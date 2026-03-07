@@ -1,0 +1,247 @@
+Build a production-structured MVP SaaS web application using Next.js 14 App Router, TypeScript, Tailwind CSS, shadcn/ui, and Supabase.
+
+Project idea:
+A web app for e-commerce and dropshipping sellers to discover trending / winning products. The app helps users find promising products using an opportunity score, supplier pricing, suggested selling price, niche/category, and AI-generated marketing angles.
+
+Important instructions:
+- Build a CLEAN, MODERN, PROFESSIONAL project structure
+- Use reusable components
+- Use TypeScript properly
+- Do not generate messy code
+- Do not overengineer
+- Keep the MVP focused and fast
+- The UI must be responsive and polished on desktop and mobile
+- Use a SaaS dashboard style
+- Use placeholder/mock data first where needed, but structure everything so it can easily connect to Supabase
+- Do not add unnecessary features outside the requested scope
+- Do not break the app into random inconsistent styles
+- Use a modern Arabic/English-friendly layout, but default app language should be English for now
+- Make code easy to maintain and extend later
+
+Tech stack:
+- Next.js 14 with App Router
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Supabase (auth + database)
+- Lucide icons
+- Use server components where suitable, but use client components when interaction is needed
+
+Core pages to build:
+1. Landing page
+2. Login page
+3. Sign up page
+4. Dashboard page
+5. Products listing page
+6. Product details page
+7. Saved products page
+8. Pricing page
+9. Settings page (simple placeholder)
+
+Main product functionality:
+Each product should contain:
+- id
+- title
+- image
+- short description
+- category
+- niche
+- source platform
+- supplier price
+- suggested selling price
+- estimated margin
+- trend score
+- saturation score
+- opportunity score
+- AI summary
+- supplier link
+- created_at
+
+Dashboard requirements:
+- KPI cards:
+  - total products
+  - trending today
+  - high opportunity products
+  - saved products
+- a simple trend section
+- recent products section
+- top opportunities section
+
+Products page requirements:
+- grid/list of products
+- search bar
+- filters:
+  - category
+  - niche
+  - source platform
+  - minimum opportunity score
+- sort:
+  - newest
+  - highest opportunity
+  - highest margin
+- each product card should show:
+  - image
+  - title
+  - category
+  - source
+  - opportunity score
+  - supplier price
+  - suggested price
+  - estimated margin
+  - save button
+  - details button
+
+Product details page requirements:
+- large product image
+- product info summary
+- score cards:
+  - trend score
+  - saturation score
+  - opportunity score
+- pricing panel:
+  - supplier price
+  - suggested sell price
+  - estimated margin
+- AI analysis section:
+  - why this product is promising
+  - target audience
+  - 3 ad angles
+  - 3 hooks
+- supplier link button
+- save product button
+
+Saved products page:
+- show saved products for the logged-in user
+- empty state if none exist
+
+Landing page requirements:
+- premium SaaS feel
+- hero section
+- strong headline
+- subheadline
+- CTA buttons
+- features section
+- product preview/demo section
+- pricing preview
+- FAQ
+- final CTA
+
+Design requirements:
+- clean premium SaaS style
+- rounded cards
+- subtle shadows
+- strong spacing and hierarchy
+- no clutter
+- polished buttons and inputs
+- modern navbar and sidebar
+- consistent typography
+- visually impressive but not flashy
+
+App layout requirements:
+- authenticated app should have:
+  - sidebar
+  - topbar
+  - content area
+- sidebar items:
+  - Dashboard
+  - Products
+  - Saved
+  - Pricing
+  - Settings
+
+Authentication:
+- set up Supabase auth structure
+- include login and signup forms
+- protect dashboard routes
+- if Supabase keys are missing, keep fallback/mock mode so app still runs
+
+Database:
+Prepare Supabase schema and SQL for these tables:
+1. profiles
+2. products
+3. saved_products
+
+Schema ideas:
+profiles:
+- id uuid pk references auth.users
+- full_name text nullable
+- email text
+- created_at timestamp
+
+products:
+- id uuid pk default gen_random_uuid()
+- title text
+- image_url text
+- short_description text
+- category text
+- niche text
+- source_platform text
+- supplier_price numeric
+- suggested_sell_price numeric
+- estimated_margin numeric
+- trend_score integer
+- saturation_score integer
+- opportunity_score integer
+- ai_summary text
+- supplier_link text
+- created_at timestamp default now()
+
+saved_products:
+- id uuid pk default gen_random_uuid()
+- user_id uuid references auth.users(id)
+- product_id uuid references products(id)
+- created_at timestamp default now()
+- unique(user_id, product_id)
+
+Important:
+- Add seed/mock product data so the UI is populated beautifully
+- Use local mock data first if database is not connected
+- Abstract data access so replacing mock data with Supabase is easy
+
+Code structure:
+Please create a clean folder structure such as:
+- app/
+- components/
+- lib/
+- data/
+- types/
+- hooks/
+- supabase/
+- styles/
+
+Please include:
+- reusable ProductCard component
+- reusable ScoreBadge component
+- reusable KPI card component
+- reusable FilterBar component
+- reusable Sidebar component
+- reusable Topbar component
+- reusable EmptyState component
+
+Also create:
+- types for Product, Profile, SavedProduct
+- utility helpers for formatting money, scores, and percentage margins
+
+Important engineering rules:
+- Avoid dead code
+- Avoid fake complex architecture
+- Avoid broken imports
+- Avoid giant files when possible
+- Keep components modular
+- Keep styling consistent
+- Add comments only where useful
+- Ensure app builds successfully
+
+Output requirements:
+- Create the full project files
+- Make the app runnable immediately
+- Include setup instructions in a README
+- Include Supabase SQL schema in a separate file
+- Include mock seed data in a separate file
+- Make sure there are no TypeScript errors
+
+After building the initial MVP, stop and summarize:
+1. what has been completed
+2. what is still mock-based
+3. what should be connected next
+Do not continue adding advanced features beyond this MVP unless requested.
