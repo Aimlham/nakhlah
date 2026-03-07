@@ -28,7 +28,7 @@ function LandingNav() {
         <span className="text-lg font-bold tracking-tight">TrendDrop</span>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <Button size="icon" variant="ghost" onClick={toggleTheme} data-testid="button-landing-theme">
+        <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="Toggle theme" data-testid="button-landing-theme">
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
         <Button variant="ghost" asChild>
@@ -292,7 +292,7 @@ function FAQSection() {
     },
     {
       q: "Can I connect to my own store?",
-      a: "Not yet in the MVP, but we're building integrations with Shopify, WooCommerce, and other major platforms. Stay tuned!",
+      a: "We're building integrations with Shopify, WooCommerce, and other major platforms. Stay tuned for updates!",
     },
     {
       q: "How accurate are the suggested selling prices?",
@@ -357,7 +357,7 @@ function Footer() {
           <span className="font-semibold">TrendDrop</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          2026 TrendDrop. All rights reserved.
+          &copy; 2026 TrendDrop. All rights reserved.
         </p>
       </div>
     </footer>

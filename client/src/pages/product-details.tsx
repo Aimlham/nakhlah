@@ -8,7 +8,6 @@ import {
   ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, Package,
   TrendingUp, BarChart3, Target, Users, Megaphone, Lightbulb,
 } from "lucide-react";
-import { ScoreBadge } from "@/components/score-badge";
 import { formatMoney, formatMargin, getCategoryGradient, parseAiSummary, cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";

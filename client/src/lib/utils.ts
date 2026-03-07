@@ -17,13 +17,6 @@ export function formatMargin(margin: number | string | null): string {
   return `${num.toFixed(1)}%`;
 }
 
-export function getScoreColor(score: number | null): string {
-  if (!score) return "text-muted-foreground";
-  if (score >= 80) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 60) return "text-amber-600 dark:text-amber-400";
-  return "text-red-500 dark:text-red-400";
-}
-
 export function getScoreBg(score: number | null): string {
   if (!score) return "bg-muted text-muted-foreground";
   if (score >= 80) return "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300";

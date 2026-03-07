@@ -39,9 +39,9 @@ export function FilterBar({
           data-testid="input-search"
         />
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
         <Select value={category} onValueChange={onCategoryChange}>
-          <SelectTrigger className="w-[160px]" data-testid="select-category">
+          <SelectTrigger className="sm:w-[160px]" data-testid="select-category">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -53,7 +53,7 @@ export function FilterBar({
         </Select>
 
         <Select value={niche} onValueChange={onNicheChange}>
-          <SelectTrigger className="w-[160px]" data-testid="select-niche">
+          <SelectTrigger className="sm:w-[160px]" data-testid="select-niche">
             <SelectValue placeholder="Niche" />
           </SelectTrigger>
           <SelectContent>
@@ -65,7 +65,7 @@ export function FilterBar({
         </Select>
 
         <Select value={platform} onValueChange={onPlatformChange}>
-          <SelectTrigger className="w-[160px]" data-testid="select-platform">
+          <SelectTrigger className="sm:w-[160px]" data-testid="select-platform">
             <SelectValue placeholder="Platform" />
           </SelectTrigger>
           <SelectContent>
@@ -77,7 +77,7 @@ export function FilterBar({
         </Select>
 
         <Select value={sort} onValueChange={onSortChange}>
-          <SelectTrigger className="w-[180px]" data-testid="select-sort">
+          <SelectTrigger className="sm:w-[180px]" data-testid="select-sort">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>

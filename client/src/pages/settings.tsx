@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,7 +51,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-              <a href="/pricing" data-testid="link-upgrade-plan">View Plans</a>
+              <Link href="/pricing" data-testid="link-upgrade-plan">View Plans</Link>
             </Button>
           </CardContent>
         </Card>
