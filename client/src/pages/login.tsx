@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect, type FormEvent } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,20 @@ export default function LoginPage() {
   const { login, loginWithGoogle } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const searchString = useSearch();
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const authError = params.get("auth_error");
+    if (authError) {
+      toast({
+        title: "فشل تسجيل الدخول",
+        description: authError,
+        variant: "destructive",
+      });
+      window.history.replaceState({}, "", "/login");
+    }
+  }, [searchString, toast]);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
