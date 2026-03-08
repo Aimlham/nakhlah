@@ -257,5 +257,59 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/products/:id/ads", async (req: Request, res: Response) => {
+    try {
+      const ads = await storage.getAdsByProductId(req.params.id);
+      res.json(ads);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to fetch ads" });
+    }
+  });
+
+  app.get("/api/ads", async (req: Request, res: Response) => {
+    try {
+      let ads = await storage.getAllAds();
+      const products = await storage.getAllProducts();
+      const productMap = new Map(products.map(p => [p.id, p]));
+
+      const { search, platform, niche, minViews } = req.query;
+
+      if (platform && platform !== "all") {
+        ads = ads.filter(a => a.platform === platform);
+      }
+
+      if (minViews) {
+        const min = parseInt(minViews as string, 10);
+        if (!isNaN(min)) ads = ads.filter(a => (a.views || 0) >= min);
+      }
+
+      if (niche && niche !== "all") {
+        ads = ads.filter(a => {
+          const product = productMap.get(a.productId);
+          return product?.niche === niche;
+        });
+      }
+
+      if (search) {
+        const q = (search as string).toLowerCase();
+        ads = ads.filter(a => {
+          const product = productMap.get(a.productId);
+          return product?.title.toLowerCase().includes(q) || product?.category.toLowerCase().includes(q);
+        });
+      }
+
+      const enriched = ads.map(ad => ({
+        ...ad,
+        productTitle: productMap.get(ad.productId)?.title || "",
+        productCategory: productMap.get(ad.productId)?.category || "",
+        productNiche: productMap.get(ad.productId)?.niche || "",
+      }));
+
+      res.json(enriched);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to fetch ads" });
+    }
+  });
+
   return httpServer;
 }

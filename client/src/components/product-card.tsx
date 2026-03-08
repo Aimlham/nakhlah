@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bookmark, BookmarkCheck, Package } from "lucide-react";
+import { Bookmark, BookmarkCheck, Package, Flame } from "lucide-react";
 import { type Product } from "@shared/schema";
 import { cn, formatMoney, formatMargin, getCategoryGradient } from "@/lib/utils";
 import { ScoreBadge } from "./score-badge";
@@ -15,18 +15,24 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, isSaved, onToggleSave, savePending }: ProductCardProps) {
+  const isHighOpportunity = (product.opportunityScore || 0) >= 80;
+
   return (
-    <Card className="hover-elevate group" data-testid={`card-product-${product.id}`}>
+    <Card
+      className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+      data-testid={`card-product-${product.id}`}
+    >
       <CardContent className="p-0">
         <div className={cn(
-          "relative h-40 rounded-t-md bg-gradient-to-br flex items-center justify-center",
+          "relative h-44 rounded-t-md bg-gradient-to-br flex items-center justify-center overflow-hidden",
           getCategoryGradient(product.category)
         )}>
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.title}
-              className="w-full h-full object-cover rounded-t-md"
+              className="w-full h-full object-cover rounded-t-md transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
             />
           ) : (
             <Package className="w-10 h-10 text-white/60" />
@@ -34,6 +40,14 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
           <div className="absolute top-2 end-2">
             <ScoreBadge label="التقييم" score={product.opportunityScore} />
           </div>
+          {isHighOpportunity && (
+            <div className="absolute top-2 start-2" data-testid={`badge-trending-${product.id}`}>
+              <div className="inline-flex items-center gap-1 rounded-md bg-orange-500 text-white px-2 py-1 text-xs font-medium">
+                <Flame className="w-3 h-3" />
+                ترند الآن
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-4 space-y-3">
@@ -42,13 +56,20 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
               {product.title}
             </h3>
             <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <Badge variant="secondary" className="text-xs no-default-active-elevate">
+              <Badge variant="secondary" className="text-xs">
                 {product.category}
               </Badge>
-              {product.sourcePlatform && (
-                <span className="text-xs text-muted-foreground">{product.sourcePlatform}</span>
+              {product.niche && (
+                <Badge variant="outline" className="text-xs">
+                  {product.niche}
+                </Badge>
               )}
             </div>
+            {product.sourcePlatform && (
+              <p className="text-xs text-muted-foreground mt-1" data-testid={`text-platform-${product.id}`}>
+                {product.sourcePlatform}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">

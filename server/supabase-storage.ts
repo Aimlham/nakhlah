@@ -3,6 +3,7 @@ import type {
   InsertUser,
   Product,
   SavedProduct,
+  ProductAd,
 } from "@shared/schema";
 import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
@@ -158,4 +159,36 @@ export class SupabaseStorage implements IStorage {
       .eq("product_id", productId);
     if (error) throw new Error(error.message);
   }
+
+  async getAdsByProductId(productId: string): Promise<ProductAd[]> {
+    const { data, error } = await this.db
+      .from("product_ads")
+      .select("*")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
+    if (error) return [];
+    return (data ?? []).map(mapProductAd);
+  }
+
+  async getAllAds(): Promise<ProductAd[]> {
+    const { data, error } = await this.db
+      .from("product_ads")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) return [];
+    return (data ?? []).map(mapProductAd);
+  }
+}
+
+function mapProductAd(row: Record<string, unknown>): ProductAd {
+  return {
+    id: row.id as string,
+    productId: row.product_id as string,
+    platform: row.platform as string,
+    videoUrl: row.video_url as string,
+    thumbnailUrl: (row.thumbnail_url as string) ?? null,
+    views: (row.views as number) ?? 0,
+    likes: (row.likes as number) ?? 0,
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
 }

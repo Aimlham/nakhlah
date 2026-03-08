@@ -16,6 +16,7 @@ import ProductDetailsPage from "@/pages/product-details";
 import SavedProductsPage from "@/pages/saved-products";
 import PricingPage from "@/pages/pricing-page";
 import SettingsPage from "@/pages/settings";
+import AdsPage from "@/pages/ads";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallbackPage from "@/pages/auth-callback";
@@ -73,6 +74,7 @@ function Router() {
       <Route path="/dashboard">{() => <ProtectedRoute component={DashboardPage} />}</Route>
       <Route path="/products">{() => <ProtectedRoute component={ProductsPage} />}</Route>
       <Route path="/products/:id">{() => <ProtectedRoute component={ProductDetailsPage} />}</Route>
+      <Route path="/ads">{() => <ProtectedRoute component={AdsPage} />}</Route>
       <Route path="/saved">{() => <ProtectedRoute component={SavedProductsPage} />}</Route>
       <Route path="/pricing">{() => <ProtectedRoute component={PricingPage} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>

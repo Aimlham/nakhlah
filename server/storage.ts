@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct } from "@shared/schema";
+import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { supabaseConfigured } from "./supabase";
 import { SupabaseStorage } from "./supabase-storage";
@@ -13,25 +13,30 @@ export interface IStorage {
   getSavedProducts(userId: string): Promise<Product[]>;
   saveProduct(userId: string, productId: string): Promise<SavedProduct>;
   unsaveProduct(userId: string, productId: string): Promise<void>;
+  getAdsByProductId(productId: string): Promise<ProductAd[]>;
+  getAllAds(): Promise<ProductAd[]>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private products: Map<string, Product>;
   private savedProducts: Map<string, SavedProduct>;
+  private ads: Map<string, ProductAd>;
 
   constructor() {
     this.users = new Map();
     this.products = new Map();
     this.savedProducts = new Map();
+    this.ads = new Map();
     this.seedProducts();
+    this.seedAds();
   }
 
   private seedProducts() {
     const mockProducts: Omit<Product, "id" | "createdAt">[] = [
       {
         title: "LED Sunset Projection Lamp",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=400&h=400&fit=crop",
         shortDescription: "Viral TikTok sunset lamp that creates warm ambient lighting. Perfect for content creators and home decor enthusiasts looking for aesthetic room upgrades.",
         category: "Home & Living",
         niche: "Ambient Lighting",
@@ -47,7 +52,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Portable USB Blender Cup",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=400&h=400&fit=crop",
         shortDescription: "Rechargeable personal blender that makes smoothies on the go. USB-C charging, 380ml capacity, BPA-free materials.",
         category: "Kitchen",
         niche: "Health & Fitness",
@@ -63,7 +68,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Cloud-Shaped LED Mirror",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1616627577385-5c0c4dab55a5?w=400&h=400&fit=crop",
         shortDescription: "Aesthetic cloud-shaped vanity mirror with built-in LED lighting. Touch dimmer control, USB powered, perfect for makeup and selfies.",
         category: "Home Decor",
         niche: "Vanity & Beauty",
@@ -79,7 +84,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Magnetic MagSafe Car Phone Mount",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop",
         shortDescription: "Strong magnetic phone mount compatible with MagSafe. 360-degree rotation, one-hand operation, fits all car vents.",
         category: "Electronics",
         niche: "Car Accessories",
@@ -95,7 +100,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Mini Portable Thermal Printer",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=400&h=400&fit=crop",
         shortDescription: "Pocket-sized wireless thermal printer. Print photos, stickers, notes, and labels from your phone via Bluetooth. No ink needed.",
         category: "Electronics",
         niche: "Stationery & Gadgets",
@@ -111,7 +116,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Adjustable Posture Corrector Belt",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=400&fit=crop",
         shortDescription: "Invisible under-clothes posture corrector with adjustable straps. Helps reduce back pain and improve posture for desk workers.",
         category: "Health & Wellness",
         niche: "Ergonomics",
@@ -127,7 +132,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Rotating Cosmetics Organizer",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=400&fit=crop",
         shortDescription: "360-degree rotating makeup organizer with adjustable shelves. Fits skincare, makeup, brushes, and perfumes. Clear acrylic design.",
         category: "Beauty",
         niche: "Storage & Organization",
@@ -143,7 +148,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Smart Water Bottle with Temperature Display",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop",
         shortDescription: "Insulated smart water bottle with LED temperature display. Reminds you to drink water. Keeps drinks hot 12hrs, cold 24hrs.",
         category: "Kitchen",
         niche: "Health & Hydration",
@@ -159,7 +164,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Wireless Earbuds Cleaning Pen Kit",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=400&h=400&fit=crop",
         shortDescription: "3-in-1 cleaning tool for AirPods, earbuds, and charging cases. Soft brush, sponge tip, and metal point for deep cleaning.",
         category: "Electronics",
         niche: "Accessories",
@@ -175,7 +180,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Self-Cleaning Pet Hair Removal Brush",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1583337130417-13104dec14a7?w=400&h=400&fit=crop",
         shortDescription: "Reusable lint roller with self-cleaning base. Removes pet hair from clothes, furniture, and car seats instantly.",
         category: "Pet Supplies",
         niche: "Cleaning",
@@ -191,7 +196,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "Collapsible Silicone Travel Bottle Set",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=400&h=400&fit=crop",
         shortDescription: "TSA-approved collapsible silicone bottles for travel. Leak-proof, BPA-free, and they flatten to save space in your bag.",
         category: "Travel",
         niche: "Travel Accessories",
@@ -207,7 +212,7 @@ export class MemStorage implements IStorage {
       },
       {
         title: "RGB Gaming Desk Pad XXL",
-        imageUrl: null,
+        imageUrl: "https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?w=400&h=400&fit=crop",
         shortDescription: "Extra-large RGB LED mouse pad with 14 lighting modes. Waterproof surface, non-slip rubber base. 800x300mm.",
         category: "Electronics",
         niche: "Gaming",
@@ -233,6 +238,43 @@ export class MemStorage implements IStorage {
     mockProducts.forEach((p, i) => {
       const id = String(i + 1);
       this.products.set(id, { ...p, id, createdAt: dates[i] || new Date() });
+    });
+  }
+
+  private seedAds() {
+    const mockAds: Omit<ProductAd, "id" | "createdAt">[] = [
+      { productId: "1", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/1", thumbnailUrl: "https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=300&h=400&fit=crop", views: 2400000, likes: 185000 },
+      { productId: "1", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/2", thumbnailUrl: "https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?w=300&h=400&fit=crop", views: 1100000, likes: 92000 },
+      { productId: "1", platform: "Facebook", videoUrl: "https://facebook.com/ads/example/1", thumbnailUrl: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=300&h=400&fit=crop", views: 850000, likes: 42000 },
+      { productId: "2", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/3", thumbnailUrl: "https://images.unsplash.com/photo-1622597467836-f3285f2131b8?w=300&h=400&fit=crop", views: 3200000, likes: 245000 },
+      { productId: "2", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/4", thumbnailUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=300&h=400&fit=crop", views: 980000, likes: 67000 },
+      { productId: "3", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/5", thumbnailUrl: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=300&h=400&fit=crop", views: 1500000, likes: 120000 },
+      { productId: "3", platform: "Instagram", videoUrl: "https://instagram.com/reel/example1", thumbnailUrl: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=300&h=400&fit=crop", views: 680000, likes: 55000 },
+      { productId: "4", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/6", thumbnailUrl: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=300&h=400&fit=crop", views: 750000, likes: 48000 },
+      { productId: "5", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/7", thumbnailUrl: "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?w=300&h=400&fit=crop", views: 4100000, likes: 310000 },
+      { productId: "5", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/8", thumbnailUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=400&fit=crop", views: 1800000, likes: 145000 },
+      { productId: "5", platform: "Facebook", videoUrl: "https://facebook.com/ads/example/2", thumbnailUrl: "https://images.unsplash.com/photo-1468495244123-6c6c332eeece?w=300&h=400&fit=crop", views: 620000, likes: 31000 },
+      { productId: "6", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/9", thumbnailUrl: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=300&h=400&fit=crop", views: 920000, likes: 73000 },
+      { productId: "7", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/10", thumbnailUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=300&h=400&fit=crop", views: 560000, likes: 38000 },
+      { productId: "8", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/11", thumbnailUrl: "https://images.unsplash.com/photo-1523362628745-0c100150b504?w=300&h=400&fit=crop", views: 2100000, likes: 167000 },
+      { productId: "9", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/12", thumbnailUrl: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=400&fit=crop", views: 1350000, likes: 98000 },
+      { productId: "10", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/13", thumbnailUrl: "https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=300&h=400&fit=crop", views: 890000, likes: 62000 },
+      { productId: "12", platform: "TikTok", videoUrl: "https://www.tiktok.com/@example/video/14", thumbnailUrl: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=300&h=400&fit=crop", views: 1700000, likes: 130000 },
+      { productId: "12", platform: "Instagram", videoUrl: "https://instagram.com/reel/example2", thumbnailUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=300&h=400&fit=crop", views: 450000, likes: 28000 },
+    ];
+
+    const adDates = [
+      new Date("2026-03-06"), new Date("2026-03-05"), new Date("2026-03-04"),
+      new Date("2026-03-06"), new Date("2026-03-03"), new Date("2026-03-05"),
+      new Date("2026-03-04"), new Date("2026-03-02"), new Date("2026-03-06"),
+      new Date("2026-03-05"), new Date("2026-03-03"), new Date("2026-03-04"),
+      new Date("2026-03-01"), new Date("2026-03-05"), new Date("2026-03-06"),
+      new Date("2026-03-04"), new Date("2026-03-06"), new Date("2026-03-03"),
+    ];
+
+    mockAds.forEach((ad, i) => {
+      const id = `ad-${i + 1}`;
+      this.ads.set(id, { ...ad, id, createdAt: adDates[i] || new Date() });
     });
   }
 
@@ -293,6 +335,14 @@ export class MemStorage implements IStorage {
   async unsaveProduct(userId: string, productId: string): Promise<void> {
     const key = `${userId}:${productId}`;
     this.savedProducts.delete(key);
+  }
+
+  async getAdsByProductId(productId: string): Promise<ProductAd[]> {
+    return Array.from(this.ads.values()).filter(ad => ad.productId === productId);
+  }
+
+  async getAllAds(): Promise<ProductAd[]> {
+    return Array.from(this.ads.values());
   }
 }
 

@@ -17,6 +17,12 @@ export function formatMargin(margin: number | string | null): string {
   return `${num.toFixed(1)}%`;
 }
 
+export function formatCompactNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return String(num);
+}
+
 export function getScoreBg(score: number | null): string {
   if (!score) return "bg-muted text-muted-foreground";
   if (score >= 80) return "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300";

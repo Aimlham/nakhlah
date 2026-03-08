@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Package, TrendingUp, Star, Bookmark, ArrowLeft } from "lucide-react";
+import { Package, TrendingUp, Star, Bookmark, ArrowLeft, Flame, CalendarPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { KpiCard } from "@/components/kpi-card";
 import { ScoreBadge } from "@/components/score-badge";
 import { useAuth } from "@/lib/auth";
@@ -22,9 +23,19 @@ export default function DashboardPage() {
   });
 
   const allProducts = products || [];
-  const savedCount = savedData?.savedProductIds?.length || 0;
+  const savedIds = new Set(savedData?.savedProductIds || []);
+  const savedCount = savedIds.size;
   const trendingToday = allProducts.filter(p => (p.trendScore || 0) >= 80).length;
   const highOpportunity = allProducts.filter(p => (p.opportunityScore || 0) >= 80).length;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const newToday = allProducts.filter(p => {
+    if (!p.createdAt) return false;
+    const d = new Date(p.createdAt);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() >= today.getTime();
+  }).length;
 
   const recentProducts = [...allProducts]
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
@@ -34,6 +45,10 @@ export default function DashboardPage() {
     .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0))
     .slice(0, 5);
 
+  const mostSaved = allProducts
+    .filter(p => savedIds.has(p.id))
+    .slice(0, 5);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -41,12 +56,13 @@ export default function DashboardPage() {
           <Skeleton className="h-8 w-64 mb-2" />
           <Skeleton className="h-4 w-48" />
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map(i => (
             <Skeleton key={i} className="h-28 rounded-md" />
           ))}
         </div>
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6">
+          <Skeleton className="h-64 rounded-md" />
           <Skeleton className="h-64 rounded-md" />
           <Skeleton className="h-64 rounded-md" />
         </div>
@@ -63,12 +79,18 @@ export default function DashboardPage() {
         <p className="text-muted-foreground">إليك أحدث المنتجات الرائجة في أبحاثك.</p>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard
           title="إجمالي المنتجات"
           value={allProducts.length}
           icon={Package}
           description="في قاعدة البيانات"
+        />
+        <KpiCard
+          title="جديد اليوم"
+          value={newToday}
+          icon={CalendarPlus}
+          description="أضيفت اليوم"
         />
         <KpiCard
           title="الرائج اليوم"
@@ -84,14 +106,14 @@ export default function DashboardPage() {
           description="فرصة 80+"
         />
         <KpiCard
-          title="المنتجات المحفوظة"
+          title="المحفوظة"
           value={savedCount}
           icon={Bookmark}
           description="مجموعتك"
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-4">
             <CardTitle className="text-base font-semibold">أحدث المنتجات</CardTitle>
@@ -104,12 +126,16 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             {recentProducts.map(product => (
               <Link key={product.id} href={`/products/${product.id}`}>
-                <div className="flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer" data-testid={`link-recent-product-${product.id}`}>
+                <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`link-recent-product-${product.id}`}>
                   <div className={cn(
-                    "w-10 h-10 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0",
+                    "w-10 h-10 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 overflow-hidden",
                     getCategoryGradient(product.category)
                   )}>
-                    <Package className="w-4 h-4 text-white/60" />
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="w-4 h-4 text-white/60" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{product.title}</p>
@@ -124,7 +150,10 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-4">
-            <CardTitle className="text-base font-semibold">أفضل الفرص</CardTitle>
+            <CardTitle className="text-base font-semibold flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-orange-500" />
+              أفضل الفرص
+            </CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/products" data-testid="link-view-opportunities">
                 عرض الكل <ArrowLeft className="w-3 h-3" />
@@ -134,7 +163,7 @@ export default function DashboardPage() {
           <CardContent className="space-y-3">
             {topOpportunities.map((product, index) => (
               <Link key={product.id} href={`/products/${product.id}`}>
-                <div className="flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer" data-testid={`link-top-product-${product.id}`}>
+                <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`link-top-product-${product.id}`}>
                   <span className="text-sm font-bold text-muted-foreground w-5 text-center shrink-0">
                     {index + 1}
                   </span>
@@ -153,6 +182,49 @@ export default function DashboardPage() {
                 </div>
               </Link>
             ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-4">
+            <CardTitle className="text-base font-semibold flex items-center gap-1.5">
+              <Bookmark className="w-4 h-4 text-primary" />
+              المنتجات المحفوظة
+            </CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/saved" data-testid="link-view-saved">
+                عرض الكل <ArrowLeft className="w-3 h-3" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {mostSaved.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">لم تحفظ أي منتجات بعد.</p>
+            ) : (
+              mostSaved.map(product => (
+                <Link key={product.id} href={`/products/${product.id}`}>
+                  <div className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`link-saved-product-${product.id}`}>
+                    <div className={cn(
+                      "w-10 h-10 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 overflow-hidden",
+                      getCategoryGradient(product.category)
+                    )}>
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Package className="w-4 h-4 text-white/60" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{product.title}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                      </div>
+                    </div>
+                    <ScoreBadge label="" score={product.opportunityScore} />
+                  </div>
+                </Link>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

@@ -7,7 +7,6 @@ import { EmptyState } from "@/components/empty-state";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Package } from "lucide-react";
-import { categories, niches, platforms } from "@/data/mock-products";
 import type { Product } from "@shared/schema";
 
 export default function ProductsPage() {
@@ -16,6 +15,9 @@ export default function ProductsPage() {
   const [niche, setNiche] = useState("all");
   const [platform, setPlatform] = useState("all");
   const [sort, setSort] = useState("newest");
+  const [minOpportunity, setMinOpportunity] = useState("all");
+  const [minMargin, setMinMargin] = useState("all");
+  const [minTrend, setMinTrend] = useState("all");
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery<Product[]>({
@@ -44,6 +46,21 @@ export default function ProductsPage() {
     },
   });
 
+  const categories = useMemo(() => {
+    if (!products) return [];
+    return [...new Set(products.map(p => p.category))];
+  }, [products]);
+
+  const niches = useMemo(() => {
+    if (!products) return [];
+    return [...new Set(products.map(p => p.niche).filter(Boolean))] as string[];
+  }, [products]);
+
+  const platforms = useMemo(() => {
+    if (!products) return [];
+    return [...new Set(products.map(p => p.sourcePlatform).filter(Boolean))] as string[];
+  }, [products]);
+
   const filtered = useMemo(() => {
     let result = products || [];
 
@@ -59,14 +76,28 @@ export default function ProductsPage() {
     if (niche !== "all") result = result.filter(p => p.niche === niche);
     if (platform !== "all") result = result.filter(p => p.sourcePlatform === platform);
 
+    if (minOpportunity !== "all") {
+      const min = parseInt(minOpportunity, 10);
+      result = result.filter(p => (p.opportunityScore || 0) >= min);
+    }
+    if (minMargin !== "all") {
+      const min = parseFloat(minMargin);
+      result = result.filter(p => parseFloat(p.estimatedMargin || "0") >= min);
+    }
+    if (minTrend !== "all") {
+      const min = parseInt(minTrend, 10);
+      result = result.filter(p => (p.trendScore || 0) >= min);
+    }
+
     result = [...result].sort((a, b) => {
       if (sort === "opportunity") return (b.opportunityScore || 0) - (a.opportunityScore || 0);
       if (sort === "margin") return parseFloat(b.estimatedMargin || "0") - parseFloat(a.estimatedMargin || "0");
+      if (sort === "trending") return (b.trendScore || 0) - (a.trendScore || 0);
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
 
     return result;
-  }, [products, search, category, niche, platform, sort]);
+  }, [products, search, category, niche, platform, sort, minOpportunity, minMargin, minTrend]);
 
   if (isLoading) {
     return (
@@ -98,7 +129,14 @@ export default function ProductsPage() {
         categories={categories}
         niches={niches}
         platforms={platforms}
+        minOpportunity={minOpportunity} onMinOpportunityChange={setMinOpportunity}
+        minMargin={minMargin} onMinMarginChange={setMinMargin}
+        minTrend={minTrend} onMinTrendChange={setMinTrend}
       />
+
+      <p className="text-sm text-muted-foreground" data-testid="text-products-count">
+        {filtered.length} منتج
+      </p>
 
       {filtered.length === 0 ? (
         <EmptyState

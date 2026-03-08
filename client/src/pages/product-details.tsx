@@ -7,11 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowRight, Bookmark, BookmarkCheck, ExternalLink, Package,
   TrendingUp, BarChart3, Target, Users, Megaphone, Lightbulb,
+  Eye, Heart, Play, Calendar, Flame, Activity,
 } from "lucide-react";
-import { formatMoney, formatMargin, getCategoryGradient, parseAiSummary, cn } from "@/lib/utils";
+import { SiTiktok } from "react-icons/si";
+import { formatMoney, formatMargin, formatCompactNumber, getCategoryGradient, parseAiSummary, cn, getScoreBg } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from "@shared/schema";
+import type { Product, ProductAd } from "@shared/schema";
 
 export default function ProductDetailsPage() {
   const [, params] = useRoute("/products/:id");
@@ -20,6 +22,11 @@ export default function ProductDetailsPage() {
 
   const { data: product, isLoading } = useQuery<Product>({
     queryKey: ["/api/products", productId],
+    enabled: !!productId,
+  });
+
+  const { data: ads } = useQuery<ProductAd[]>({
+    queryKey: ["/api/products", productId, "ads"],
     enabled: !!productId,
   });
 
@@ -73,6 +80,8 @@ export default function ProductDetailsPage() {
   }
 
   const analysis = parseAiSummary(product.aiSummary);
+  const isHighOpportunity = (product.opportunityScore || 0) >= 80;
+  const productAds = ads || [];
 
   return (
     <div className="space-y-6">
@@ -86,13 +95,21 @@ export default function ProductDetailsPage() {
       <div className="grid lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 space-y-6">
           <div className={cn(
-            "h-56 md:h-72 rounded-md bg-gradient-to-br flex items-center justify-center",
+            "relative h-56 md:h-72 rounded-md bg-gradient-to-br flex items-center justify-center overflow-hidden",
             getCategoryGradient(product.category)
           )}>
             {product.imageUrl ? (
               <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover rounded-md" />
             ) : (
               <Package className="w-16 h-16 text-white/40" />
+            )}
+            {isHighOpportunity && (
+              <div className="absolute top-3 start-3">
+                <div className="inline-flex items-center gap-1 rounded-md bg-orange-500 text-white px-2.5 py-1.5 text-sm font-medium">
+                  <Flame className="w-4 h-4" />
+                  ترند الآن
+                </div>
+              </div>
             )}
           </div>
 
@@ -103,9 +120,9 @@ export default function ProductDetailsPage() {
                   {product.title}
                 </h1>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
-                  <Badge variant="secondary" className="no-default-active-elevate">{product.category}</Badge>
+                  <Badge variant="secondary">{product.category}</Badge>
                   {product.niche && (
-                    <Badge variant="outline" className="no-default-active-elevate">{product.niche}</Badge>
+                    <Badge variant="outline">{product.niche}</Badge>
                   )}
                   {product.sourcePlatform && (
                     <span className="text-sm text-muted-foreground">{product.sourcePlatform}</span>
@@ -118,86 +135,14 @@ export default function ProductDetailsPage() {
             )}
           </div>
 
-          {analysis && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Lightbulb className="w-5 h-5 text-primary" />
-                تحليل الذكاء الاصطناعي
-              </h2>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Target className="w-4 h-4 text-primary" />
-                    لماذا هذا المنتج واعد
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{analysis.whyPromising}</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Users className="w-4 h-4 text-primary" />
-                    الجمهور المستهدف
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{analysis.targetAudience}</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Megaphone className="w-4 h-4 text-primary" />
-                    زوايا إعلانية
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.adAngles.map((angle, i) => (
-                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                        <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium mt-0.5">
-                          {i + 1}
-                        </span>
-                        {angle}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-primary" />
-                    عبارات تسويقية
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {analysis.hooks.map((hook, i) => (
-                      <li key={i} className="text-sm text-muted-foreground italic">
-                        "{hook}"
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Card>
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
                 <p className="text-xs text-muted-foreground">الرواج</p>
-                <p className="text-xl font-bold">{product.trendScore || 0}</p>
+                <p className={cn("text-xl font-bold", getScoreBg(product.trendScore).includes("emerald") ? "text-emerald-600" : getScoreBg(product.trendScore).includes("amber") ? "text-amber-600" : "")}>
+                  {product.trendScore || 0}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -211,11 +156,154 @@ export default function ProductDetailsPage() {
               <CardContent className="p-4 text-center">
                 <Target className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
                 <p className="text-xs text-muted-foreground">الفرصة</p>
-                <p className="text-xl font-bold">{product.opportunityScore || 0}</p>
+                <p className="text-xl font-bold text-emerald-600">{product.opportunityScore || 0}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <Activity className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                <p className="text-xs text-muted-foreground">الطلب المتوقع</p>
+                <p className="text-xl font-bold text-blue-600">
+                  {(product.trendScore || 0) >= 80 ? "عالي" : (product.trendScore || 0) >= 60 ? "متوسط" : "منخفض"}
+                </p>
               </CardContent>
             </Card>
           </div>
 
+          {analysis && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-primary" />
+                تحليل الذكاء الاصطناعي
+              </h2>
+
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Target className="w-4 h-4 text-primary" />
+                    </div>
+                    لماذا هذا المنتج واعد
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{analysis.whyPromising}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    الجمهور المستهدف
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{analysis.targetAudience}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                      <Megaphone className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    زوايا إعلانية
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.adAngles.map((angle, i) => (
+                      <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="shrink-0 w-5 h-5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-xs flex items-center justify-center font-medium mt-0.5">
+                          {i + 1}
+                        </span>
+                        {angle}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card className="border-violet-200 dark:border-violet-900 bg-violet-50/50 dark:bg-violet-950/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                    </div>
+                    عبارات تسويقية
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {analysis.hooks.map((hook, i) => (
+                      <li key={i} className="text-sm text-muted-foreground italic leading-relaxed">
+                        &ldquo;{hook}&rdquo;
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {productAds.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <SiTiktok className="w-5 h-5" />
+                إعلانات المنتج على TikTok
+              </h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {productAds.map(ad => (
+                  <AdCard key={ad.id} ad={ad} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {productAds.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Play className="w-5 h-5 text-primary" />
+                فيديوهات المنتج
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {productAds.slice(0, 4).map(ad => (
+                  <a key={ad.id} href={ad.videoUrl} target="_blank" rel="noopener noreferrer" className="block" data-testid={`link-video-${ad.id}`}>
+                    <Card className="transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+                      <CardContent className="p-0">
+                        <div className="relative h-40 rounded-t-md overflow-hidden bg-muted">
+                          {ad.thumbnailUrl ? (
+                            <img src={ad.thumbnailUrl} alt="Video" className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <Play className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                              <Play className="w-5 h-5 text-black ms-0.5" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-3 flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {formatCompactNumber(ad.views || 0)}</span>
+                          <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {formatCompactNumber(ad.likes || 0)}</span>
+                          <Badge variant="outline" className="text-xs">{ad.platform}</Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="lg:col-span-2 space-y-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">تفاصيل التسعير</CardTitle>
@@ -270,5 +358,45 @@ export default function ProductDetailsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function AdCard({ ad }: { ad: ProductAd }) {
+  return (
+    <a href={ad.videoUrl} target="_blank" rel="noopener noreferrer" className="block" data-testid={`ad-card-${ad.id}`}>
+      <Card className="transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+        <CardContent className="p-0">
+          <div className="relative h-48 rounded-t-md overflow-hidden bg-muted">
+            {ad.thumbnailUrl ? (
+              <img src={ad.thumbnailUrl} alt="Ad" className="w-full h-full object-cover" loading="lazy" />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <Play className="w-8 h-8 text-muted-foreground" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+                <Play className="w-5 h-5 text-black ms-0.5" />
+              </div>
+            </div>
+          </div>
+          <div className="p-3 space-y-2">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1" data-testid={`text-ad-views-${ad.id}`}><Eye className="w-3.5 h-3.5" /> {formatCompactNumber(ad.views || 0)}</span>
+              <span className="flex items-center gap-1" data-testid={`text-ad-likes-${ad.id}`}><Heart className="w-3.5 h-3.5" /> {formatCompactNumber(ad.likes || 0)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <Badge variant="outline" className="text-xs" data-testid={`badge-ad-platform-${ad.id}`}>{ad.platform}</Badge>
+              {ad.createdAt && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(ad.createdAt).toLocaleDateString("ar-SA")}
+                </span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </a>
   );
 }

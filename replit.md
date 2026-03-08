@@ -47,6 +47,17 @@ CREATE TABLE saved_products (
   product_id VARCHAR NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE product_ads (
+  id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id VARCHAR NOT NULL,
+  platform TEXT NOT NULL,
+  video_url TEXT NOT NULL,
+  thumbnail_url TEXT,
+  views INTEGER DEFAULT 0,
+  likes INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
 ## Architecture
@@ -57,10 +68,10 @@ client/src/
     app-sidebar.tsx    - Navigation sidebar (shadcn Sidebar, side="right" for RTL)
     app-layout.tsx     - Authenticated page layout wrapper
     topbar.tsx         - Top bar with theme toggle and logout
-    product-card.tsx   - Reusable product card component
+    product-card.tsx   - Reusable product card with images, hover animation, trending badge
     score-badge.tsx    - Score indicator badge
     kpi-card.tsx       - Dashboard KPI metric card
-    filter-bar.tsx     - Search + filter controls
+    filter-bar.tsx     - Search + filter controls (category, niche, platform, score/margin/trend ranges)
     empty-state.tsx    - Empty state placeholder
     theme-provider.tsx - Dark/light mode context
   lib/
@@ -74,9 +85,10 @@ client/src/
     signup.tsx         - Signup form (email/password + Google OAuth, Arabic)
     forgot-password.tsx - Forgot password form (sends reset email, Arabic)
     reset-password.tsx - Reset password form (updates password via token, Arabic)
-    dashboard.tsx      - Dashboard with KPIs (Arabic)
-    products.tsx       - Product listing with filters (Arabic)
-    product-details.tsx - Single product details + AI analysis (Arabic)
+    dashboard.tsx      - Dashboard with 5 KPIs, 3-column layout, saved products widget (Arabic)
+    products.tsx       - Product listing with advanced filters (Arabic)
+    product-details.tsx - Product details + AI analysis + TikTok ads section (Arabic)
+    ads.tsx            - Ad library page with search/filter (Arabic)
     saved-products.tsx - User's saved products (Arabic)
     pricing-page.tsx   - Pricing plans (Arabic)
     auth-callback.tsx  - OAuth callback handler (processes tokens, redirects to dashboard)
@@ -84,7 +96,7 @@ client/src/
 
 server/
   index.ts             - Express server entry
-  routes.ts            - API endpoints (auth, products, saved) with dual auth support
+  routes.ts            - API endpoints (auth, products, saved, ads) with dual auth support
   storage.ts           - IStorage interface + MemStorage (fallback) + conditional selection
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation of IStorage
@@ -101,8 +113,10 @@ shared/
 - `GET /api/auth/me` - Current user (JWT or session)
 - `POST /api/auth/logout` - Logout
 - `GET /api/health` - Healthcheck endpoint (for deployment)
-- `GET /api/products` - List all products
-- `GET /api/products/:id` - Single product
+- `GET /api/products` - List all products (with scoring applied server-side)
+- `GET /api/products/:id` - Single product (with scoring applied)
+- `GET /api/products/:id/ads` - TikTok ads for a specific product
+- `GET /api/ads` - All ads (query: search, platform, niche, minViews)
 - `GET /api/saved/ids` - Saved product IDs for current user
 - `GET /api/saved/products` - Saved products for current user
 - `POST /api/saved/:productId` - Save a product
@@ -137,9 +151,11 @@ shared/
 ## Key Features
 - Landing page with hero, features, pricing, FAQ (Arabic)
 - Auth with Supabase or session-based fallback
-- Dashboard with KPI cards and recent/top products
-- Product listing with search, category/niche/platform filters, sorting
-- Product details with scores, pricing, AI analysis (ad angles, hooks, target audience)
+- Dashboard with 5 KPIs (total products, avg opportunity, avg margin, trending, saved), 3-column layout, saved products widget
+- Product listing with advanced filters: search, category, niche, platform, sort, min opportunity/margin/trend scores
+- Product cards with real Unsplash images, hover animation (shadow + translate), trending badge for opportunityScore >= 80, niche badge
+- Product details with 4-metric scores row, colored AI analysis cards, TikTok ads section with video previews
+- Ad library page (/ads) with search, platform/niche/views filters, ad cards grid
 - Save/unsave products
 - Product scoring engine with transparent, editable formulas
 - Dark/light mode toggle

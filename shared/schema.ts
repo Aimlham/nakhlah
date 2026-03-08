@@ -37,6 +37,17 @@ export const savedProducts = pgTable("saved_products", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const productAds = pgTable("product_ads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  productId: varchar("product_id").notNull(),
+  platform: text("platform").notNull(),
+  videoUrl: text("video_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  views: integer("views").default(0),
+  likes: integer("likes").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -54,9 +65,16 @@ export const insertSavedProductSchema = createInsertSchema(savedProducts).omit({
   createdAt: true,
 });
 
+export const insertProductAdSchema = createInsertSchema(productAds).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type SavedProduct = typeof savedProducts.$inferSelect;
 export type InsertSavedProduct = z.infer<typeof insertSavedProductSchema>;
+export type ProductAd = typeof productAds.$inferSelect;
+export type InsertProductAd = z.infer<typeof insertProductAdSchema>;
