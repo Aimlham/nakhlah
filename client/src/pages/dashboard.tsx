@@ -1,301 +1,275 @@
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
-  Package, Bookmark, Flame,
-  ArrowLeft, Search, Megaphone, Sparkles,
+  Trophy,
+  TrendingUp,
+  DollarSign,
+  Users,
+  BarChart3,
+  ArrowLeft,
+  Loader2,
+  Flame,
+  ShieldCheck,
+  Target,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
-import { cn, formatCompactNumber, getCategoryGradient, formatMoney, formatMargin } from "@/lib/utils";
-import { ScoreBadge } from "@/components/score-badge";
-import { MineaAdCard, type EnrichedAd } from "@/components/minea-ad-card";
-import type { Product } from "@shared/schema";
-import { useState } from "react";
+import { cn } from "@/lib/utils";
+
+interface WinningProduct {
+  id: string;
+  nameEn: string;
+  nameAr?: string;
+  bigImage: string;
+  sellPrice: string;
+  nowPrice: string;
+  listedNum: number;
+  winningScore: number;
+  demandLevel: string;
+  competitionLevel: string;
+  profitMarginPercent: number;
+  supplierPriceSAR: number;
+  suggestedPriceSAR: number;
+  estimatedProfitSAR: number;
+}
+
+interface WinningResult {
+  products: WinningProduct[];
+  totalRecords: number;
+}
+
+function getScoreColor(score: number) {
+  if (score >= 75) return "text-emerald-500";
+  if (score >= 55) return "text-amber-500";
+  return "text-red-400";
+}
+
+function getScoreBg(score: number) {
+  if (score >= 75) return "bg-emerald-500/10";
+  if (score >= 55) return "bg-amber-500/10";
+  return "bg-red-500/10";
+}
+
+function getDemandColor(level: string) {
+  if (level === "عالي") return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+  if (level === "متوسط") return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
+  return "bg-red-500/10 text-red-600 dark:text-red-400";
+}
+
+function getCompetitionColor(level: string) {
+  if (level === "منخفضة") return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+  if (level === "متوسطة") return "bg-amber-500/10 text-amber-600 dark:text-amber-400";
+  return "bg-red-500/10 text-red-600 dark:text-red-400";
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("ads");
-  const [search, setSearch] = useState("");
 
-  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+  const { data: winningData, isLoading } = useQuery<WinningResult>({
+    queryKey: ["/api/cj/winning?page=1&size=6&sort=winning"],
   });
 
-  const { data: adsData, isLoading: adsLoading } = useQuery<EnrichedAd[]>({
-    queryKey: ["/api/ads"],
-  });
+  const products = winningData?.products || [];
 
-  const { data: savedData } = useQuery<{ savedProductIds: string[] }>({
-    queryKey: ["/api/saved", "ids"],
-  });
+  const avgProfit = products.length > 0
+    ? (products.reduce((sum, p) => sum + p.estimatedProfitSAR, 0) / products.length).toFixed(0)
+    : "0";
 
-  const allProducts = products || [];
-  const allAds = adsData || [];
-  const savedIds = new Set(savedData?.savedProductIds || []);
-  const isLoading = productsLoading || adsLoading;
+  const avgMargin = products.length > 0
+    ? (products.reduce((sum, p) => sum + p.profitMarginPercent, 0) / products.length).toFixed(0)
+    : "0";
 
-  const adCountByProduct = useMemo(() => {
-    const map: Record<string, number> = {};
-    allAds.forEach(ad => {
-      map[ad.productId] = (map[ad.productId] || 0) + 1;
-    });
-    return map;
-  }, [allAds]);
+  const highDemandCount = products.filter(p => p.demandLevel === "عالي").length;
+  const topScore = products.length > 0 ? Math.max(...products.map(p => p.winningScore)) : 0;
 
-  const viewsByProduct = useMemo(() => {
-    const map: Record<string, number> = {};
-    allAds.forEach(ad => {
-      map[ad.productId] = (map[ad.productId] || 0) + (ad.views || 0);
-    });
-    return map;
-  }, [allAds]);
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold" data-testid="text-dashboard-greeting">
+          مرحباً{user?.fullName ? ` ${user.fullName}` : ""}
+        </h1>
+        <p className="text-muted-foreground mt-1">إليك أفضل المنتجات الرابحة اليوم</p>
+      </div>
 
-  const filteredAds = useMemo(() => {
-    let result = [...allAds];
-    if (search) {
-      const s = search.toLowerCase();
-      result = result.filter(ad =>
-        ad.productTitle.toLowerCase().includes(s) ||
-        ad.platform.toLowerCase().includes(s) ||
-        (ad.niche || "").toLowerCase().includes(s) ||
-        (ad.productNiche || "").toLowerCase().includes(s)
-      );
-    }
-    return result.sort((a, b) => (b.views || 0) - (a.views || 0));
-  }, [allAds, search]);
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-border/60">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+              <Trophy className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">أعلى نقاط فوز</p>
+              <p className="text-xl font-bold tabular-nums" data-testid="text-top-score">{topScore}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/60">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <DollarSign className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">متوسط الربح</p>
+              <p className="text-xl font-bold tabular-nums" data-testid="text-avg-profit">{avgProfit} ر.س</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/60">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
+              <BarChart3 className="w-5 h-5 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">متوسط الهامش</p>
+              <p className="text-xl font-bold tabular-nums" data-testid="text-avg-margin">%{avgMargin}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-border/60">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+              <Flame className="w-5 h-5 text-violet-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">طلب عالي</p>
+              <p className="text-xl font-bold tabular-nums" data-testid="text-high-demand">{highDemandCount}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-  const filteredProducts = useMemo(() => {
-    let result = [...allProducts];
-    if (search) {
-      const s = search.toLowerCase();
-      result = result.filter(p =>
-        p.title.toLowerCase().includes(s) ||
-        p.category.toLowerCase().includes(s) ||
-        (p.niche || "").toLowerCase().includes(s)
-      );
-    }
-    return result.sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
-  }, [allProducts, search]);
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-amber-500" />
+          <h2 className="text-lg font-bold">أفضل المنتجات الرابحة اليوم</h2>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/discover" data-testid="link-view-all-winning">
+            عرض الكل
+            <ArrowLeft className="w-4 h-4 ms-1" />
+          </Link>
+        </Button>
+      </div>
 
-  const topProducts = filteredProducts.slice(0, 8);
-
-  const quickFilterTags = [
-    { label: "الأكثر رواجاً", icon: Flame, color: "text-orange-500" },
-    { label: "فرص ذهبية", icon: Sparkles, color: "text-amber-500" },
-    { label: "جديد اليوم", icon: Package, color: "text-violet-500" },
-  ];
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-48 rounded-lg" />
-        <Skeleton className="h-10 w-full rounded-lg" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <Skeleton key={i} className="h-[420px] rounded-lg" />
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="aspect-square w-full" />
+              <CardContent className="p-3 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
           ))}
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted/50" data-testid="tabs-dashboard">
-            <TabsTrigger value="ads" className="gap-1.5 text-sm" data-testid="tab-ads">
-              <Megaphone className="w-4 h-4" />
-              مكتبة الإعلانات
-            </TabsTrigger>
-            <TabsTrigger value="products" className="gap-1.5 text-sm" data-testid="tab-products">
-              <Package className="w-4 h-4" />
-              المنتجات الرابحة
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="bg-muted/50 rounded-md px-2.5 py-1">
-            {activeTab === "ads" ? `${allAds.length} إعلان` : `${allProducts.length} منتج`}
-          </span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder={activeTab === "ads" ? "ابحث عن إعلانات..." : "ابحث عن منتجات..."}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="ps-9"
-            data-testid="input-dashboard-search"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {quickFilterTags.map(tag => (
-          <Badge
-            key={tag.label}
-            variant="outline"
-            className="cursor-pointer hover:bg-muted/50 transition-colors text-xs px-3 py-1.5 shrink-0 gap-1.5"
-          >
-            <tag.icon className={cn("w-3.5 h-3.5", tag.color)} />
-            {tag.label}
-          </Badge>
-        ))}
-        <Badge
-          variant="outline"
-          className="cursor-pointer hover:bg-muted/50 transition-colors text-xs px-3 py-1.5 shrink-0 gap-1.5"
-        >
-          <Bookmark className="w-3.5 h-3.5 text-primary" />
-          المحفوظة ({savedIds.size})
-        </Badge>
-      </div>
-
-      {activeTab === "ads" ? (
-        filteredAds.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-3" />
-            <p className="text-sm font-medium">لا توجد إعلانات</p>
-            <p className="text-xs text-muted-foreground mt-1">حاول تعديل البحث</p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="grid-dashboard-ads">
-            {filteredAds.map(ad => (
-              <MineaAdCard
-                key={ad.id}
-                ad={ad}
-                adCountForProduct={adCountByProduct[ad.productId]}
-                totalViewsForProduct={viewsByProduct[ad.productId]}
-              />
-            ))}
-          </div>
-        )
+      ) : products.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Trophy className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
+            <p className="font-medium">لا توجد منتجات رابحة حالياً</p>
+            <p className="text-sm text-muted-foreground mt-1">جرب البحث في صفحة المنتجات الرابحة</p>
+            <Button variant="outline" size="sm" className="mt-3" asChild>
+              <Link href="/discover">ابحث عن منتجات</Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        filteredProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Package className="w-12 h-12 text-muted-foreground/30 mb-3" />
-            <p className="text-sm font-medium">لا توجد منتجات</p>
-            <p className="text-xs text-muted-foreground mt-1">حاول تعديل البحث</p>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="grid-dashboard-products">
-            {topProducts.map(product => (
-              <DashboardProductCard key={product.id} product={product} isSaved={savedIds.has(product.id)} />
-            ))}
-            {filteredProducts.length > 8 && (
-              <div className="col-span-full flex justify-center pt-2">
-                <Button variant="outline" asChild>
-                  <Link href="/products" data-testid="link-view-all-products">
-                    عرض كل المنتجات ({filteredProducts.length})
-                    <ArrowLeft className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </div>
-        )
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4" data-testid="grid-winning-products">
+          {products.map((product, index) => (
+            <Link key={product.id} href="/discover" data-testid={`card-dashboard-winning-${product.id}`}>
+              <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-border/60 cursor-pointer h-full">
+                <div className="relative aspect-square overflow-hidden bg-muted">
+                  <img
+                    src={product.bigImage}
+                    alt={product.nameAr || product.nameEn}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+
+                  <div className="absolute top-2 start-2">
+                    <div className={cn(
+                      "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-lg",
+                      index < 3 ? "bg-amber-500 text-white" : "bg-black/60 text-white backdrop-blur-sm"
+                    )}>
+                      {index + 1}
+                    </div>
+                  </div>
+
+                  <div className="absolute top-2 end-2">
+                    <div className={cn(
+                      "flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold shadow-lg",
+                      getScoreBg(product.winningScore),
+                      getScoreColor(product.winningScore)
+                    )}>
+                      <Trophy className="w-3 h-3" />
+                      {product.winningScore}
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-2 start-2 end-2 flex items-center justify-between">
+                    <Badge className={cn("text-[10px] border-0 shadow-sm", getDemandColor(product.demandLevel))}>
+                      <TrendingUp className="w-3 h-3 me-0.5" />
+                      {product.demandLevel}
+                    </Badge>
+                    <Badge className={cn("text-[10px] border-0 shadow-sm", getCompetitionColor(product.competitionLevel))}>
+                      <ShieldCheck className="w-3 h-3 me-0.5" />
+                      {product.competitionLevel}
+                    </Badge>
+                  </div>
+                </div>
+
+                <CardContent className="p-3 space-y-2">
+                  <p className="text-sm font-semibold line-clamp-2 leading-relaxed min-h-[2.5rem]" data-testid={`text-dashboard-product-${product.id}`}>
+                    {product.nameAr || product.nameEn}
+                  </p>
+
+                  <div className="grid grid-cols-3 gap-1 text-center bg-muted/30 rounded-lg p-2 text-xs">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">التكلفة</p>
+                      <p className="font-bold tabular-nums">{product.supplierPriceSAR.toFixed(0)} ر.س</p>
+                    </div>
+                    <div className="border-x border-border/50">
+                      <p className="text-[10px] text-muted-foreground">البيع</p>
+                      <p className="font-bold tabular-nums">{product.suggestedPriceSAR.toFixed(0)} ر.س</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-muted-foreground">الربح</p>
+                      <p className="font-bold text-emerald-500 tabular-nums">{product.estimatedProfitSAR.toFixed(0)} ر.س</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       )}
+
+      <Card className="border-primary/20 bg-gradient-to-l from-primary/5 to-transparent">
+        <CardContent className="p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Target className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm">اكتشف المزيد من المنتجات الرابحة</p>
+              <p className="text-xs text-muted-foreground mt-0.5">ابحث وحلل المنتجات بالذكاء الاصطناعي</p>
+            </div>
+          </div>
+          <Button asChild>
+            <Link href="/discover" data-testid="link-discover-cta">
+              ابدأ البحث
+              <ArrowLeft className="w-4 h-4 ms-1" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
-  );
-}
-
-function DashboardProductCard({ product, isSaved }: { product: Product; isSaved?: boolean }) {
-  const isHighOpportunity = (product.opportunityScore || 0) >= 80;
-
-  return (
-    <Card
-      className="group transition-all duration-200 hover:shadow-md h-full border-border/60"
-      data-testid={`card-product-${product.id}`}
-    >
-      <CardContent className="p-0">
-        <div className={cn(
-          "relative h-44 rounded-t-lg bg-gradient-to-br flex items-center justify-center overflow-hidden",
-          getCategoryGradient(product.category)
-        )}>
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
-          ) : (
-            <Package className="w-8 h-8 text-white/60" />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-          <div className="absolute top-2.5 end-2.5">
-            <ScoreBadge label="" score={product.opportunityScore} />
-          </div>
-          {isHighOpportunity && (
-            <div className="absolute top-2.5 start-2.5">
-              <Badge className="text-[10px] bg-orange-500 text-white border-0 gap-1">
-                <Flame className="w-3 h-3" />
-                ترند
-              </Badge>
-            </div>
-          )}
-          {product.sourcePlatform && (
-            <div className="absolute bottom-2.5 start-2.5">
-              <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm">
-                {product.sourcePlatform}
-              </Badge>
-            </div>
-          )}
-        </div>
-
-        <div className="p-3 space-y-2.5">
-          <div>
-            <h3 className="text-sm font-semibold leading-tight line-clamp-1" data-testid={`text-product-title-${product.id}`}>
-              {product.title}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{product.category}</Badge>
-              {product.niche && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.niche}</Badge>}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-1 text-center bg-muted/30 rounded-md p-2 text-xs">
-            <div>
-              <p className="text-[10px] text-muted-foreground">المورّد</p>
-              <p className="font-bold tabular-nums">{formatMoney(product.supplierPrice)}</p>
-            </div>
-            <div className="border-x border-border/50">
-              <p className="text-[10px] text-muted-foreground">البيع</p>
-              <p className="font-bold tabular-nums">{formatMoney(product.suggestedSellPrice)}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-muted-foreground">الهامش</p>
-              <p className="font-bold text-emerald-500 tabular-nums">{formatMargin(product.estimatedMargin)}</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="flex-1 text-xs">
-              <Link href={`/products/${product.id}`} data-testid={`link-product-details-${product.id}`}>
-                التفاصيل
-              </Link>
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-8 h-8 shrink-0"
-              data-testid={`button-save-${product.id}`}
-            >
-              <Bookmark className={cn("w-3.5 h-3.5", isSaved ? "fill-primary text-primary" : "")} />
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

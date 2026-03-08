@@ -6,14 +6,14 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { scoreProduct } from "@shared/scoring";
 import { generateProductAnalysis } from "./openai";
-import { searchCJProducts, translateProductToArabic, translateProductNamesToArabic, calculateProductScores } from "./cj-dropshipping";
+import { searchCJProducts, translateProductToArabic, translateProductNamesToArabic, calculateProductScores, getWinningProducts, enrichProduct } from "./cj-dropshipping";
 import { z } from "zod";
 
 const cjProductSchema = z.object({
   id: z.string().min(1),
   nameEn: z.string().min(1),
   bigImage: z.string().nullable().optional().default(""),
-  sellPrice: z.string().refine((v) => !isNaN(parseFloat(v)), "Invalid price"),
+  sellPrice: z.string(),
   nowPrice: z.string().nullable().optional(),
   listedNum: z.number().int().min(0).nullable().optional().default(0),
   threeCategoryName: z.string().nullable().optional(),
@@ -402,6 +402,84 @@ export async function registerRoutes(
       res.json(enriched);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch ads" });
+    }
+  });
+
+  app.get("/api/cj/winning", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      if (!process.env.CJ_API_TOKEN) {
+        return res.status(500).json({ message: "CJ Dropshipping not configured" });
+      }
+
+      const { keyword, page, size, sort } = req.query;
+      const result = await getWinningProducts({
+        keyword: keyword as string,
+        page: page ? parseInt(page as string) : 1,
+        size: size ? parseInt(size as string) : 20,
+        sort: (sort as any) || "winning",
+      });
+
+      const translations = await translateProductNamesToArabic(result.products);
+      const productsWithArabic = result.products.map(p => ({
+        ...p,
+        nameAr: translations[p.id] || p.nameEn,
+      }));
+
+      res.json({ ...result, products: productsWithArabic });
+    } catch (err: any) {
+      console.error("[cj] Winning products error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to fetch winning products" });
+    }
+  });
+
+  app.post("/api/cj/analyze", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const parsed = cjProductSchema.safeParse(req.body?.product);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid product data" });
+      }
+
+      const cjProduct = parsed.data;
+      const translated = await translateProductToArabic(cjProduct);
+      const enriched = enrichProduct(cjProduct);
+
+      let analysis = null;
+      try {
+        analysis = await generateProductAnalysis({
+          title: translated.title,
+          category: translated.category,
+          niche: translated.niche || null,
+          shortDescription: translated.shortDescription || null,
+          supplierPrice: String(enriched.supplierPriceSAR),
+          suggestedSellPrice: String(enriched.suggestedPriceSAR),
+          estimatedMargin: String(enriched.profitMarginPercent),
+          trendScore: enriched.winningScore,
+          saturationScore: enriched.competitionLevel === "عالية" ? 70 : enriched.competitionLevel === "متوسطة" ? 45 : 20,
+          sourcePlatform: "CJ Dropshipping",
+        });
+      } catch {}
+
+      res.json({
+        ...enriched,
+        nameAr: translated.title,
+        shortDescription: translated.shortDescription,
+        categoryAr: translated.category,
+        nicheAr: translated.niche,
+        aiAnalysis: analysis,
+      });
+    } catch (err: any) {
+      console.error("[cj] Analyze error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to analyze product" });
     }
   });
 

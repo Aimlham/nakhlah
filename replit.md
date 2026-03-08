@@ -94,11 +94,11 @@ client/src/
     signup.tsx         - Signup form (email/password + Google OAuth, Arabic)
     forgot-password.tsx - Forgot password form (sends reset email, Arabic)
     reset-password.tsx - Reset password form (updates password via token, Arabic)
-    dashboard.tsx      - Minea-style dashboard with tabs (ads/products), search, filter pills, ad card grid (Arabic)
+    dashboard.tsx      - Winning products dashboard with stats cards, top 6 products, and CTA to discover page (Arabic)
     products.tsx       - Product listing with advanced filters (Arabic)
     product-details.tsx - Product details + AI analysis + TikTok ads section (Arabic)
     ads.tsx            - Minea-style ads library with platform tabs, filter sidebar, sort, grid/list toggle (Arabic)
-    cj-products.tsx    - CJ Dropshipping product discovery with search, filters, import (Arabic)
+    cj-products.tsx    - Winning Products hub — auto-ranked products by demand/profit/competition with AI analysis modal (Arabic)
     saved-products.tsx - User's saved products (Arabic)
     pricing-page.tsx   - Pricing plans (Arabic)
     auth-callback.tsx  - OAuth callback handler (processes tokens, redirects to dashboard)
@@ -139,11 +139,14 @@ shared/
 - **Service file**: `server/cj-dropshipping.ts` — handles auth token exchange (auto-refresh), product search, translation, scoring
 - **Auth flow**: API Key → `getAccessToken` (15-day validity) → auto-refreshes with refreshToken (180-day validity) → cached in memory
 - **API endpoints**:
-  - `GET /api/cj/search` — search CJ products (keyword, page, size, productFlag, categoryId)
+  - `GET /api/cj/winning` — winning products ranked by score (keyword, page, size, sort: winning/demand/profit/competition), 30-min cache
+  - `POST /api/cj/analyze` — AI analysis of a CJ product (translates, enriches, generates analysis without importing)
+  - `GET /api/cj/search` — raw CJ product search (keyword, page, size, productFlag, categoryId)
   - `POST /api/cj/import` — import single product (translates to Arabic via OpenAI, calculates scores, saves to DB)
   - `POST /api/cj/import-batch` — import up to 10 products at once
-- **Frontend**: `/discover` page with search, flag filters (trending/new/video/slow-moving), grid view, import button
-- **productFlag values**: 0=Trending, 1=New, 2=Video, 3=Slow-moving
+- **Winning Score**: Weighted formula — 45% demand (listedNum) + 25% anti-competition + 30% margin
+- **Frontend**: `/discover` page as "المنتجات الرابحة" hub with sorting, Arabic names, SAR prices, inline AI analysis modal
+- **Dashboard**: Shows top 6 winning products with stats (avg profit, avg margin, high demand count, top score)
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`

@@ -112,11 +112,132 @@ export interface CJProduct {
   createAt: number;
 }
 
+export interface CJProductEnriched extends CJProduct {
+  nameAr?: string;
+  winningScore: number;
+  demandLevel: string;
+  competitionLevel: string;
+  profitMarginPercent: number;
+  supplierPriceSAR: number;
+  suggestedPriceSAR: number;
+  estimatedProfitSAR: number;
+}
+
 export interface CJSearchResult {
   products: CJProduct[];
   totalRecords: number;
   totalPages: number;
   page: number;
+}
+
+export interface CJWinningResult {
+  products: CJProductEnriched[];
+  totalRecords: number;
+  totalPages: number;
+  page: number;
+}
+
+const USD_TO_SAR = 3.75;
+
+function extractNumericPrice(price: string): number {
+  const cleaned = (price || "0").replace(/\s+/g, "");
+  const match = cleaned.match(/[\d.]+/);
+  return match ? parseFloat(match[0]) : 0;
+}
+
+export function enrichProduct(product: CJProduct): CJProductEnriched {
+  const supplierUSD = extractNumericPrice(product.nowPrice || product.sellPrice);
+  const supplierPriceSAR = parseFloat((supplierUSD * USD_TO_SAR).toFixed(2));
+  const multiplier = supplierUSD < 5 ? 3.5 : supplierUSD < 15 ? 3 : supplierUSD < 30 ? 2.5 : 2;
+  const suggestedPriceSAR = parseFloat((supplierUSD * multiplier * USD_TO_SAR).toFixed(2));
+  const estimatedProfitSAR = parseFloat((suggestedPriceSAR - supplierPriceSAR).toFixed(2));
+  const profitMarginPercent = suggestedPriceSAR > 0
+    ? parseFloat((((suggestedPriceSAR - supplierPriceSAR) / suggestedPriceSAR) * 100).toFixed(1))
+    : 0;
+
+  const listedNum = product.listedNum || 0;
+
+  let demandScore = 0;
+  if (listedNum > 5000) demandScore = 95;
+  else if (listedNum > 2000) demandScore = 80;
+  else if (listedNum > 1000) demandScore = 70;
+  else if (listedNum > 500) demandScore = 60;
+  else if (listedNum > 100) demandScore = 45;
+  else demandScore = 25;
+
+  let competitionScore = 0;
+  if (listedNum > 10000) competitionScore = 90;
+  else if (listedNum > 5000) competitionScore = 70;
+  else if (listedNum > 2000) competitionScore = 55;
+  else if (listedNum > 500) competitionScore = 35;
+  else competitionScore = 15;
+
+  const marginScore = Math.min(100, profitMarginPercent * 1.2);
+  const winningScore = Math.round(
+    demandScore * 0.45 +
+    (100 - competitionScore) * 0.25 +
+    marginScore * 0.30
+  );
+
+  const demandLevel = demandScore >= 70 ? "عالي" : demandScore >= 45 ? "متوسط" : "منخفض";
+  const competitionLevel = competitionScore >= 60 ? "عالية" : competitionScore >= 35 ? "متوسطة" : "منخفضة";
+
+  return {
+    ...product,
+    winningScore: Math.min(99, Math.max(10, winningScore)),
+    demandLevel,
+    competitionLevel,
+    profitMarginPercent,
+    supplierPriceSAR,
+    suggestedPriceSAR,
+    estimatedProfitSAR,
+  };
+}
+
+interface CachedTrending {
+  data: CJWinningResult;
+  timestamp: number;
+}
+
+const trendingCache: Record<string, CachedTrending> = {};
+const CACHE_TTL = 30 * 60 * 1000;
+
+export async function getWinningProducts(options: {
+  keyword?: string;
+  page?: number;
+  size?: number;
+  sort?: "winning" | "demand" | "profit" | "competition";
+}): Promise<CJWinningResult> {
+  const cacheKey = `${options.keyword || ""}_${options.page || 1}_${options.size || 20}_${options.sort || "winning"}`;
+  const cached = trendingCache[cacheKey];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const raw = await searchCJProducts({
+    keyword: options.keyword,
+    page: options.page,
+    size: options.size || 20,
+    productFlag: 0,
+  });
+
+  let enriched = raw.products.map(enrichProduct);
+
+  const sort = options.sort || "winning";
+  if (sort === "winning") enriched.sort((a, b) => b.winningScore - a.winningScore);
+  else if (sort === "demand") enriched.sort((a, b) => b.listedNum - a.listedNum);
+  else if (sort === "profit") enriched.sort((a, b) => b.estimatedProfitSAR - a.estimatedProfitSAR);
+  else if (sort === "competition") enriched.sort((a, b) => a.listedNum - b.listedNum);
+
+  const result: CJWinningResult = {
+    products: enriched,
+    totalRecords: raw.totalRecords,
+    totalPages: raw.totalPages,
+    page: raw.page,
+  };
+
+  trendingCache[cacheKey] = { data: result, timestamp: Date.now() };
+  return result;
 }
 
 export async function searchCJProducts(options: {

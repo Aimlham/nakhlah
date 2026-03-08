@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Package, Bookmark, CreditCard, Settings, Zap, Megaphone, Globe } from "lucide-react";
+import { LayoutDashboard, Package, Bookmark, CreditCard, Settings, Zap, Megaphone, Trophy } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,8 +17,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   { title: "لوحة التحكم", url: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
-  { title: "المنتجات", url: "/products", icon: Package, key: "products" },
-  { title: "اكتشاف المنتجات", url: "/discover", icon: Globe, key: "discover" },
+  { title: "المنتجات الرابحة", url: "/discover", icon: Trophy, key: "discover" },
+  { title: "مكتبتي", url: "/products", icon: Package, key: "products" },
   { title: "مكتبة الإعلانات", url: "/ads", icon: Megaphone, key: "ads" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
   { title: "الأسعار", url: "/pricing", icon: CreditCard, key: "pricing" },
