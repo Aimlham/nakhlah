@@ -8,6 +8,7 @@ import { scoreProduct } from "@shared/scoring";
 import { generateProductAnalysis } from "./openai";
 import { searchCJProducts, translateProductToArabic, translateProductNamesToArabic, calculateProductScores, getWinningProducts, enrichProduct } from "./cj-dropshipping";
 import { checkHalalSafe } from "./storage";
+import { importAliExpressProducts, getAliExpressStatus } from "./aliexpress-importer";
 import { z } from "zod";
 
 const cjProductSchema = z.object({
@@ -553,12 +554,14 @@ export async function registerRoutes(
         source: "cj",
         supplierPrice,
         suggestedSellPrice: scores.suggestedSellPrice,
-        sellPrice: scores.suggestedSellPrice,
+        actualSellPrice: scores.suggestedSellPrice,
         estimatedMargin: scores.estimatedMargin,
-        orders: cjProduct.listedNum || 0,
+        ordersCount: cjProduct.listedNum || 0,
         rating: null,
         supplierName: "CJ Dropshipping",
         isHalalSafe: isHalalSafe,
+        discoverySource: "cj",
+        supplierSource: "cj",
         trendScore: scores.trendScore,
         saturationScore: scores.saturationScore,
         opportunityScore: null,
@@ -612,12 +615,14 @@ export async function registerRoutes(
             source: "cj",
             supplierPrice,
             suggestedSellPrice: scores.suggestedSellPrice,
-            sellPrice: scores.suggestedSellPrice,
+            actualSellPrice: scores.suggestedSellPrice,
             estimatedMargin: scores.estimatedMargin,
-            orders: cjProduct.listedNum || 0,
+            ordersCount: cjProduct.listedNum || 0,
             rating: null,
             supplierName: "CJ Dropshipping",
             isHalalSafe: isHalalSafe,
+            discoverySource: "cj",
+            supplierSource: "cj",
             trendScore: scores.trendScore,
             saturationScore: scores.saturationScore,
             opportunityScore: null,
@@ -636,6 +641,47 @@ export async function registerRoutes(
       console.error("[cj] Batch import error:", err.message);
       res.status(500).json({ message: err.message || "Failed to batch import" });
     }
+  });
+
+  const aliexpressImportSchema = z.object({
+    keyword: z.string().min(1).max(200),
+    halal_only: z.boolean().optional().default(false),
+    min_orders: z.number().int().min(0).max(100000).optional().default(50),
+    min_rating: z.number().min(0).max(5).optional().default(4.0),
+    max_pages: z.number().int().min(1).max(5).optional().default(1),
+  });
+
+  app.post("/api/import/aliexpress", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const parsed = aliexpressImportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
+      }
+
+      const { keyword, halal_only, min_orders, min_rating, max_pages } = parsed.data;
+
+      const result = await importAliExpressProducts({
+        keyword: keyword.trim(),
+        halalOnly: halal_only,
+        minOrders: min_orders,
+        minRating: min_rating,
+        maxPages: max_pages,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("[aliexpress] Import route error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to import AliExpress products" });
+    }
+  });
+
+  app.get("/api/import/aliexpress/status", async (_req: Request, res: Response) => {
+    res.json(getAliExpressStatus());
   });
 
   return httpServer;

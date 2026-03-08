@@ -1,0 +1,130 @@
+Implement the next real step of the product sourcing system:
+
+Phase 1:
+Support the new product columns already added in Supabase:
+- source
+- supplier_name
+- orders_count
+- rating
+- actual_sell_price
+- is_halal_safe
+- discovery_source
+- supplier_source
+
+Make sure the app reads and writes these fields correctly without breaking the current CJ integration.
+
+Phase 2:
+Build a real AliExpress importer pipeline.
+
+Important:
+- This must be a REAL importer structure, not fake placeholder support
+- Keep CJ integration working
+- AliExpress should become the second active source
+- Keep the current Arabic-first product UI working
+- Do not break existing routes or Supabase integration
+
+Requirements for the AliExpress importer:
+
+1. Create a dedicated import module for AliExpress products
+2. The importer should support:
+   - searching by keyword
+   - fetching product results
+   - mapping the data into our products schema
+3. Extract and map these fields when available:
+   - title
+   - image_url
+   - category
+   - supplier_name
+   - supplier_price
+   - actual_sell_price
+   - orders_count
+   - rating
+   - source = "aliexpress"
+   - discovery_source = "aliexpress"
+   - supplier_source = "aliexpress"
+4. Add data cleaning and normalization
+5. Add duplicate protection logic
+6. Keep code modular and ready for future Alibaba/Amazon importers
+
+Halal filter requirements:
+Before saving any imported AliExpress product, automatically mark or filter products using a keyword safety filter.
+
+Unsafe keywords include:
+wine
+beer
+vodka
+pork
+bacon
+cross
+jesus
+christ
+adult
+sex
+lingerie
+vibrator
+casino
+gambling
+tarot
+vape
+cigarette
+hookah
+weed
+
+Behavior:
+- If a product matches these keywords, set is_halal_safe = false
+- If the importer is configured for halal-only mode, skip saving these products completely
+
+Dropshipping quality filter requirements:
+Skip or downgrade products that are poor for dropshipping:
+- very low orders
+- very low rating
+- fragile keywords like glass or fragile
+- heavy or oversized keywords if detected
+
+Recommended defaults:
+- orders_count >= 50
+- rating >= 4.0
+- supplier_price should remain in a reasonable dropshipping range
+
+Scoring:
+Use the current scoring model and include:
+- demand from orders_count
+- margin
+- competition
+- rating
+
+Persistence:
+- Save imported products into Supabase products table
+- Do not overwrite CJ products incorrectly
+- Avoid duplicates by checking title similarity and source/supplier fields where possible
+
+API:
+Create an internal importer action or route for AliExpress import, for example:
+- /api/import/aliexpress
+
+The import route should:
+- accept a keyword
+- accept halal_only boolean
+- import products
+- return a summary:
+  - imported count
+  - skipped count
+  - unsafe count
+  - duplicate count
+
+UI:
+If easy, add a minimal admin/developer trigger or action to test importing AliExpress products by keyword.
+Do not build a large admin panel now.
+
+Engineering rules:
+- Do not fake a completed integration if data is still mocked
+- Clearly separate active sources from planned sources
+- Keep TypeScript clean
+- Keep modules reusable
+- Do not break the current app
+
+After finishing:
+1. explain exactly what part of AliExpress is truly active
+2. explain whether the importer uses live scraping/integration or mock fallback
+3. explain how to trigger an import
+4. confirm the app still works correctly

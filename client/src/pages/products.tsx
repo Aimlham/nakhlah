@@ -96,7 +96,7 @@ export default function ProductsPage() {
       if (sort === "opportunity") return (b.opportunityScore || 0) - (a.opportunityScore || 0);
       if (sort === "margin") return parseFloat(b.estimatedMargin || "0") - parseFloat(a.estimatedMargin || "0");
       if (sort === "trending") return (b.trendScore || 0) - (a.trendScore || 0);
-      if (sort === "orders") return (b.orders || 0) - (a.orders || 0);
+      if (sort === "orders") return (b.ordersCount || 0) - (a.ordersCount || 0);
       if (sort === "rating") return Number(b.rating || 0) - Number(a.rating || 0);
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });

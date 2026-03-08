@@ -50,7 +50,7 @@ export class MemStorage implements IStorage {
   }
 
   private seedProducts() {
-    const mockProducts: Omit<Product, "id" | "createdAt">[] = [
+    const mockProducts: Array<Partial<Omit<Product, "id" | "createdAt">> & Pick<Product, "title" | "category" | "supplierPrice" | "suggestedSellPrice">> = [
       {
         title: "مصباح إسقاط غروب الشمس LED",
         imageUrl: "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=400&h=400&fit=crop",
@@ -61,12 +61,14 @@ export class MemStorage implements IStorage {
         source: "aliexpress",
         supplierPrice: "8.50",
         suggestedSellPrice: "34.99",
-        sellPrice: "34.99",
+        actualSellPrice: "34.99",
         estimatedMargin: "75.7",
-        orders: 4200,
+        ordersCount: 4200,
         rating: "4.7",
         supplierName: "ShenZhen Light Co.",
         isHalalSafe: true,
+        discoverySource: "aliexpress",
+        supplierSource: "aliexpress",
         trendScore: 92,
         saturationScore: 35,
         opportunityScore: 88,
@@ -260,25 +262,29 @@ export class MemStorage implements IStorage {
 
     const defaultNewFields = {
       source: "aliexpress" as string | null,
-      sellPrice: null as string | null,
-      orders: null as number | null,
+      actualSellPrice: null as string | null,
+      ordersCount: null as number | null,
       rating: null as string | null,
       supplierName: null as string | null,
       isHalalSafe: true as boolean | null,
+      discoverySource: null as string | null,
+      supplierSource: null as string | null,
     };
 
-    mockProducts.forEach((p, i) => {
+    mockProducts.forEach((p: any, i: number) => {
       const id = String(i + 1);
       const product = {
         ...defaultNewFields,
         ...p,
         id,
         createdAt: dates[i] || new Date(),
-        sellPrice: p.sellPrice || p.suggestedSellPrice,
-        orders: p.orders || Math.floor(Math.random() * 5000) + 500,
+        actualSellPrice: p.actualSellPrice || p.sellPrice || p.suggestedSellPrice,
+        ordersCount: p.ordersCount || p.orders || Math.floor(Math.random() * 5000) + 500,
         rating: p.rating || (3.5 + Math.random() * 1.5).toFixed(1),
         supplierName: p.supplierName || "مورّد عام",
         isHalalSafe: p.isHalalSafe ?? checkHalalSafe({ title: p.title }),
+        discoverySource: p.discoverySource || p.source || "aliexpress",
+        supplierSource: p.supplierSource || p.source || "aliexpress",
       };
       this.products.set(id, product);
     });
@@ -362,12 +368,14 @@ export class MemStorage implements IStorage {
       source: product.source || null,
       supplierPrice: product.supplierPrice,
       suggestedSellPrice: product.suggestedSellPrice,
-      sellPrice: product.sellPrice || null,
+      actualSellPrice: product.actualSellPrice || null,
       estimatedMargin: product.estimatedMargin || null,
-      orders: product.orders || null,
+      ordersCount: product.ordersCount || null,
       rating: product.rating || null,
       supplierName: product.supplierName || null,
       isHalalSafe: product.isHalalSafe ?? true,
+      discoverySource: product.discoverySource || null,
+      supplierSource: product.supplierSource || null,
       trendScore: product.trendScore || null,
       saturationScore: product.saturationScore || null,
       opportunityScore: product.opportunityScore || null,

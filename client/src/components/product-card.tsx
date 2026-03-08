@@ -105,7 +105,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
             </div>
             <div className="border-x border-border/50">
               <p className="text-[10px] text-muted-foreground mb-0.5">البيع</p>
-              <p className="text-sm font-bold tabular-nums">{formatMoney(product.sellPrice || product.suggestedSellPrice)}</p>
+              <p className="text-sm font-bold tabular-nums">{formatMoney(product.actualSellPrice || product.suggestedSellPrice)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground mb-0.5">الهامش</p>
@@ -117,10 +117,10 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
 
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
-              {product.orders != null && product.orders > 0 && (
+              {product.ordersCount != null && product.ordersCount > 0 && (
                 <span className="flex items-center gap-0.5" data-testid={`text-orders-${product.id}`}>
                   <ShoppingCart className="w-3 h-3" />
-                  {product.orders.toLocaleString()}
+                  {product.ordersCount.toLocaleString()}
                 </span>
               )}
               {product.rating != null && (

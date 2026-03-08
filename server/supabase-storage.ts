@@ -10,7 +10,10 @@ import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
 import { getMockAds } from "./mock-ads";
 
-const NEW_COLUMNS = ["source", "sell_price", "orders", "rating", "supplier_name", "is_halal_safe"];
+const NEW_COLUMNS = [
+  "source", "actual_sell_price", "orders_count", "rating",
+  "supplier_name", "is_halal_safe", "discovery_source", "supplier_source",
+];
 let availableNewColumns: Set<string> = new Set();
 let columnsProbed = false;
 
@@ -31,14 +34,19 @@ async function probeColumns() {
   if (missing.length > 0) {
     console.log("[supabase] Missing columns in products table:", missing.join(", "));
     console.log("[supabase] Run this SQL in Supabase Dashboard > SQL Editor:");
-    console.log(`
-ALTER TABLE products ADD COLUMN IF NOT EXISTS source TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price NUMERIC;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS orders INTEGER;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS rating NUMERIC;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_name TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS is_halal_safe BOOLEAN DEFAULT true;
-    `.trim());
+    console.log(missing.map(c => {
+      const types: Record<string, string> = {
+        source: "TEXT",
+        actual_sell_price: "NUMERIC",
+        orders_count: "INTEGER",
+        rating: "NUMERIC",
+        supplier_name: "TEXT",
+        is_halal_safe: "BOOLEAN DEFAULT true",
+        discovery_source: "TEXT",
+        supplier_source: "TEXT",
+      };
+      return `ALTER TABLE products ADD COLUMN IF NOT EXISTS ${c} ${types[c] || "TEXT"};`;
+    }).join("\n"));
   } else {
     console.log("[supabase] All product columns available");
   }
@@ -60,12 +68,14 @@ function mapProduct(row: Record<string, unknown>): Product {
     source: (row.source as string) ?? null,
     supplierPrice: String(row.supplier_price),
     suggestedSellPrice: String(row.suggested_sell_price),
-    sellPrice: row.sell_price != null ? String(row.sell_price) : null,
+    actualSellPrice: row.actual_sell_price != null ? String(row.actual_sell_price) : null,
     estimatedMargin: row.estimated_margin != null ? String(row.estimated_margin) : null,
-    orders: (row.orders as number) ?? null,
+    ordersCount: (row.orders_count as number) ?? null,
     rating: row.rating != null ? String(row.rating) : null,
     supplierName: (row.supplier_name as string) ?? null,
     isHalalSafe: row.is_halal_safe != null ? (row.is_halal_safe as boolean) : true,
+    discoverySource: (row.discovery_source as string) ?? null,
+    supplierSource: (row.supplier_source as string) ?? null,
     trendScore: (row.trend_score as number) ?? null,
     saturationScore: (row.saturation_score as number) ?? null,
     opportunityScore: (row.opportunity_score as number) ?? null,
@@ -231,11 +241,13 @@ export class SupabaseStorage implements IStorage {
     };
 
     if (hasCol("source")) row.source = product.source || null;
-    if (hasCol("sell_price")) row.sell_price = product.sellPrice || null;
-    if (hasCol("orders")) row.orders = product.orders || null;
+    if (hasCol("actual_sell_price")) row.actual_sell_price = product.actualSellPrice || null;
+    if (hasCol("orders_count")) row.orders_count = product.ordersCount || null;
     if (hasCol("rating")) row.rating = product.rating || null;
     if (hasCol("supplier_name")) row.supplier_name = product.supplierName || null;
     if (hasCol("is_halal_safe")) row.is_halal_safe = product.isHalalSafe ?? true;
+    if (hasCol("discovery_source")) row.discovery_source = product.discoverySource || null;
+    if (hasCol("supplier_source")) row.supplier_source = product.supplierSource || null;
 
     const { data, error } = await this.db
       .from("products")

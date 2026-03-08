@@ -40,12 +40,14 @@ CREATE TABLE products (
   source TEXT,
   supplier_price NUMERIC NOT NULL,
   suggested_sell_price NUMERIC NOT NULL,
-  sell_price NUMERIC,
+  actual_sell_price NUMERIC,
   estimated_margin NUMERIC,
-  orders INTEGER,
+  orders_count INTEGER,
   rating NUMERIC,
   supplier_name TEXT,
   is_halal_safe BOOLEAN DEFAULT true,
+  discovery_source TEXT,
+  supplier_source TEXT,
   trend_score INTEGER,
   saturation_score INTEGER,
   opportunity_score INTEGER,
@@ -86,7 +88,7 @@ client/src/
     product-card.tsx   - Reusable product card with images, hover animation, trending badge
     score-badge.tsx    - Score indicator badge
     kpi-card.tsx       - Dashboard KPI metric card
-    filter-bar.tsx     - Search + filter controls (category, niche, platform, score/margin/trend ranges)
+    filter-bar.tsx     - Search + filter controls (category, niche, platform, score/margin/trend ranges, halal toggle)
     empty-state.tsx    - Empty state placeholder
     theme-provider.tsx - Dark/light mode context
   lib/
@@ -112,17 +114,30 @@ client/src/
 
 server/
   index.ts             - Express server entry
-  routes.ts            - API endpoints (auth, products, saved, ads, CJ) with dual auth support
+  routes.ts            - API endpoints (auth, products, saved, ads, CJ, AliExpress import) with dual auth support
   storage.ts           - IStorage interface + MemStorage (fallback) + conditional selection
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation of IStorage
   cj-dropshipping.ts   - CJ Dropshipping API client (auth, search, translate, scoring)
+  aliexpress-importer.ts - AliExpress product importer (RapidAPI, halal filter, quality filter, dedup)
   openai.ts            - OpenAI API client (product analysis)
 
 shared/
   schema.ts            - Drizzle schema + TypeScript types
   scoring.ts           - Reusable product scoring engine (trend, saturation, opportunity, margin)
+  halal.ts             - Shared halal keyword blocklist + checkHalalSafeText()
 ```
+
+## Product Schema Fields
+Key fields in the products table (Drizzle → Supabase):
+- `source` (text) — importer source: "cj", "aliexpress", "amazon", "alibaba"
+- `actualSellPrice` → `actual_sell_price` (numeric) — actual/market sell price
+- `ordersCount` → `orders_count` (integer) — total orders/sales count
+- `rating` (numeric) — product rating (0-5)
+- `supplierName` → `supplier_name` (text) — supplier/shop name
+- `isHalalSafe` → `is_halal_safe` (boolean) — halal-safe flag
+- `discoverySource` → `discovery_source` (text) — where product was discovered
+- `supplierSource` → `supplier_source` (text) — supplier platform
 
 ## API Routes
 - `GET /api/config` - Returns `{ supabaseEnabled: true/false }`
@@ -131,7 +146,7 @@ shared/
 - `GET /api/auth/me` - Current user (JWT or session)
 - `POST /api/auth/logout` - Logout
 - `GET /api/health` - Healthcheck endpoint (for deployment)
-- `GET /api/products` - List all products (with scoring applied server-side)
+- `GET /api/products` - List all products (with scoring applied server-side, supports `halal_only=true`)
 - `GET /api/products/:id` - Single product (with scoring applied)
 - `GET /api/products/:id/ads` - TikTok ads for a specific product
 - `GET /api/ads` - All ads (query: search, platform, niche, minViews)
@@ -139,6 +154,8 @@ shared/
 - `GET /api/saved/products` - Saved products for current user
 - `POST /api/saved/:productId` - Save a product
 - `DELETE /api/saved/:productId` - Unsave a product
+- `POST /api/import/aliexpress` - Import AliExpress products (keyword, halal_only, min_orders, min_rating, max_pages)
+- `GET /api/import/aliexpress/status` - AliExpress importer status (active/configured)
 
 ## CJ Dropshipping Integration
 - `CJ_API_TOKEN` — CJ API Key (obtained from cjdropshipping.com/myCJ.html#/apikey)
@@ -151,9 +168,17 @@ shared/
   - `POST /api/cj/import` — import single product (translates to Arabic via OpenAI, calculates scores, saves to DB)
   - `POST /api/cj/import-batch` — import up to 10 products at once
 - **Winning Score**: Weighted formula — 40% demand (orders/listedNum) + 30% margin + 20% competition + 10% rating
-- **Halal check**: `checkHalalSafe()` in `server/storage.ts` — auto-flags products containing blocked keywords (alcohol, pork, adult content, gambling, tobacco, etc.) as `isHalalSafe=false` on import
+- **Halal check**: Auto-flags products containing blocked keywords as `isHalalSafe=false` on import
 - **Frontend**: `/discover` page as "المنتجات الرابحة" hub with sorting, Arabic names, SAR prices, inline AI analysis modal, halal filter toggle
 - **Dashboard**: Shows top 6 winning products with stats (avg profit, avg margin, high demand count, top score)
+
+## AliExpress Importer
+- `ALIEXPRESS_API_KEY` — RapidAPI key for aliexpress-datahub endpoint
+- **Service file**: `server/aliexpress-importer.ts`
+- **Pipeline**: Search → normalize → halal filter → quality filter (min orders/rating, fragile/heavy skip) → dedup → score → save
+- **Quality defaults**: orders_count >= 50, rating >= 4.0, skips fragile/heavy keywords
+- **Import route**: `POST /api/import/aliexpress` — accepts keyword + options, returns summary
+- **Status**: Requires ALIEXPRESS_API_KEY to activate. Without key, returns clear error message.
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`
@@ -190,24 +215,14 @@ shared/
 - Product cards with gradient overlay, pricing grid, source platform badge, orders count, star rating, supplier name, hover animation (shadow + translate), trending badge for opportunityScore >= 80, halal-unsafe badge
 - Product details with colored score metric cards, side-by-side AI analysis cards, sticky pricing sidebar, ad cards
 - CJ Winning Products page with halal filter toggle, demand/competition/profit sorting
+- AliExpress product importer with quality filters, halal safety, dedup
 - Ad library page (/ads) with stats header, sort dropdown, colored platform badges, gradient overlays, dual action buttons
 - Halal-safe filtering: auto-detection on import using keyword blocklist, toggle filter in UI
-- Multi-source schema: `source` field supports "cj", "aliexpress", "amazon", "alibaba" (CJ active, others prepared)
+- Multi-source support: CJ (active), AliExpress (active with API key), Amazon/Alibaba (schema ready)
 - Save/unsave products
 - Product scoring engine with transparent, editable formulas (40% demand + 30% margin + 20% competition + 10% rating)
 - Dark/light mode toggle
 - Responsive design (mobile + desktop)
-
-## Supabase Migration (if columns missing)
-If the server logs show "Missing columns in products table", run this SQL in Supabase Dashboard > SQL Editor:
-```sql
-ALTER TABLE products ADD COLUMN IF NOT EXISTS source TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price NUMERIC;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS orders INTEGER;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS rating NUMERIC;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_name TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS is_halal_safe BOOLEAN DEFAULT true;
-```
 
 ## User Preferences
 - Clean, modern SaaS dashboard style
