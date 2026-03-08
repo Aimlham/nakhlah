@@ -233,7 +233,9 @@ export function calculateProductScores(product: CJProduct): {
   estimatedMargin: string;
   suggestedSellPrice: string;
 } {
-  const supplierPrice = parseFloat(product.nowPrice || product.sellPrice);
+  const priceStr = (product.nowPrice || product.sellPrice || "0").replace(/\s+/g, "");
+  const priceMatch = priceStr.match(/[\d.]+/);
+  const supplierPrice = priceMatch ? parseFloat(priceMatch[0]) : 0;
   const suggestedMultiplier = supplierPrice < 5 ? 4 : supplierPrice < 15 ? 3 : supplierPrice < 30 ? 2.5 : 2;
   const suggestedSellPrice = (supplierPrice * suggestedMultiplier).toFixed(2);
   const margin = (((parseFloat(suggestedSellPrice) - supplierPrice) / parseFloat(suggestedSellPrice)) * 100).toFixed(1);

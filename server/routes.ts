@@ -24,6 +24,13 @@ const cjProductSchema = z.object({
   createAt: z.number().nullable().optional().default(0),
 });
 
+function extractPrice(price: string | null | undefined): string {
+  if (!price) return "0";
+  const cleaned = price.replace(/\s+/g, "");
+  const match = cleaned.match(/[\d.]+/);
+  return match ? match[0] : "0";
+}
+
 const SessionStore = MemoryStore(session);
 
 async function getAuthUserId(req: Request): Promise<string | null> {
@@ -440,7 +447,7 @@ export async function registerRoutes(
 
       const translated = await translateProductToArabic(cjProduct);
       const scores = calculateProductScores(cjProduct);
-      const supplierPrice = cjProduct.nowPrice || cjProduct.sellPrice;
+      const supplierPrice = extractPrice(cjProduct.nowPrice || cjProduct.sellPrice);
 
       const newProduct = await storage.createProduct({
         title: translated.title,
@@ -449,7 +456,7 @@ export async function registerRoutes(
         category: translated.category,
         niche: translated.niche,
         sourcePlatform: "CJ Dropshipping",
-        supplierPrice: supplierPrice,
+        supplierPrice,
         suggestedSellPrice: scores.suggestedSellPrice,
         estimatedMargin: scores.estimatedMargin,
         trendScore: scores.trendScore,
@@ -492,7 +499,7 @@ export async function registerRoutes(
           const cjProduct = parsed.data;
           const translated = await translateProductToArabic(cjProduct);
           const scores = calculateProductScores(cjProduct);
-          const supplierPrice = cjProduct.nowPrice || cjProduct.sellPrice;
+          const supplierPrice = extractPrice(cjProduct.nowPrice || cjProduct.sellPrice);
 
           const newProduct = await storage.createProduct({
             title: translated.title,
@@ -501,7 +508,7 @@ export async function registerRoutes(
             category: translated.category,
             niche: translated.niche,
             sourcePlatform: "CJ Dropshipping",
-            supplierPrice: supplierPrice,
+            supplierPrice,
             suggestedSellPrice: scores.suggestedSellPrice,
             estimatedMargin: scores.estimatedMargin,
             trendScore: scores.trendScore,
