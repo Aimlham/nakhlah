@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { scoreProduct } from "@shared/scoring";
 import { generateProductAnalysis } from "./openai";
-import { searchCJProducts, translateProductToArabic, calculateProductScores } from "./cj-dropshipping";
+import { searchCJProducts, translateProductToArabic, translateProductNamesToArabic, calculateProductScores } from "./cj-dropshipping";
 import { z } from "zod";
 
 const cjProductSchema = z.object({
@@ -425,7 +425,13 @@ export async function registerRoutes(
         categoryId: categoryId as string,
       });
 
-      res.json(result);
+      const translations = await translateProductNamesToArabic(result.products);
+      const productsWithArabic = result.products.map(p => ({
+        ...p,
+        nameAr: translations[p.id] || p.nameEn,
+      }));
+
+      res.json({ ...result, products: productsWithArabic });
     } catch (err: any) {
       console.error("[cj] Search error:", err.message);
       res.status(500).json({ message: err.message || "Failed to search CJ products" });

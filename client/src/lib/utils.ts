@@ -5,10 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+const USD_TO_SAR = 3.75;
+
 export function formatMoney(amount: number | string | null): string {
-  if (amount === null || amount === undefined) return "$0.00";
+  if (amount === null || amount === undefined) return "٠ ر.س";
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
-  return `$${num.toFixed(2)}`;
+  const sar = num * USD_TO_SAR;
+  return `${sar.toFixed(2)} ر.س`;
 }
 
 export function formatMargin(margin: number | string | null): string {

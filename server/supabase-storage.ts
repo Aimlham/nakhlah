@@ -185,7 +185,7 @@ export class SupabaseStorage implements IStorage {
       .select()
       .single();
     if (error) throw new Error(error.message);
-    return this.mapProduct(data);
+    return mapProduct(data);
   }
 
   async getAdsByProductId(productId: string): Promise<ProductAd[]> {

@@ -28,6 +28,7 @@ type ProductFlag = 0 | 1 | 2 | 3;
 interface CJProduct {
   id: string;
   nameEn: string;
+  nameAr?: string;
   bigImage: string;
   sellPrice: string;
   nowPrice: string;
@@ -54,8 +55,14 @@ const flagFilters: { label: string; value: ProductFlag; icon: typeof Flame }[] =
   { label: "بطيئة الحركة", value: 3, icon: PackageMinus },
 ];
 
+const USD_TO_SAR = 3.75;
+
 function formatPrice(price: string) {
-  return `$${parseFloat(price).toFixed(2)}`;
+  const cleaned = price.replace(/\s+/g, "");
+  const match = cleaned.match(/[\d.]+/);
+  const usd = match ? parseFloat(match[0]) : 0;
+  const sar = usd * USD_TO_SAR;
+  return `${sar.toFixed(2)} ر.س`;
 }
 
 function CJProductCard({
@@ -69,8 +76,11 @@ function CJProductCard({
   isImporting: boolean;
   isImported: boolean;
 }) {
-  const margin = parseFloat(product.sellPrice) > 0
-    ? (((parseFloat(product.sellPrice) - parseFloat(product.nowPrice || product.sellPrice)) / parseFloat(product.sellPrice)) * 100).toFixed(0)
+  const extractNum = (p: string) => { const m = p.replace(/\s+/g, "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 0; };
+  const sell = extractNum(product.sellPrice);
+  const now = extractNum(product.nowPrice || product.sellPrice);
+  const margin = sell > 0 && now < sell
+    ? (((sell - now) / sell) * 100).toFixed(0)
     : "0";
 
   return (
@@ -96,8 +106,8 @@ function CJProductCard({
         )}
       </div>
       <CardContent className="p-3 space-y-2">
-        <p className="text-sm font-medium line-clamp-2 leading-relaxed min-h-[2.5rem]" dir="ltr" data-testid={`text-cj-title-${product.id}`}>
-          {product.nameEn}
+        <p className="text-sm font-medium line-clamp-2 leading-relaxed min-h-[2.5rem]" data-testid={`text-cj-title-${product.id}`}>
+          {product.nameAr || product.nameEn}
         </p>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground" dir="ltr">
@@ -114,11 +124,11 @@ function CJProductCard({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-base font-bold text-primary" dir="ltr">
+            <span className="text-base font-bold text-primary">
               {formatPrice(product.nowPrice || product.sellPrice)}
             </span>
-            {product.nowPrice && product.nowPrice !== product.sellPrice && (
-              <span className="text-xs line-through text-muted-foreground" dir="ltr">
+            {product.nowPrice && now < sell && (
+              <span className="text-xs line-through text-muted-foreground">
                 {formatPrice(product.sellPrice)}
               </span>
             )}
@@ -233,7 +243,7 @@ export default function CJProductsPage() {
           <Input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="ابحث عن منتج... (بالإنجليزية)"
+            placeholder="ابحث عن منتج... (بالإنجليزية أو العربية)"
             className="flex-1"
             dir="ltr"
             data-testid="input-cj-search"

@@ -173,6 +173,44 @@ export async function getCJCategories(): Promise<any[]> {
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 
+export async function translateProductNamesToArabic(products: CJProduct[]): Promise<Record<string, string>> {
+  if (!openai || products.length === 0) return {};
+
+  const names = products.map((p, i) => `${i + 1}. ${p.nameEn}`).join("\n");
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{
+        role: "user",
+        content: `ترجم أسماء المنتجات التالية للعربية. أعد كائن JSON حيث المفتاح هو الرقم والقيمة هي الترجمة العربية المختصرة والجذابة:
+
+${names}
+
+مثال الناتج:
+{"1": "اسم المنتج بالعربية", "2": "اسم آخر بالعربية"}`
+      }],
+      temperature: 0.3,
+      max_tokens: 2000,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return {};
+    const parsed = JSON.parse(content);
+    const result: Record<string, string> = {};
+    products.forEach((p, i) => {
+      if (parsed[String(i + 1)]) {
+        result[p.id] = parsed[String(i + 1)];
+      }
+    });
+    return result;
+  } catch (err) {
+    console.error("[cj] Batch translation failed:", err);
+    return {};
+  }
+}
+
 export async function translateProductToArabic(product: CJProduct): Promise<{
   title: string;
   shortDescription: string;

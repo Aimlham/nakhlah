@@ -158,7 +158,8 @@ shared/
 - CSS uses logical properties (`ms-*`, `me-*`, `ps-*`, `pe-*`, `start-*`, `end-*`) instead of physical `ml/mr/pl/pr/left/right`
 - Sidebar positioned on the right (`side="right"`)
 - Directional icons swapped (ArrowRight↔ArrowLeft for RTL)
-- Product names/titles remain in English (data, not UI)
+- Product names/titles translated to Arabic via batch OpenAI translation on CJ search results
+- Prices displayed in Saudi Riyal (ر.س) with USD→SAR conversion (×3.75)
 - data-testid attributes use English keys for testing stability
 - Prepared for future i18n/bilingual support
 
