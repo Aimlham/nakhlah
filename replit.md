@@ -64,8 +64,8 @@ client/src/
     empty-state.tsx    - Empty state placeholder
     theme-provider.tsx - Dark/light mode context
   lib/
-    supabase.ts        - Client-side Supabase client (with fallback, checks /api/config)
-    auth.tsx           - Auth context (Supabase Auth or session fallback)
+    supabase.ts        - Client-side Supabase client (sync availability check via env vars)
+    auth.tsx           - Auth context (Supabase Auth or session fallback, handles OAuth callback)
     queryClient.ts     - TanStack Query config (adds Bearer token for Supabase)
     utils.ts           - Formatting helpers (money, scores, margins)
   pages/
@@ -79,6 +79,7 @@ client/src/
     product-details.tsx - Single product details + AI analysis (Arabic)
     saved-products.tsx - User's saved products (Arabic)
     pricing-page.tsx   - Pricing plans (Arabic)
+    auth-callback.tsx  - OAuth callback handler (processes tokens, redirects to dashboard)
     settings.tsx       - Account settings (Arabic)
 
 server/
@@ -108,7 +109,7 @@ shared/
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`
-- **Google OAuth**: Uses `supabase.auth.signInWithOAuth({ provider: 'google' })` → redirects to Google → returns with session. Google provider must be configured in Supabase dashboard.
+- **Google OAuth**: Uses `supabase.auth.signInWithOAuth({ provider: 'google' })` → redirects to Google → returns to `/auth/callback` with `#access_token=...` → callback page processes tokens via `getSession()` + `onAuthStateChange` → redirects to `/dashboard`. Google provider must be configured in Supabase dashboard. The redirect URL `origin/auth/callback` must be whitelisted in Supabase Auth settings.
 - **Forgot/Reset Password**: Uses `supabase.auth.resetPasswordForEmail()` → sends email with reset link → user lands on `/reset-password` → `supabase.auth.updateUser({ password })` to change password.
 - **Fallback mode**: Client calls API routes → server uses express-session with cookie → userId stored in session
 

@@ -1,0 +1,51 @@
+Google OAuth now starts correctly, but after successful login the app redirects to a URL like:
+
+https://saas-builder-aimlham100.replit.app/#access_token=...
+
+and then shows a plain "Not Found" page.
+
+I need you to fix the post-Google-login flow completely.
+
+Goals:
+1. Keep the Google auth button visible and working
+2. After successful Google login, the user must NOT land on a Not Found page
+3. The app must correctly detect the authenticated Supabase session after OAuth redirect
+4. After login, redirect the user to a valid page such as:
+   - /dashboard
+   - or /
+   whichever already exists in the app
+5. Do not use localhost anywhere
+6. Keep the existing email/password auth intact
+7. Make the solution production-ready for Replit
+
+What I want you to do:
+- Inspect the current auth flow and routing
+- Find why the app shows "Not Found" after Supabase Google OAuth returns
+- Check whether the app is missing:
+  - Supabase session handling
+  - auth state listener
+  - callback route handling
+  - valid redirect target
+  - SPA fallback routing
+- Fix the auth callback flow properly instead of patching blindly
+
+Implementation requirements:
+- Reuse the existing Supabase client
+- Properly handle OAuth return from Supabase
+- Read the session after redirect
+- Use supabase.auth.getSession() and/or supabase.auth.onAuthStateChange() if needed
+- If a callback page is needed, create a proper one
+- If redirecting after login, only redirect to an existing valid route
+- If /dashboard does not exist, redirect to /
+- Prevent the user from seeing the raw #access_token URL and the Not Found page
+- Clean up the login flow so the user lands inside the app normally after Google login
+
+Also check routing:
+- If this is a React/Vite SPA, make sure the app handles auth redirect routes correctly
+- If the current router or server config causes Not Found after OAuth, fix that too
+
+At the end:
+1. Tell me exactly what caused the Not Found issue
+2. Tell me which files you changed
+3. Tell me what route the user is redirected to after login
+4. Confirm that Google login now works end-to-end in production

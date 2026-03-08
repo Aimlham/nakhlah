@@ -27,35 +27,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     let unsubscribe: (() => void) | null = null;
 
+    function setUserFromSession(session: any) {
+      if (cancelled || !session?.user) return;
+      setUser({
+        id: session.user.id,
+        email: session.user.email ?? "",
+        fullName: (session.user.user_metadata?.full_name as string) ?? null,
+      });
+    }
+
     async function init() {
       const supabase = getSupabaseClient();
 
       if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!cancelled && session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email ?? "",
-            fullName: (session.user.user_metadata?.full_name as string) ?? null,
-          });
-        }
-        if (!cancelled) setIsLoading(false);
-
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (_event, session) => {
+          (event, session) => {
             if (cancelled) return;
             if (session?.user) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email ?? "",
-                fullName: (session.user.user_metadata?.full_name as string) ?? null,
-              });
+              setUserFromSession(session);
+              if (event === "SIGNED_IN" && window.location.hash.includes("access_token")) {
+                window.history.replaceState({}, "", "/dashboard");
+                window.location.replace("/dashboard");
+              }
             } else {
               setUser(null);
             }
           }
         );
         unsubscribe = () => subscription.unsubscribe();
+
+        const { data: { session } } = await supabase.auth.getSession();
+        setUserFromSession(session);
+        if (!cancelled) setIsLoading(false);
         return;
       }
 
@@ -127,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin + "/dashboard",
+          redirectTo: window.location.origin + "/auth/callback",
         },
       });
       if (error) throw new Error(error.message);
