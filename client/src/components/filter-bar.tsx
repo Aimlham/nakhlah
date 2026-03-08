@@ -85,7 +85,9 @@ export function FilterBar({
           <SelectContent>
             <SelectItem value="all">جميع المنصات</SelectItem>
             {platforms.map(p => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
+              <SelectItem key={p} value={p}>
+                {p === "cj" ? "CJ Dropshipping" : p === "aliexpress" ? "AliExpress" : p === "amazon" ? "Amazon" : p === "alibaba" ? "Alibaba" : p}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

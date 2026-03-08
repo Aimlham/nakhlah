@@ -59,7 +59,7 @@ export default function ProductsPage() {
 
   const platforms = useMemo(() => {
     if (!products) return [];
-    return [...new Set(products.map(p => p.sourcePlatform).filter(Boolean))] as string[];
+    return [...new Set(products.map(p => p.source).filter(Boolean))] as string[];
   }, [products]);
 
   const filtered = useMemo(() => {
@@ -76,7 +76,7 @@ export default function ProductsPage() {
     }
     if (category !== "all") result = result.filter(p => p.category === category);
     if (niche !== "all") result = result.filter(p => p.niche === niche);
-    if (platform !== "all") result = result.filter(p => p.sourcePlatform === platform);
+    if (platform !== "all") result = result.filter(p => p.source === platform);
     if (halalOnly) result = result.filter(p => p.isHalalSafe !== false);
 
     if (minOpportunity !== "all") {
