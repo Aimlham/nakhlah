@@ -17,9 +17,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   { title: "لوحة التحكم", url: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
-  { title: "المنتجات الرابحة", url: "/products", icon: Trophy, key: "products" },
-  { title: "اكتشاف CJ", url: "/discover", icon: Package, key: "discover" },
   { title: "مكتبة الإعلانات", url: "/ads", icon: Megaphone, key: "ads" },
+  { title: "المنتجات الرابحة", url: "/products", icon: Trophy, key: "products" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
   { title: "الأسعار", url: "/pricing", icon: CreditCard, key: "pricing" },
   { title: "الإعدادات", url: "/settings", icon: Settings, key: "settings" },

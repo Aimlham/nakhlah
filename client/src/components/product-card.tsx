@@ -17,10 +17,8 @@ interface ProductCardProps {
 function getSourceLabel(source: string | null): string {
   if (!source) return "";
   const map: Record<string, string> = {
-    cj: "CJ",
     aliexpress: "AliExpress",
     amazon: "Amazon",
-    alibaba: "Alibaba",
   };
   return map[source.toLowerCase()] || source;
 }

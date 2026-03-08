@@ -349,10 +349,10 @@ export default function ProductDetailsPage() {
 
               <div className="space-y-2.5">
                 {product.supplierLink && (
-                  <Button variant="outline" size="default" className="w-full" asChild>
+                  <Button variant="default" size="default" className="w-full bg-red-500 hover:bg-red-600" asChild>
                     <a href={product.supplierLink} target="_blank" rel="noopener noreferrer" data-testid="link-supplier">
                       <ExternalLink className="w-4 h-4" />
-                      زيارة المورّد
+                      عرض على AliExpress
                     </a>
                   </Button>
                 )}

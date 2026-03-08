@@ -17,9 +17,11 @@ const EXCLUDED_CATEGORIES_EXACT = [
   "Large Appliances", "Major Appliances",
 ];
 
-const SUPPLIER_SOURCES = ["cj", "aliexpress", "alibaba"];
+const SUPPLIER_SOURCES = ["aliexpress", "alibaba"];
 
 const DISCOVERY_ONLY_SOURCES = ["amazon"];
+
+const SUPPORTED_SOURCES = ["aliexpress", "alibaba", "amazon"];
 
 export interface QualificationResult {
   isPublishable: boolean;
@@ -37,6 +39,10 @@ export function qualifyProduct(product: Product): QualificationResult {
   const ordersCount = product.ordersCount || 0;
   const rating = product.rating != null ? Number(product.rating) : 0;
   const opportunityScore = product.opportunityScore || 0;
+
+  if (source && !SUPPORTED_SOURCES.includes(source)) {
+    reasons.push("unsupported_source");
+  }
 
   if (product.isHalalSafe === false) {
     reasons.push("not_halal");

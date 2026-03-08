@@ -126,7 +126,7 @@ export default function ProductsPage() {
           <Trophy className="w-6 h-6 text-amber-500" />
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">المنتجات الرابحة</h1>
         </div>
-        <p className="text-muted-foreground mt-1">منتجات مؤهلة للدروبشيبنق بناءً على معايير الجودة والربحية</p>
+        <p className="text-muted-foreground mt-1">منتجات مؤهلة للدروبشيبنق مع رابط مباشر لصفحة المنتج على AliExpress</p>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
@@ -136,7 +136,7 @@ export default function ProductsPage() {
         </Badge>
         {platforms.map(p => (
           <Badge key={p} variant="outline" className="text-xs">
-            {p === "cj" ? "CJ" : p === "aliexpress" ? "AliExpress" : p === "amazon" ? "Amazon" : p}:
+            {p === "aliexpress" ? "AliExpress" : p === "amazon" ? "Amazon" : p}:
             {" "}{(products || []).filter(prod => prod.source === p).length}
           </Badge>
         ))}
@@ -165,7 +165,7 @@ export default function ProductsPage() {
         <EmptyState
           icon={Trophy}
           title="لا توجد منتجات رابحة مؤهلة"
-          description="جرب تعديل الفلاتر أو استورد منتجات جديدة من AliExpress أو CJ"
+          description="جرب تعديل الفلاتر أو استورد منتجات جديدة من AliExpress"
         />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

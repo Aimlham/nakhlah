@@ -35,14 +35,13 @@ function getScoreBg(score: number) {
 
 function getSourceLabel(source: string | null) {
   if (!source) return "";
-  const map: Record<string, string> = { cj: "CJ", aliexpress: "AliExpress", amazon: "Amazon", alibaba: "Alibaba" };
+  const map: Record<string, string> = { aliexpress: "AliExpress", amazon: "Amazon" };
   return map[source.toLowerCase()] || source;
 }
 
 function getSourceColor(source: string | null) {
   if (!source) return "bg-gray-500/80";
   const map: Record<string, string> = {
-    cj: "bg-orange-500/80",
     aliexpress: "bg-red-500/80",
     amazon: "bg-yellow-600/80",
   };
@@ -176,9 +175,9 @@ export default function DashboardPage() {
           <CardContent className="py-12 text-center">
             <Trophy className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
             <p className="font-medium">لا توجد منتجات رابحة مؤهلة حالياً</p>
-            <p className="text-sm text-muted-foreground mt-1">استورد منتجات من AliExpress أو CJ عشان يتم تقييمها تلقائياً</p>
+            <p className="text-sm text-muted-foreground mt-1">ابدأ باكتشاف الإعلانات الناجحة ثم استورد المنتجات من AliExpress</p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
-              <Link href="/discover">اكتشف منتجات CJ</Link>
+              <Link href="/ads">تصفح الإعلانات</Link>
             </Button>
           </CardContent>
         </Card>
