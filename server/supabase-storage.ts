@@ -187,6 +187,17 @@ export class SupabaseStorage implements IStorage {
     if (data && data.length > 0) return data.map(mapProductAd);
     return getMockAds();
   }
+
+  async updateProductAiSummary(productId: string, aiSummary: string): Promise<void> {
+    const { error } = await this.db
+      .from("products")
+      .update({ ai_summary: aiSummary })
+      .eq("id", productId);
+    if (error) {
+      console.error("[supabase] Failed to update ai_summary:", error.message);
+      throw new Error("Failed to update AI summary");
+    }
+  }
 }
 
 function mapProductAd(row: Record<string, unknown>): ProductAd {

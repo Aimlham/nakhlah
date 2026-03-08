@@ -8,6 +8,7 @@ import {
   ArrowRight, Bookmark, BookmarkCheck, ExternalLink, Package,
   TrendingUp, BarChart3, Target, Users, Megaphone, Lightbulb,
   Eye, Heart, Play, Calendar, Flame, Activity, DollarSign,
+  Sparkles, RefreshCw, Loader2,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { formatMoney, formatMargin, formatCompactNumber, getCategoryGradient, getPlatformColor, parseAiSummary, timeSince, cn, getScoreBg, getScoreColor } from "@/lib/utils";
@@ -51,6 +52,21 @@ export default function ProductDetailsPage() {
     },
     onError: (err: Error) => {
       toast({ title: "خطأ", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const generateAnalysis = useMutation({
+    mutationFn: async () => {
+      if (!productId) return;
+      const res = await apiRequest("POST", `/api/products/${productId}/analyze`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/products", productId] });
+      toast({ title: "تم التحليل", description: "تم توليد تحليل الذكاء الاصطناعي بنجاح" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "خطأ في التحليل", description: err.message, variant: "destructive" });
     },
   });
 
@@ -164,89 +180,128 @@ export default function ProductDetailsPage() {
             />
           </div>
 
-          {analysis && (
-            <div className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                   <Lightbulb className="w-4 h-4 text-primary" />
                 </div>
                 تحليل الذكاء الاصطناعي
               </h2>
-
-              <Card className="border-primary/20 bg-gradient-to-l from-primary/5 to-transparent">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Target className="w-4 h-4 text-primary" />
-                    </div>
-                    لماذا هذا المنتج واعد
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{analysis.whyPromising}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-blue-500/20 bg-gradient-to-l from-blue-500/5 to-transparent">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
-                      <Users className="w-4 h-4 text-blue-500" />
-                    </div>
-                    الجمهور المستهدف
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{analysis.targetAudience}</p>
-                </CardContent>
-              </Card>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                <Card className="border-amber-500/20 bg-gradient-to-l from-amber-500/5 to-transparent">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
-                        <Megaphone className="w-4 h-4 text-amber-500" />
-                      </div>
-                      زوايا إعلانية
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {analysis.adAngles.map((angle, i) => (
-                        <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                          <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500/10 text-amber-500 text-xs flex items-center justify-center font-bold mt-0.5">
-                            {i + 1}
-                          </span>
-                          {angle}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-violet-500/20 bg-gradient-to-l from-violet-500/5 to-transparent">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-violet-500/10 flex items-center justify-center">
-                        <BarChart3 className="w-4 h-4 text-violet-500" />
-                      </div>
-                      عبارات تسويقية
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {analysis.hooks.map((hook, i) => (
-                        <li key={i} className="text-sm text-muted-foreground italic leading-relaxed">
-                          &ldquo;{hook}&rdquo;
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
+              <Button
+                variant={analysis ? "outline" : "default"}
+                size="sm"
+                onClick={() => generateAnalysis.mutate()}
+                disabled={generateAnalysis.isPending}
+                data-testid="button-generate-analysis"
+              >
+                {generateAnalysis.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    جاري التحليل...
+                  </>
+                ) : analysis ? (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    إعادة التحليل
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    توليد التحليل بالذكاء الاصطناعي
+                  </>
+                )}
+              </Button>
             </div>
-          )}
+
+            {!analysis && !generateAnalysis.isPending && (
+              <Card className="border-dashed border-2 border-muted-foreground/20">
+                <CardContent className="p-8 text-center space-y-3">
+                  <Sparkles className="w-10 h-10 mx-auto text-muted-foreground/40" />
+                  <p className="text-muted-foreground text-sm">
+                    اضغط على زر "توليد التحليل" للحصول على تحليل شامل من الذكاء الاصطناعي يتضمن أسباب نجاح المنتج والجمهور المستهدف وأفكار إعلانية.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis && (
+              <>
+                <Card className="border-primary/20 bg-gradient-to-l from-primary/5 to-transparent">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Target className="w-4 h-4 text-primary" />
+                      </div>
+                      لماذا هذا المنتج واعد
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{analysis.whyPromising}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-blue-500/20 bg-gradient-to-l from-blue-500/5 to-transparent">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Users className="w-4 h-4 text-blue-500" />
+                      </div>
+                      الجمهور المستهدف
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{analysis.targetAudience}</p>
+                  </CardContent>
+                </Card>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Card className="border-amber-500/20 bg-gradient-to-l from-amber-500/5 to-transparent">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-amber-500/10 flex items-center justify-center">
+                          <Megaphone className="w-4 h-4 text-amber-500" />
+                        </div>
+                        زوايا إعلانية
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {analysis.adAngles.map((angle, i) => (
+                          <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                            <span className="shrink-0 w-5 h-5 rounded-full bg-amber-500/10 text-amber-500 text-xs flex items-center justify-center font-bold mt-0.5">
+                              {i + 1}
+                            </span>
+                            {angle}
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-violet-500/20 bg-gradient-to-l from-violet-500/5 to-transparent">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-violet-500/10 flex items-center justify-center">
+                          <BarChart3 className="w-4 h-4 text-violet-500" />
+                        </div>
+                        عبارات تسويقية
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2">
+                        {analysis.hooks.map((hook, i) => (
+                          <li key={i} className="text-sm text-muted-foreground italic leading-relaxed">
+                            &ldquo;{hook}&rdquo;
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
+          </div>
 
           {productAds.length > 0 && (
             <div className="space-y-4">

@@ -16,6 +16,7 @@ export interface IStorage {
   unsaveProduct(userId: string, productId: string): Promise<void>;
   getAdsByProductId(productId: string): Promise<ProductAd[]>;
   getAllAds(): Promise<ProductAd[]>;
+  updateProductAiSummary(productId: string, aiSummary: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -313,6 +314,14 @@ export class MemStorage implements IStorage {
 
   async getAllAds(): Promise<ProductAd[]> {
     return Array.from(this.ads.values());
+  }
+
+  async updateProductAiSummary(productId: string, aiSummary: string): Promise<void> {
+    const product = this.products.get(productId);
+    if (product) {
+      product.aiSummary = aiSummary;
+      this.products.set(productId, product);
+    }
   }
 }
 

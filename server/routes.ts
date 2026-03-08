@@ -5,6 +5,7 @@ import MemoryStore from "memorystore";
 import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { scoreProduct } from "@shared/scoring";
+import { generateProductAnalysis } from "./openai";
 
 const SessionStore = MemoryStore(session);
 
@@ -277,6 +278,44 @@ export async function registerRoutes(
       res.json(ads);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch ads" });
+    }
+  });
+
+  app.post("/api/products/:id/analyze", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const product = await storage.getProduct(req.params.id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      if (!process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ message: "OpenAI API key not configured" });
+      }
+
+      const aiSummary = await generateProductAnalysis({
+        title: product.title,
+        category: product.category,
+        niche: product.niche,
+        shortDescription: product.shortDescription,
+        supplierPrice: product.supplierPrice,
+        suggestedSellPrice: product.suggestedSellPrice,
+        estimatedMargin: product.estimatedMargin,
+        trendScore: product.trendScore,
+        saturationScore: product.saturationScore,
+        sourcePlatform: product.sourcePlatform,
+      });
+
+      await storage.updateProductAiSummary(req.params.id, aiSummary);
+
+      res.json({ aiSummary });
+    } catch (err: any) {
+      console.error("[openai] Analysis error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to generate analysis" });
     }
   });
 

@@ -8,6 +8,7 @@ A SaaS web application for e-commerce and dropshipping sellers to discover trend
 - **Backend**: Express 5 (Node.js) + Supabase Auth (with session fallback)
 - **Database**: Supabase (PostgreSQL) with in-memory fallback when not configured
 - **Auth**: Supabase Auth (email/password, Google OAuth, forgot/reset password) — falls back to express-session + memorystore
+- **AI**: OpenAI API (gpt-4o-mini) for product analysis — generates Arabic insights, ad angles, marketing hooks
 - **Build**: Vite
 - **Language**: Arabic (primary), RTL layout
 - **Font**: IBM Plex Sans Arabic (primary), Inter (fallback)
@@ -19,6 +20,12 @@ The app connects to Supabase for auth and data when these env vars are set:
 - `SUPABASE_SERVICE_ROLE_KEY` — Service role key (server-only, bypasses RLS)
 
 **If any are missing or invalid**, the app gracefully falls back to in-memory storage with session-based auth. A `/api/config` endpoint tells the client whether Supabase is fully configured server-side, preventing auth mode mismatch.
+
+## OpenAI Integration
+- `OPENAI_API_KEY` — Required for AI product analysis
+- **Service file**: `server/openai.ts` — generates Arabic AI analysis (whyPromising, targetAudience, adAngles, hooks)
+- **API endpoint**: `POST /api/products/:id/analyze` — requires auth, calls OpenAI gpt-4o-mini, saves result to product's ai_summary field
+- **Frontend**: Product details page has "توليد التحليل بالذكاء الاصطناعي" button (generate) and "إعادة التحليل" button (regenerate)
 
 ### Required Supabase Tables
 ```sql
