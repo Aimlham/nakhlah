@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
                 </p>
                 <Button variant="outline" className="w-full" asChild data-testid="link-back-to-login">
                   <Link href="/login">
-                    <ArrowLeft className="w-4 h-4 ms-2" />
+                    <ArrowLeft className="w-4 h-4" />
                     العودة لتسجيل الدخول
                   </Link>
                 </Button>
@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading} data-testid="button-send-reset">
-                  {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   إرسال رابط إعادة التعيين
                 </Button>
               </form>

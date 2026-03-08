@@ -197,7 +197,7 @@ export default function ResetPasswordPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading} data-testid="button-reset-password">
-                  {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   تحديث كلمة المرور
                 </Button>
               </form>

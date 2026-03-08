@@ -62,7 +62,7 @@ function HeroSection() {
           <Button size="lg" asChild>
             <Link href="/signup" data-testid="link-hero-signup">
               ابدأ تجربتك المجانية
-              <ArrowLeft className="w-4 h-4 ms-2" />
+              <ArrowLeft className="w-4 h-4" />
             </Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
@@ -156,7 +156,7 @@ function FeaturesSection() {
     {
       icon: BarChart3,
       title: "رؤى تسويقية بالذكاء الاصطناعي",
-      description: "احصل على زوايا إعلانية وأفكار جذب وتحليل للجمهور المستهدف لكل منتج.",
+      description: "احصل على زوايا إعلانية وعبارات تسويقية وتحليل للجمهور المستهدف لكل منتج.",
     },
     {
       icon: Link2,
@@ -340,7 +340,7 @@ function FinalCTA() {
         <Button size="lg" asChild>
           <Link href="/signup" data-testid="link-final-cta">
             ابدأ مجاناً
-            <ArrowLeft className="w-4 h-4 ms-2" />
+            <ArrowLeft className="w-4 h-4" />
           </Link>
         </Button>
       </div>

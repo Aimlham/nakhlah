@@ -78,7 +78,7 @@ export default function ProductDetailsPage() {
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
         <Link href="/products" data-testid="link-back-products">
-          <ArrowRight className="w-4 h-4 me-1" />
+          <ArrowRight className="w-4 h-4" />
           العودة للمنتجات
         </Link>
       </Button>
@@ -174,7 +174,7 @@ export default function ProductDetailsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
-                    أفكار جذب
+                    عبارات تسويقية
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -242,8 +242,8 @@ export default function ProductDetailsPage() {
             {product.supplierLink && (
               <Button variant="outline" className="w-full" asChild>
                 <a href={product.supplierLink} target="_blank" rel="noopener noreferrer" data-testid="link-supplier">
-                  <ExternalLink className="w-4 h-4 me-2" />
-                  عرض المورّد
+                  <ExternalLink className="w-4 h-4" />
+                  زيارة المورّد
                 </a>
               </Button>
             )}
@@ -256,12 +256,12 @@ export default function ProductDetailsPage() {
             >
               {isSaved ? (
                 <>
-                  <BookmarkCheck className="w-4 h-4 me-2" />
+                  <BookmarkCheck className="w-4 h-4" />
                   تم الحفظ
                 </>
               ) : (
                 <>
-                  <Bookmark className="w-4 h-4 me-2" />
+                  <Bookmark className="w-4 h-4" />
                   حفظ المنتج
                 </>
               )}

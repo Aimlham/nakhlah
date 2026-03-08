@@ -83,7 +83,7 @@ export default function SignupPage() {
                   onClick={handleGoogleLogin}
                   data-testid="button-google-signup"
                 >
-                  {googleLoading ? <Loader2 className="w-4 h-4 ms-2 animate-spin" /> : <SiGoogle className="w-4 h-4 ms-2" />}
+                  {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <SiGoogle className="w-4 h-4" />}
                   المتابعة بحساب Google
                 </Button>
 
@@ -134,7 +134,7 @@ export default function SignupPage() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading || googleLoading} data-testid="button-signup">
-                {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 إنشاء حساب
               </Button>
             </form>

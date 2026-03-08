@@ -54,10 +54,10 @@ export function FilterBar({
 
         <Select value={niche} onValueChange={onNicheChange}>
           <SelectTrigger className="sm:w-[160px]" data-testid="select-niche">
-            <SelectValue placeholder="النيتش" />
+            <SelectValue placeholder="التخصص" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">جميع النيتشات</SelectItem>
+            <SelectItem value="all">جميع التخصصات</SelectItem>
             {niches.map(n => (
               <SelectItem key={n} value={n}>{n}</SelectItem>
             ))}

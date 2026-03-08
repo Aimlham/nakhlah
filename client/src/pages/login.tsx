@@ -82,7 +82,7 @@ export default function LoginPage() {
                   onClick={handleGoogleLogin}
                   data-testid="button-google-login"
                 >
-                  {googleLoading ? <Loader2 className="w-4 h-4 ms-2 animate-spin" /> : <SiGoogle className="w-4 h-4 ms-2" />}
+                  {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <SiGoogle className="w-4 h-4" />}
                   المتابعة بحساب Google
                 </Button>
 
@@ -127,7 +127,7 @@ export default function LoginPage() {
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={loading || googleLoading} data-testid="button-login">
-                {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 تسجيل الدخول
               </Button>
             </form>

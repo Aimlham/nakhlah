@@ -74,14 +74,14 @@ export default function DashboardPage() {
           title="الرائج اليوم"
           value={trendingToday}
           icon={TrendingUp}
-          description="تقييم +80"
+          description="تقييم 80+"
           trend={trendingToday > 0 ? "رائج الآن" : undefined}
         />
         <KpiCard
           title="فرص عالية"
           value={highOpportunity}
           icon={Star}
-          description="فرصة +80"
+          description="فرصة 80+"
         />
         <KpiCard
           title="المنتجات المحفوظة"
@@ -97,7 +97,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base font-semibold">أحدث المنتجات</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/products" data-testid="link-view-all-products">
-                عرض الكل <ArrowLeft className="w-3 h-3 ms-1" />
+                عرض الكل <ArrowLeft className="w-3 h-3" />
               </Link>
             </Button>
           </CardHeader>
@@ -127,7 +127,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base font-semibold">أفضل الفرص</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/products" data-testid="link-view-opportunities">
-                عرض الكل <ArrowLeft className="w-3 h-3 ms-1" />
+                عرض الكل <ArrowLeft className="w-3 h-3" />
               </Link>
             </Button>
           </CardHeader>

@@ -31,7 +31,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
           ) : (
             <Package className="w-10 h-10 text-white/60" />
           )}
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2 end-2">
             <ScoreBadge label="التقييم" score={product.opportunityScore} />
           </div>
         </div>
