@@ -1,5 +1,7 @@
 import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { supabaseConfigured } from "./supabase";
+import { SupabaseStorage } from "./supabase-storage";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -294,4 +296,13 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+function createStorage(): IStorage {
+  if (supabaseConfigured) {
+    console.log("[storage] Using Supabase backend");
+    return new SupabaseStorage();
+  }
+  console.log("[storage] Supabase not configured — using in-memory storage");
+  return new MemStorage();
+}
+
+export const storage = createStorage();

@@ -66,12 +66,12 @@ export function AppSidebar() {
           <div className="flex items-center gap-3">
             <Avatar className="w-8 h-8">
               <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {(user.fullName || user.username).charAt(0).toUpperCase()}
+                {(user.fullName || user.email).charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-medium truncate" data-testid="text-sidebar-username">
-                {user.fullName || user.username}
+                {user.fullName || user.email}
               </span>
               <span className="text-xs text-muted-foreground truncate">Free Plan</span>
             </div>

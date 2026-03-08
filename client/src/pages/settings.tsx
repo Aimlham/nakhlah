@@ -32,12 +32,12 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-username">Username</Label>
+              <Label htmlFor="settings-email">Email</Label>
               <Input
-                id="settings-username"
-                defaultValue={user?.username || ""}
+                id="settings-email"
+                defaultValue={user?.email || ""}
                 disabled
-                data-testid="input-settings-username"
+                data-testid="input-settings-email"
               />
             </div>
             <Button data-testid="button-save-settings">Save Changes</Button>

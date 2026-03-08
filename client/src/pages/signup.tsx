@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -19,10 +19,10 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!username || !password || !fullName) return;
+    if (!email || !password || !fullName) return;
     setLoading(true);
     try {
-      await signup(username, password, fullName);
+      await signup(email, password, fullName);
       navigate("/dashboard");
     } catch (err: any) {
       toast({
@@ -65,15 +65,15 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
-                  type="text"
-                  placeholder="Choose a username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  data-testid="input-username"
+                  data-testid="input-email"
                 />
               </div>
               <div className="space-y-2">
@@ -81,7 +81,7 @@ export default function SignupPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Create a password"
+                  placeholder="Create a password (min. 6 characters)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
