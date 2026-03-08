@@ -1,20 +1,42 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Zap, Loader2 } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { isSupabaseEnabled } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [supabaseAvailable, setSupabaseAvailable] = useState(false);
+  const { login, loginWithGoogle } = useAuth();
+
+  useEffect(() => {
+    isSupabaseEnabled().then(setSupabaseAvailable);
+  }, []);
   const { toast } = useToast();
   const [, navigate] = useLocation();
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      toast({
+        title: "فشل تسجيل الدخول",
+        description: err.message || "تعذّر تسجيل الدخول بحساب Google.",
+        variant: "destructive",
+      });
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,7 +71,29 @@ export default function LoginPage() {
             <CardTitle>مرحباً بعودتك</CardTitle>
             <CardDescription>سجّل دخولك للمتابعة</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {supabaseAvailable && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={googleLoading || loading}
+                  onClick={handleGoogleLogin}
+                  data-testid="button-google-login"
+                >
+                  {googleLoading ? <Loader2 className="w-4 h-4 ms-2 animate-spin" /> : <SiGoogle className="w-4 h-4 ms-2" />}
+                  المتابعة بحساب Google
+                </Button>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">أو</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني</Label>
@@ -75,7 +119,14 @@ export default function LoginPage() {
                   data-testid="input-password"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading} data-testid="button-login">
+              {supabaseAvailable && (
+                <div className="flex justify-end">
+                  <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary" data-testid="link-forgot-password">
+                    نسيت كلمة المرور؟
+                  </Link>
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={loading || googleLoading} data-testid="button-login">
                 {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
                 تسجيل الدخول
               </Button>

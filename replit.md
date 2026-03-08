@@ -7,7 +7,7 @@ A SaaS web application for e-commerce and dropshipping sellers to discover trend
 - **Frontend**: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + TanStack Query
 - **Backend**: Express 5 (Node.js) + Supabase Auth (with session fallback)
 - **Database**: Supabase (PostgreSQL) with in-memory fallback when not configured
-- **Auth**: Supabase Auth (email/password) — falls back to express-session + memorystore
+- **Auth**: Supabase Auth (email/password, Google OAuth, forgot/reset password) — falls back to express-session + memorystore
 - **Build**: Vite
 - **Language**: Arabic (primary), RTL layout
 - **Font**: IBM Plex Sans Arabic (primary), Inter (fallback)
@@ -70,8 +70,10 @@ client/src/
     utils.ts           - Formatting helpers (money, scores, margins)
   pages/
     landing.tsx        - Public landing page (Arabic)
-    login.tsx          - Login form (email/password, Arabic)
-    signup.tsx         - Signup form (email/password, Arabic)
+    login.tsx          - Login form (email/password + Google OAuth, Arabic)
+    signup.tsx         - Signup form (email/password + Google OAuth, Arabic)
+    forgot-password.tsx - Forgot password form (sends reset email, Arabic)
+    reset-password.tsx - Reset password form (updates password via token, Arabic)
     dashboard.tsx      - Dashboard with KPIs (Arabic)
     products.tsx       - Product listing with filters (Arabic)
     product-details.tsx - Single product details + AI analysis (Arabic)
@@ -96,6 +98,7 @@ shared/
 - `POST /api/auth/login` - Login (Supabase Auth or session)
 - `GET /api/auth/me` - Current user (JWT or session)
 - `POST /api/auth/logout` - Logout
+- `GET /api/health` - Healthcheck endpoint (for deployment)
 - `GET /api/products` - List all products
 - `GET /api/products/:id` - Single product
 - `GET /api/saved/ids` - Saved product IDs for current user
@@ -105,6 +108,8 @@ shared/
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`
+- **Google OAuth**: Uses `supabase.auth.signInWithOAuth({ provider: 'google' })` → redirects to Google → returns with session. Google provider must be configured in Supabase dashboard.
+- **Forgot/Reset Password**: Uses `supabase.auth.resetPasswordForEmail()` → sends email with reset link → user lands on `/reset-password` → `supabase.auth.updateUser({ password })` to change password.
 - **Fallback mode**: Client calls API routes → server uses express-session with cookie → userId stored in session
 
 ## RTL / Arabic

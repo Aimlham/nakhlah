@@ -12,6 +12,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   signup: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
 }
@@ -122,6 +123,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    const sbEnabled = await isSupabaseEnabled();
+    const supabase = getSupabaseClient();
+
+    if (sbEnabled && supabase) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/dashboard",
+        },
+      });
+      if (error) throw new Error(error.message);
+      return;
+    }
+
+    throw new Error("Google sign-in requires Supabase");
+  }, []);
+
   const logout = useCallback(async () => {
     const sbEnabled = await isSupabaseEnabled();
     const supabase = getSupabaseClient();
@@ -137,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginWithGoogle, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );

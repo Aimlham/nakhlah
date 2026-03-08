@@ -16,6 +16,8 @@ import ProductDetailsPage from "@/pages/product-details";
 import SavedProductsPage from "@/pages/saved-products";
 import PricingPage from "@/pages/pricing-page";
 import SettingsPage from "@/pages/settings";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
@@ -64,6 +66,8 @@ function Router() {
       <Route path="/" component={LandingPage} />
       <Route path="/login">{() => <PublicRoute component={LoginPage} />}</Route>
       <Route path="/signup">{() => <PublicRoute component={SignupPage} />}</Route>
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/dashboard">{() => <ProtectedRoute component={DashboardPage} />}</Route>
       <Route path="/products">{() => <ProtectedRoute component={ProductsPage} />}</Route>
       <Route path="/products/:id">{() => <ProtectedRoute component={ProductDetailsPage} />}</Route>

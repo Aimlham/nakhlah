@@ -1,21 +1,43 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Zap, Loader2 } from "lucide-react";
+import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
+import { isSupabaseEnabled } from "@/lib/supabase";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [supabaseAvailable, setSupabaseAvailable] = useState(false);
+  const { signup, loginWithGoogle } = useAuth();
+
+  useEffect(() => {
+    isSupabaseEnabled().then(setSupabaseAvailable);
+  }, []);
   const { toast } = useToast();
   const [, navigate] = useLocation();
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      toast({
+        title: "فشل إنشاء الحساب",
+        description: err.message || "تعذّر التسجيل بحساب Google.",
+        variant: "destructive",
+      });
+      setGoogleLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -50,7 +72,29 @@ export default function SignupPage() {
             <CardTitle>أنشئ حسابك</CardTitle>
             <CardDescription>ابدأ باكتشاف المنتجات الرابحة اليوم</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {supabaseAvailable && (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={googleLoading || loading}
+                  onClick={handleGoogleLogin}
+                  data-testid="button-google-signup"
+                >
+                  {googleLoading ? <Loader2 className="w-4 h-4 ms-2 animate-spin" /> : <SiGoogle className="w-4 h-4 ms-2" />}
+                  المتابعة بحساب Google
+                </Button>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-xs text-muted-foreground">أو</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">الاسم الكامل</Label>
@@ -89,7 +133,7 @@ export default function SignupPage() {
                   data-testid="input-password"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading} data-testid="button-signup">
+              <Button type="submit" className="w-full" disabled={loading || googleLoading} data-testid="button-signup">
                 {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
                 إنشاء حساب
               </Button>
