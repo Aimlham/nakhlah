@@ -1,0 +1,135 @@
+Upgrade the system from a simple product catalog into a real winning-product discovery engine.
+
+Current situation:
+- CJ Dropshipping products are already imported
+- database supports multiple sources
+- halal filtering exists
+- scoring system exists but is basic
+
+Goal:
+Combine AliExpress supplier data + TikTok trend signals + halal filtering + a real winning score.
+
+Requirements:
+
+1) AliExpress importer
+Build a real AliExpress importer module.
+
+The importer should:
+- search products by keyword
+- fetch product data
+- map fields to our products table
+
+Fields to extract:
+title
+image_url
+supplier_name
+supplier_price
+orders_count
+rating
+category
+source = "aliexpress"
+supplier_source = "aliexpress"
+
+Apply filters:
+orders_count >= 100
+rating >= 4.2
+supplier_price <= 30
+
+Prevent duplicates when importing.
+
+2) TikTok trend signals
+
+Create a signals layer for TikTok.
+
+Store:
+video_url
+thumbnail
+likes
+views
+keyword
+platform = "tiktok"
+
+Link TikTok signals to products using keyword similarity.
+
+3) Halal filtering
+
+Before saving products apply halal filter.
+
+Block keywords:
+wine
+beer
+vodka
+pork
+bacon
+cross
+jesus
+adult
+sex
+lingerie
+vibrator
+casino
+gambling
+tarot
+vape
+cigarette
+weed
+
+Add fields:
+is_halal_safe
+halal_reason
+halal_confidence
+
+4) Real winning score
+
+Implement scoring model:
+
+winning_score =
+35% demand_score +
+30% margin_score +
+20% competition_score +
+15% quality_score
+
+Where:
+
+demand_score uses
+orders_count
+TikTok signals
+
+margin_score uses
+supplier_price
+sell_price
+
+competition_score uses
+saturation
+
+quality_score uses
+rating
+
+5) UI updates
+
+Product cards should display:
+
+supplier
+orders_count
+rating
+halal badge
+TikTok signal badge
+winning_score
+
+Add filters:
+halal only
+source
+minimum orders
+minimum rating
+TikTok signals only
+minimum winning score
+
+Engineering rules:
+
+Do not break existing CJ integration.
+Keep Arabic UI.
+Keep RTL layout.
+Keep TypeScript clean.
+
+After finishing:
+Explain which parts are live and which still require external scraping setup.
