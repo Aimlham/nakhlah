@@ -1,0 +1,97 @@
+Fix the product discovery logic so the app stops behaving like a generic product marketplace and instead behaves like a true winning-product finder for dropshipping.
+
+Current problem:
+The app is currently displaying products from all imported sources directly (including Amazon items like phones), which makes it feel like a product catalog or marketplace instead of a curated winning-product discovery tool.
+
+Goal:
+Only show qualified, publishable, dropshipping-friendly winning products in the main winning products experience.
+
+Important:
+- Do not break current source integrations
+- Keep Arabic UI and RTL
+- Keep current schema if possible, but extend it if needed
+- Do not treat every imported source equally in the final display
+- Make the app behave like a curated discovery engine, not a general catalog
+
+Requirements:
+
+1. Separate source roles clearly
+
+Introduce or properly use these concepts:
+- discovery_source = where the signal came from
+  Examples: tiktok, meta, amazon, cj, aliexpress
+- supplier_source = where the product can actually be sourced for selling
+  Examples: cj, aliexpress, alibaba
+
+Important:
+Amazon should usually be treated as a demand/reference source, not a default publishable supplier source.
+
+2. Add a product qualification layer
+
+Before showing any product in the “winning products” page, it must pass qualification rules.
+
+Add a boolean field if needed:
+- is_publishable
+
+A product should only be publishable if:
+- is_halal_safe = true
+- supplier_source is one of: cj, aliexpress, alibaba
+- winning_score >= 70
+- orders_count >= 100
+- rating >= 4.2
+- supplier_price is in a reasonable dropshipping range
+- it is not in excluded categories like phones, laptops, oversized items, fragile goods, or clearly unsuitable high-ticket products
+
+3. Exclude marketplace-like products from winning products
+
+Products such as mainstream phones, expensive electronics, and generic Amazon catalog items should not appear in the winning products page unless they clearly pass the dropshipping qualification logic.
+
+4. Update page logic
+
+The “winning products” page should show only qualified products.
+It should not simply show all imported products from all sources.
+
+5. Add dropshipping suitability logic
+
+Create a simple suitability filter using:
+- category exclusions
+- keyword exclusions
+- price range
+- rating
+- order volume
+- supplier suitability
+
+Examples of categories/keywords to exclude or downgrade:
+- phones
+- smartphones
+- laptops
+- tablets
+- heavy
+- fragile
+- branded mainstream electronics
+
+6. UI improvements
+
+On each product card, clearly show:
+- discovery source
+- supplier source
+- halal-safe badge
+- winning score
+- only show products that are truly qualified
+
+7. Keep Amazon useful but not dominant
+
+Amazon data can still be used for:
+- demand/reference signals
+- category validation
+- trend support
+
+But do not let Amazon turn the app into a general marketplace feed.
+
+8. Explain the outcome
+
+After implementation, clearly explain:
+- which products are allowed to appear in winning products
+- which source roles are discovery vs supplier
+- how unsuitable products are now filtered out
+- confirm the app now behaves more like a curated winning-product engine

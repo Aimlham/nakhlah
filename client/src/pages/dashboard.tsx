@@ -52,23 +52,25 @@ function getSourceColor(source: string | null) {
 export default function DashboardPage() {
   const { user } = useAuth();
 
-  const { data: allProducts, isLoading } = useQuery<Product[]>({
+  const { data: winningProducts, isLoading } = useQuery<Product[]>({
+    queryKey: ["/api/products/winning"],
+  });
+
+  const { data: allProducts } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
-  const topProducts = (allProducts || [])
-    .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0))
-    .slice(0, 6);
+  const topProducts = (winningProducts || []).slice(0, 6);
 
-  const totalProducts = allProducts?.length || 0;
-  const avgMargin = totalProducts > 0
-    ? (allProducts!.reduce((sum, p) => sum + parseFloat(p.estimatedMargin || "0"), 0) / totalProducts).toFixed(0)
+  const totalWinning = winningProducts?.length || 0;
+  const totalAll = allProducts?.length || 0;
+  const avgMargin = totalWinning > 0
+    ? (winningProducts!.reduce((sum, p) => sum + parseFloat(p.estimatedMargin || "0"), 0) / totalWinning).toFixed(0)
     : "0";
-  const highOpportunityCount = (allProducts || []).filter(p => (p.opportunityScore || 0) >= 70).length;
   const topScore = topProducts.length > 0 ? Math.max(...topProducts.map(p => p.opportunityScore || 0)) : 0;
 
   const sourceCounts: Record<string, number> = {};
-  (allProducts || []).forEach(p => {
+  (winningProducts || []).forEach(p => {
     const src = p.source || "other";
     sourceCounts[src] = (sourceCounts[src] || 0) + 1;
   });
@@ -113,8 +115,8 @@ export default function DashboardPage() {
               <TrendingUp className="w-5 h-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">فرص عالية</p>
-              <p className="text-xl font-bold tabular-nums" data-testid="text-high-demand">{highOpportunityCount}</p>
+              <p className="text-xs text-muted-foreground">منتجات رابحة</p>
+              <p className="text-xl font-bold tabular-nums" data-testid="text-high-demand">{totalWinning}</p>
             </div>
           </CardContent>
         </Card>
@@ -126,7 +128,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">إجمالي المنتجات</p>
-              <p className="text-xl font-bold tabular-nums" data-testid="text-total-products">{totalProducts}</p>
+              <p className="text-xl font-bold tabular-nums" data-testid="text-total-products">{totalAll}</p>
             </div>
           </CardContent>
         </Card>
@@ -173,10 +175,10 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Trophy className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="font-medium">لا توجد منتجات حالياً</p>
-            <p className="text-sm text-muted-foreground mt-1">استورد منتجات من AliExpress أو Amazon أو CJ</p>
+            <p className="font-medium">لا توجد منتجات رابحة مؤهلة حالياً</p>
+            <p className="text-sm text-muted-foreground mt-1">استورد منتجات من AliExpress أو CJ عشان يتم تقييمها تلقائياً</p>
             <Button variant="outline" size="sm" className="mt-3" asChild>
-              <Link href="/products">تصفح المنتجات</Link>
+              <Link href="/discover">اكتشف منتجات CJ</Link>
             </Button>
           </CardContent>
         </Card>

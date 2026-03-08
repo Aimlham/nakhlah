@@ -10,6 +10,7 @@ import { searchCJProducts, translateProductToArabic, translateProductNamesToArab
 import { checkHalalSafe } from "./storage";
 import { importAliExpressProducts, getAliExpressStatus } from "./aliexpress-importer";
 import { importAmazonProducts, getAmazonStatus } from "./amazon-importer";
+import { isProductPublishable, qualifyProduct } from "@shared/qualification";
 import { z } from "zod";
 
 const cjProductSchema = z.object({
@@ -221,6 +222,19 @@ export async function registerRoutes(
       res.json(products);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch products" });
+    }
+  });
+
+  app.get("/api/products/winning", async (req: Request, res: Response) => {
+    try {
+      let products = await storage.getAllProducts();
+      products = products.map(scoreProduct);
+      const winning = products
+        .filter(p => isProductPublishable(p))
+        .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
+      res.json(winning);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || "Failed to fetch winning products" });
     }
   });
 

@@ -6,7 +6,8 @@ import { FilterBar } from "@/components/filter-bar";
 import { EmptyState } from "@/components/empty-state";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Package } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Trophy, Flame } from "lucide-react";
 import type { Product } from "@shared/schema";
 
 export default function ProductsPage() {
@@ -14,7 +15,7 @@ export default function ProductsPage() {
   const [category, setCategory] = useState("all");
   const [niche, setNiche] = useState("all");
   const [platform, setPlatform] = useState("all");
-  const [sort, setSort] = useState("newest");
+  const [sort, setSort] = useState("opportunity");
   const [minOpportunity, setMinOpportunity] = useState("all");
   const [minMargin, setMinMargin] = useState("all");
   const [minTrend, setMinTrend] = useState("all");
@@ -22,7 +23,7 @@ export default function ProductsPage() {
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products/winning"],
   });
 
   const { data: savedData } = useQuery<{ savedProductIds: string[] }>({
@@ -121,8 +122,24 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">مكتبتي</h1>
-        <p className="text-muted-foreground">المنتجات المحفوظة في مكتبتك الشخصية</p>
+        <div className="flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-amber-500" />
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">المنتجات الرابحة</h1>
+        </div>
+        <p className="text-muted-foreground mt-1">منتجات مؤهلة للدروبشيبنق بناءً على معايير الجودة والربحية</p>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant="outline" className="text-xs gap-1">
+          <Flame className="w-3 h-3 text-amber-500" />
+          {products?.length || 0} منتج مؤهل
+        </Badge>
+        {platforms.map(p => (
+          <Badge key={p} variant="outline" className="text-xs">
+            {p === "cj" ? "CJ" : p === "aliexpress" ? "AliExpress" : p === "amazon" ? "Amazon" : p}:
+            {" "}{(products || []).filter(prod => prod.source === p).length}
+          </Badge>
+        ))}
       </div>
 
       <FilterBar
@@ -141,14 +158,14 @@ export default function ProductsPage() {
       />
 
       <p className="text-sm text-muted-foreground" data-testid="text-products-count">
-        {filtered.length} منتج
+        {filtered.length} منتج رابح
       </p>
 
       {filtered.length === 0 ? (
         <EmptyState
-          icon={Package}
-          title="لم يتم العثور على منتجات"
-          description="حاول تعديل الفلاتر أو البحث للعثور على منتجات."
+          icon={Trophy}
+          title="لا توجد منتجات رابحة مؤهلة"
+          description="جرب تعديل الفلاتر أو استورد منتجات جديدة من AliExpress أو CJ"
         />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

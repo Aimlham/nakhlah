@@ -444,11 +444,11 @@ export default function CJProductsPage() {
 
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
-          <Trophy className="w-6 h-6 text-amber-500" />
-          المنتجات الرابحة
+          <Search className="w-6 h-6 text-primary" />
+          اكتشاف CJ
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          أفضل المنتجات مبيعاً مرتبة حسب الطلب والربح والمنافسة
+          ابحث واستكشف منتجات CJ Dropshipping - المنتجات المؤهلة تظهر في قسم المنتجات الرابحة
         </p>
       </div>
 
