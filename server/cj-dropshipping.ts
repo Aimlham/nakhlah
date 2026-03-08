@@ -1,10 +1,39 @@
 import OpenAI from "openai";
+import fs from "fs";
+import path from "path";
 
 const CJ_BASE = "https://developers.cjdropshipping.com/api2.0/v1";
+const TOKEN_FILE = path.join(process.cwd(), ".cj-token.json");
 
-let cachedToken: { accessToken: string; refreshToken: string; expiresAt: number } | null = null;
+interface CachedToken {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+}
+
+let cachedToken: CachedToken | null = null;
+
+function saveTokenToFile(token: CachedToken) {
+  try {
+    fs.writeFileSync(TOKEN_FILE, JSON.stringify(token), "utf-8");
+  } catch {}
+}
+
+function loadTokenFromFile(): CachedToken | null {
+  try {
+    if (fs.existsSync(TOKEN_FILE)) {
+      const data = JSON.parse(fs.readFileSync(TOKEN_FILE, "utf-8"));
+      if (data.accessToken && data.expiresAt) return data;
+    }
+  } catch {}
+  return null;
+}
 
 async function getAccessToken(): Promise<string> {
+  if (!cachedToken) {
+    cachedToken = loadTokenFromFile();
+  }
+
   if (cachedToken && Date.now() < cachedToken.expiresAt) {
     return cachedToken.accessToken;
   }
@@ -23,6 +52,7 @@ async function getAccessToken(): Promise<string> {
           refreshToken: json.data.refreshToken,
           expiresAt: new Date(json.data.accessTokenExpiryDate).getTime() - 60000,
         };
+        saveTokenToFile(cachedToken);
         return cachedToken.accessToken;
       }
     } catch {}
@@ -47,6 +77,7 @@ async function getAccessToken(): Promise<string> {
     refreshToken: json.data.refreshToken,
     expiresAt: new Date(json.data.accessTokenExpiryDate).getTime() - 60000,
   };
+  saveTokenToFile(cachedToken);
   return cachedToken.accessToken;
 }
 
