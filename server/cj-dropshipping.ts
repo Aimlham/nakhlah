@@ -173,10 +173,12 @@ export function enrichProduct(product: CJProduct): CJProductEnriched {
   else competitionScore = 15;
 
   const marginScore = Math.min(100, profitMarginPercent * 1.2);
+  const ratingScore = 50;
   const winningScore = Math.round(
-    demandScore * 0.45 +
-    (100 - competitionScore) * 0.25 +
-    marginScore * 0.30
+    demandScore * 0.40 +
+    marginScore * 0.30 +
+    (100 - competitionScore) * 0.20 +
+    ratingScore * 0.10
   );
 
   const demandLevel = demandScore >= 70 ? "عالي" : demandScore >= 45 ? "متوسط" : "منخفض";

@@ -10,6 +10,44 @@ import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
 import { getMockAds } from "./mock-ads";
 
+const NEW_COLUMNS = ["source", "sell_price", "orders", "rating", "supplier_name", "is_halal_safe"];
+let availableNewColumns: Set<string> = new Set();
+let columnsProbed = false;
+
+async function probeColumns() {
+  if (columnsProbed || !supabaseAdmin) return;
+  columnsProbed = true;
+
+  for (const col of NEW_COLUMNS) {
+    try {
+      const { error } = await supabaseAdmin.from("products").select(col).limit(1);
+      if (!error) {
+        availableNewColumns.add(col);
+      }
+    } catch {}
+  }
+
+  const missing = NEW_COLUMNS.filter(c => !availableNewColumns.has(c));
+  if (missing.length > 0) {
+    console.log("[supabase] Missing columns in products table:", missing.join(", "));
+    console.log("[supabase] Run this SQL in Supabase Dashboard > SQL Editor:");
+    console.log(`
+ALTER TABLE products ADD COLUMN IF NOT EXISTS source TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price NUMERIC;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS orders INTEGER;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS rating NUMERIC;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_name TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_halal_safe BOOLEAN DEFAULT true;
+    `.trim());
+  } else {
+    console.log("[supabase] All product columns available");
+  }
+}
+
+function hasCol(col: string): boolean {
+  return availableNewColumns.has(col);
+}
+
 function mapProduct(row: Record<string, unknown>): Product {
   return {
     id: row.id as string,
@@ -19,9 +57,15 @@ function mapProduct(row: Record<string, unknown>): Product {
     category: row.category as string,
     niche: (row.niche as string) ?? null,
     sourcePlatform: (row.source_platform as string) ?? null,
+    source: (row.source as string) ?? null,
     supplierPrice: String(row.supplier_price),
     suggestedSellPrice: String(row.suggested_sell_price),
+    sellPrice: row.sell_price != null ? String(row.sell_price) : null,
     estimatedMargin: row.estimated_margin != null ? String(row.estimated_margin) : null,
+    orders: (row.orders as number) ?? null,
+    rating: row.rating != null ? String(row.rating) : null,
+    supplierName: (row.supplier_name as string) ?? null,
+    isHalalSafe: row.is_halal_safe != null ? (row.is_halal_safe as boolean) : true,
     trendScore: (row.trend_score as number) ?? null,
     saturationScore: (row.saturation_score as number) ?? null,
     opportunityScore: (row.opportunity_score as number) ?? null,
@@ -44,6 +88,10 @@ export class SupabaseStorage implements IStorage {
   private get db() {
     if (!supabaseAdmin) throw new Error("Supabase not configured");
     return supabaseAdmin;
+  }
+
+  async init() {
+    await probeColumns();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -163,7 +211,9 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createProduct(product: InsertProduct): Promise<Product> {
-    const row = {
+    await probeColumns();
+
+    const row: Record<string, unknown> = {
       title: product.title,
       image_url: product.imageUrl || null,
       short_description: product.shortDescription || null,
@@ -179,6 +229,14 @@ export class SupabaseStorage implements IStorage {
       ai_summary: product.aiSummary || null,
       supplier_link: product.supplierLink || null,
     };
+
+    if (hasCol("source")) row.source = product.source || null;
+    if (hasCol("sell_price")) row.sell_price = product.sellPrice || null;
+    if (hasCol("orders")) row.orders = product.orders || null;
+    if (hasCol("rating")) row.rating = product.rating || null;
+    if (hasCol("supplier_name")) row.supplier_name = product.supplierName || null;
+    if (hasCol("is_halal_safe")) row.is_halal_safe = product.isHalalSafe ?? true;
+
     const { data, error } = await this.db
       .from("products")
       .insert(row)

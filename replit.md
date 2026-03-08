@@ -37,9 +37,15 @@ CREATE TABLE products (
   category TEXT NOT NULL,
   niche TEXT,
   source_platform TEXT,
+  source TEXT,
   supplier_price NUMERIC NOT NULL,
   suggested_sell_price NUMERIC NOT NULL,
+  sell_price NUMERIC,
   estimated_margin NUMERIC,
+  orders INTEGER,
+  rating NUMERIC,
+  supplier_name TEXT,
+  is_halal_safe BOOLEAN DEFAULT true,
   trend_score INTEGER,
   saturation_score INTEGER,
   opportunity_score INTEGER,
@@ -144,8 +150,9 @@ shared/
   - `GET /api/cj/search` — raw CJ product search (keyword, page, size, productFlag, categoryId)
   - `POST /api/cj/import` — import single product (translates to Arabic via OpenAI, calculates scores, saves to DB)
   - `POST /api/cj/import-batch` — import up to 10 products at once
-- **Winning Score**: Weighted formula — 45% demand (listedNum) + 25% anti-competition + 30% margin
-- **Frontend**: `/discover` page as "المنتجات الرابحة" hub with sorting, Arabic names, SAR prices, inline AI analysis modal
+- **Winning Score**: Weighted formula — 40% demand (orders/listedNum) + 30% margin + 20% competition + 10% rating
+- **Halal check**: `checkHalalSafe()` in `server/storage.ts` — auto-flags products containing blocked keywords (alcohol, pork, adult content, gambling, tobacco, etc.) as `isHalalSafe=false` on import
+- **Frontend**: `/discover` page as "المنتجات الرابحة" hub with sorting, Arabic names, SAR prices, inline AI analysis modal, halal filter toggle
 - **Dashboard**: Shows top 6 winning products with stats (avg profit, avg margin, high demand count, top score)
 
 ## Auth Flow
@@ -171,7 +178,7 @@ shared/
 - `calculateMargin(supplierPrice, sellPrice)` — margin percentage from prices
 - `calculateTrendScore(...)` — uses existing score if present, otherwise estimates from margin/price/category
 - `calculateSaturationScore(...)` — uses existing score if present, otherwise estimates from price/margin/category
-- `calculateOpportunityScore(trend, saturation, margin)` — weighted: 40% trend + 30% anti-saturation + 30% margin
+- `calculateOpportunityScore(trend, saturation, margin, rating?)` — weighted: 40% demand + 30% margin + 20% competition + 10% rating
 - Applied server-side in API routes (`/api/products`, `/api/products/:id`, `/api/saved/products`)
 - All scores are 0-100 integers; margin is a percentage string with one decimal
 
@@ -179,14 +186,28 @@ shared/
 - Landing page with hero, features, pricing, FAQ (Arabic)
 - Auth with Supabase or session-based fallback
 - Dashboard with gradient hero header, search bar, 6 KPIs, trending products grid with pricing & details button, active ads with dual CTAs, best opportunities list, new today, saved products with empty state
-- Product listing with advanced filters: search, category, niche, platform, sort, min opportunity/margin/trend scores
-- Product cards with gradient overlay, pricing grid, source platform badge, hover animation (shadow + translate), trending badge for opportunityScore >= 80
+- Product listing with advanced filters: search, category, niche, platform, sort, min opportunity/margin/trend scores, halal toggle
+- Product cards with gradient overlay, pricing grid, source platform badge, orders count, star rating, supplier name, hover animation (shadow + translate), trending badge for opportunityScore >= 80, halal-unsafe badge
 - Product details with colored score metric cards, side-by-side AI analysis cards, sticky pricing sidebar, ad cards
+- CJ Winning Products page with halal filter toggle, demand/competition/profit sorting
 - Ad library page (/ads) with stats header, sort dropdown, colored platform badges, gradient overlays, dual action buttons
+- Halal-safe filtering: auto-detection on import using keyword blocklist, toggle filter in UI
+- Multi-source schema: `source` field supports "cj", "aliexpress", "amazon", "alibaba" (CJ active, others prepared)
 - Save/unsave products
-- Product scoring engine with transparent, editable formulas
+- Product scoring engine with transparent, editable formulas (40% demand + 30% margin + 20% competition + 10% rating)
 - Dark/light mode toggle
 - Responsive design (mobile + desktop)
+
+## Supabase Migration (if columns missing)
+If the server logs show "Missing columns in products table", run this SQL in Supabase Dashboard > SQL Editor:
+```sql
+ALTER TABLE products ADD COLUMN IF NOT EXISTS source TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sell_price NUMERIC;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS orders INTEGER;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS rating NUMERIC;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_name TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_halal_safe BOOLEAN DEFAULT true;
+```
 
 ## User Preferences
 - Clean, modern SaaS dashboard style

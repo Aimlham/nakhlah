@@ -18,6 +18,7 @@ export default function ProductsPage() {
   const [minOpportunity, setMinOpportunity] = useState("all");
   const [minMargin, setMinMargin] = useState("all");
   const [minTrend, setMinTrend] = useState("all");
+  const [halalOnly, setHalalOnly] = useState(false);
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery<Product[]>({
@@ -69,12 +70,14 @@ export default function ProductsPage() {
       result = result.filter(p =>
         p.title.toLowerCase().includes(q) ||
         (p.shortDescription || "").toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q)
+        p.category.toLowerCase().includes(q) ||
+        (p.supplierName || "").toLowerCase().includes(q)
       );
     }
     if (category !== "all") result = result.filter(p => p.category === category);
     if (niche !== "all") result = result.filter(p => p.niche === niche);
     if (platform !== "all") result = result.filter(p => p.sourcePlatform === platform);
+    if (halalOnly) result = result.filter(p => p.isHalalSafe !== false);
 
     if (minOpportunity !== "all") {
       const min = parseInt(minOpportunity, 10);
@@ -93,11 +96,13 @@ export default function ProductsPage() {
       if (sort === "opportunity") return (b.opportunityScore || 0) - (a.opportunityScore || 0);
       if (sort === "margin") return parseFloat(b.estimatedMargin || "0") - parseFloat(a.estimatedMargin || "0");
       if (sort === "trending") return (b.trendScore || 0) - (a.trendScore || 0);
+      if (sort === "orders") return (b.orders || 0) - (a.orders || 0);
+      if (sort === "rating") return Number(b.rating || 0) - Number(a.rating || 0);
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
 
     return result;
-  }, [products, search, category, niche, platform, sort, minOpportunity, minMargin, minTrend]);
+  }, [products, search, category, niche, platform, sort, minOpportunity, minMargin, minTrend, halalOnly]);
 
   if (isLoading) {
     return (
@@ -116,8 +121,8 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">المنتجات</h1>
-        <p className="text-muted-foreground">اكتشف المنتجات الرائجة ذات الربحية العالية.</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">مكتبتي</h1>
+        <p className="text-muted-foreground">المنتجات المحفوظة في مكتبتك الشخصية</p>
       </div>
 
       <FilterBar
@@ -132,6 +137,7 @@ export default function ProductsPage() {
         minOpportunity={minOpportunity} onMinOpportunityChange={setMinOpportunity}
         minMargin={minMargin} onMinMarginChange={setMinMargin}
         minTrend={minTrend} onMinTrendChange={setMinTrend}
+        halalOnly={halalOnly} onHalalOnlyChange={setHalalOnly}
       />
 
       <p className="text-sm text-muted-foreground" data-testid="text-products-count">

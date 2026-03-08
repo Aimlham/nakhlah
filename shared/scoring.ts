@@ -88,19 +88,23 @@ export function calculateSaturationScore(product: {
 export function calculateOpportunityScore(
   trendScore: number,
   saturationScore: number,
-  margin: number
+  margin: number,
+  rating?: number | null
 ): number {
-  const trendWeight = 0.4;
-  const antiSaturationWeight = 0.3;
-  const marginWeight = 0.3;
+  const demandWeight = 0.40;
+  const marginWeight = 0.30;
+  const competitionWeight = 0.20;
+  const ratingWeight = 0.10;
 
   const marginNormalized = Math.max(0, Math.min(margin, 100));
   const antiSaturation = 100 - saturationScore;
+  const ratingScore = rating != null ? Math.min(100, (rating / 5) * 100) : 50;
 
   const raw =
-    trendScore * trendWeight +
-    antiSaturation * antiSaturationWeight +
-    marginNormalized * marginWeight;
+    trendScore * demandWeight +
+    marginNormalized * marginWeight +
+    antiSaturation * competitionWeight +
+    ratingScore * ratingWeight;
 
   return clamp(Math.round(raw));
 }
@@ -127,7 +131,8 @@ export function scoreProduct(product: Product): Product {
     existingScore: product.saturationScore,
   });
 
-  const opportunityScore = calculateOpportunityScore(trendScore, saturationScore, margin);
+  const rating = product.rating != null ? Number(product.rating) : null;
+  const opportunityScore = calculateOpportunityScore(trendScore, saturationScore, margin, rating);
 
   return {
     ...product,

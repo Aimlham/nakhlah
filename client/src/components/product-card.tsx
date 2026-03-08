@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bookmark, BookmarkCheck, Package, Flame } from "lucide-react";
+import { Bookmark, BookmarkCheck, Package, Flame, Star, ShoppingCart, Store } from "lucide-react";
 import { type Product } from "@shared/schema";
 import { cn, formatMoney, formatMargin, getCategoryGradient } from "@/lib/utils";
 import { ScoreBadge } from "./score-badge";
@@ -12,6 +12,17 @@ interface ProductCardProps {
   isSaved?: boolean;
   onToggleSave?: (productId: string) => void;
   savePending?: boolean;
+}
+
+function getSourceLabel(source: string | null): string {
+  if (!source) return "";
+  const map: Record<string, string> = {
+    cj: "CJ",
+    aliexpress: "AliExpress",
+    amazon: "Amazon",
+    alibaba: "Alibaba",
+  };
+  return map[source.toLowerCase()] || source;
 }
 
 export function ProductCard({ product, isSaved, onToggleSave, savePending }: ProductCardProps) {
@@ -49,13 +60,25 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
               </div>
             </div>
           )}
-          {product.sourcePlatform && (
-            <div className="absolute bottom-2 start-2">
-              <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm">
-                {product.sourcePlatform}
-              </Badge>
+          <div className="absolute bottom-2 start-2 end-2 flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              {product.source && (
+                <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm" data-testid={`badge-source-${product.id}`}>
+                  {getSourceLabel(product.source)}
+                </Badge>
+              )}
+              {!product.source && product.sourcePlatform && (
+                <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm">
+                  {product.sourcePlatform}
+                </Badge>
+              )}
             </div>
-          )}
+            {product.isHalalSafe === false && (
+              <Badge variant="destructive" className="text-[10px] border-0 shadow-sm" data-testid={`badge-not-halal-${product.id}`}>
+                غير حلال
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="p-4 space-y-3">
@@ -82,7 +105,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
             </div>
             <div className="border-x border-border/50">
               <p className="text-[10px] text-muted-foreground mb-0.5">البيع</p>
-              <p className="text-sm font-bold tabular-nums">{formatMoney(product.suggestedSellPrice)}</p>
+              <p className="text-sm font-bold tabular-nums">{formatMoney(product.sellPrice || product.suggestedSellPrice)}</p>
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground mb-0.5">الهامش</p>
@@ -90,6 +113,29 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
                 {formatMargin(product.estimatedMargin)}
               </p>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-2">
+              {product.orders != null && product.orders > 0 && (
+                <span className="flex items-center gap-0.5" data-testid={`text-orders-${product.id}`}>
+                  <ShoppingCart className="w-3 h-3" />
+                  {product.orders.toLocaleString()}
+                </span>
+              )}
+              {product.rating != null && (
+                <span className="flex items-center gap-0.5" data-testid={`text-rating-${product.id}`}>
+                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                  {Number(product.rating).toFixed(1)}
+                </span>
+              )}
+            </div>
+            {product.supplierName && (
+              <span className="flex items-center gap-0.5 truncate max-w-[100px]" data-testid={`text-supplier-${product.id}`}>
+                <Store className="w-3 h-3 shrink-0" />
+                {product.supplierName}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

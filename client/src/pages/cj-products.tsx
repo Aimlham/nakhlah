@@ -26,9 +26,16 @@ import {
   Lightbulb,
   Megaphone,
   X,
+  Star,
+  ShoppingCart,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { parseAiSummary } from "@/lib/utils";
+import { cn, parseAiSummary } from "@/lib/utils";
+
+import { HALAL_BLOCKED_KEYWORDS, checkHalalSafeText } from "@shared/halal";
+
+function isProductHalal(product: WinningProduct): boolean {
+  return checkHalalSafeText([product.nameEn, product.nameAr || "", product.description || ""].join(" "));
+}
 
 interface WinningProduct {
   id: string;
@@ -167,8 +174,8 @@ function WinningProductCard({
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <BarChart3 className="w-3 h-3" />
-            {product.listedNum.toLocaleString()} متجر يبيعه
+            <ShoppingCart className="w-3 h-3" />
+            {product.listedNum.toLocaleString()} طلب
           </span>
           <span className="font-medium text-emerald-500">
             %{product.profitMarginPercent.toFixed(0)} هامش
@@ -401,6 +408,7 @@ export default function CJProductsPage() {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortOption>("winning");
   const [analyzingProduct, setAnalyzingProduct] = useState<WinningProduct | null>(null);
+  const [halalOnly, setHalalOnly] = useState(false);
 
   const queryParams = new URLSearchParams({
     page: String(page),
@@ -414,6 +422,10 @@ export default function CJProductsPage() {
     queryKey: [queryUrl],
     retry: 1,
   });
+
+  const displayProducts = halalOnly && data?.products
+    ? data.products.filter(isProductHalal)
+    : data?.products || [];
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -470,6 +482,18 @@ export default function CJProductsPage() {
             {s.label}
           </Button>
         ))}
+        <div className="border-s border-border/50 ps-2 ms-auto">
+          <Button
+            variant={halalOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => setHalalOnly(!halalOnly)}
+            className={cn(halalOnly && "bg-emerald-600 hover:bg-emerald-700")}
+            data-testid="button-halal-filter"
+          >
+            <ShieldCheck className="w-4 h-4 me-1" />
+            حلال فقط
+          </Button>
+        </div>
       </div>
 
       {isError && (
@@ -508,7 +532,7 @@ export default function CJProductsPage() {
             </span>
           </div>
 
-          {data.products.length === 0 ? (
+          {displayProducts.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -518,7 +542,7 @@ export default function CJProductsPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {data.products.map((product, index) => (
+              {displayProducts.map((product, index) => (
                 <WinningProductCard
                   key={product.id}
                   product={product}

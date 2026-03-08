@@ -7,6 +7,7 @@ import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supaba
 import { scoreProduct } from "@shared/scoring";
 import { generateProductAnalysis } from "./openai";
 import { searchCJProducts, translateProductToArabic, translateProductNamesToArabic, calculateProductScores, getWinningProducts, enrichProduct } from "./cj-dropshipping";
+import { checkHalalSafe } from "./storage";
 import { z } from "zod";
 
 const cjProductSchema = z.object({
@@ -205,10 +206,17 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  app.get("/api/products", async (_req: Request, res: Response) => {
+  app.get("/api/products", async (req: Request, res: Response) => {
     try {
-      const products = await storage.getAllProducts();
-      res.json(products.map(scoreProduct));
+      let products = await storage.getAllProducts();
+      products = products.map(scoreProduct);
+
+      const { halal_only } = req.query;
+      if (halal_only === "true") {
+        products = products.filter(p => p.isHalalSafe !== false);
+      }
+
+      res.json(products);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch products" });
     }
@@ -533,6 +541,8 @@ export async function registerRoutes(
       const scores = calculateProductScores(cjProduct);
       const supplierPrice = extractPrice(cjProduct.nowPrice || cjProduct.sellPrice);
 
+      const isHalalSafe = checkHalalSafe({ nameEn: cjProduct.nameEn, description: cjProduct.description || "", category: translated.category, niche: translated.niche });
+
       const newProduct = await storage.createProduct({
         title: translated.title,
         imageUrl: cjProduct.bigImage || null,
@@ -540,9 +550,15 @@ export async function registerRoutes(
         category: translated.category,
         niche: translated.niche,
         sourcePlatform: "CJ Dropshipping",
+        source: "cj",
         supplierPrice,
         suggestedSellPrice: scores.suggestedSellPrice,
+        sellPrice: scores.suggestedSellPrice,
         estimatedMargin: scores.estimatedMargin,
+        orders: cjProduct.listedNum || 0,
+        rating: null,
+        supplierName: "CJ Dropshipping",
+        isHalalSafe: isHalalSafe,
         trendScore: scores.trendScore,
         saturationScore: scores.saturationScore,
         opportunityScore: null,
@@ -584,6 +600,7 @@ export async function registerRoutes(
           const translated = await translateProductToArabic(cjProduct);
           const scores = calculateProductScores(cjProduct);
           const supplierPrice = extractPrice(cjProduct.nowPrice || cjProduct.sellPrice);
+          const isHalalSafe = checkHalalSafe({ nameEn: cjProduct.nameEn, description: cjProduct.description || "", category: translated.category, niche: translated.niche });
 
           const newProduct = await storage.createProduct({
             title: translated.title,
@@ -592,9 +609,15 @@ export async function registerRoutes(
             category: translated.category,
             niche: translated.niche,
             sourcePlatform: "CJ Dropshipping",
+            source: "cj",
             supplierPrice,
             suggestedSellPrice: scores.suggestedSellPrice,
+            sellPrice: scores.suggestedSellPrice,
             estimatedMargin: scores.estimatedMargin,
+            orders: cjProduct.listedNum || 0,
+            rating: null,
+            supplierName: "CJ Dropshipping",
+            isHalalSafe: isHalalSafe,
             trendScore: scores.trendScore,
             saturationScore: scores.saturationScore,
             opportunityScore: null,

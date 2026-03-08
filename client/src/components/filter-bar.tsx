@@ -1,6 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   search: string;
@@ -22,6 +24,8 @@ interface FilterBarProps {
   onMinMarginChange?: (value: string) => void;
   minTrend?: string;
   onMinTrendChange?: (value: string) => void;
+  halalOnly?: boolean;
+  onHalalOnlyChange?: (value: boolean) => void;
 }
 
 export function FilterBar({
@@ -34,6 +38,7 @@ export function FilterBar({
   minOpportunity, onMinOpportunityChange,
   minMargin, onMinMarginChange,
   minTrend, onMinTrendChange,
+  halalOnly, onHalalOnlyChange,
 }: FilterBarProps) {
   return (
     <div className="space-y-3">
@@ -138,8 +143,23 @@ export function FilterBar({
             <SelectItem value="opportunity">أعلى فرصة</SelectItem>
             <SelectItem value="margin">أعلى هامش ربح</SelectItem>
             <SelectItem value="trending">أعلى رواج</SelectItem>
+            <SelectItem value="orders">الأكثر مبيعاً</SelectItem>
+            <SelectItem value="rating">الأعلى تقييماً</SelectItem>
           </SelectContent>
         </Select>
+
+        {onHalalOnlyChange && (
+          <Button
+            variant={halalOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => onHalalOnlyChange(!halalOnly)}
+            className={cn("gap-1", halalOnly && "bg-emerald-600 hover:bg-emerald-700")}
+            data-testid="button-halal-filter"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            حلال فقط
+          </Button>
+        )}
       </div>
     </div>
   );

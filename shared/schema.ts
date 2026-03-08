@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, numeric, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, numeric, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -19,9 +19,15 @@ export const products = pgTable("products", {
   category: text("category").notNull(),
   niche: text("niche"),
   sourcePlatform: text("source_platform"),
+  source: text("source"),
   supplierPrice: numeric("supplier_price").notNull(),
   suggestedSellPrice: numeric("suggested_sell_price").notNull(),
+  sellPrice: numeric("sell_price"),
   estimatedMargin: numeric("estimated_margin"),
+  orders: integer("orders"),
+  rating: numeric("rating"),
+  supplierName: text("supplier_name"),
+  isHalalSafe: boolean("is_halal_safe").default(true),
   trendScore: integer("trend_score"),
   saturationScore: integer("saturation_score"),
   opportunityScore: integer("opportunity_score"),

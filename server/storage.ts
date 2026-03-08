@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { supabaseConfigured } from "./supabase";
 import { SupabaseStorage } from "./supabase-storage";
 import { getMockAds } from "./mock-ads";
+import { checkHalalSafeText } from "@shared/halal";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -18,6 +19,19 @@ export interface IStorage {
   getAdsByProductId(productId: string): Promise<ProductAd[]>;
   getAllAds(): Promise<ProductAd[]>;
   updateProductAiSummary(productId: string, aiSummary: string): Promise<void>;
+  init?(): Promise<void>;
+}
+
+export function checkHalalSafe(product: { nameEn?: string; title?: string; description?: string; category?: string; niche?: string }): boolean {
+  const text = [
+    product.nameEn || "",
+    product.title || "",
+    product.description || "",
+    product.category || "",
+    product.niche || "",
+  ].join(" ");
+
+  return checkHalalSafeText(text);
 }
 
 export class MemStorage implements IStorage {
@@ -44,9 +58,15 @@ export class MemStorage implements IStorage {
         category: "المنزل والمعيشة",
         niche: "إضاءة مميزة",
         sourcePlatform: "AliExpress",
+        source: "aliexpress",
         supplierPrice: "8.50",
         suggestedSellPrice: "34.99",
+        sellPrice: "34.99",
         estimatedMargin: "75.7",
+        orders: 4200,
+        rating: "4.7",
+        supplierName: "ShenZhen Light Co.",
+        isHalalSafe: true,
         trendScore: 92,
         saturationScore: 35,
         opportunityScore: 88,
@@ -238,9 +258,29 @@ export class MemStorage implements IStorage {
       new Date("2026-03-04"), new Date("2026-03-01"), new Date("2026-03-05"),
     ];
 
+    const defaultNewFields = {
+      source: "aliexpress" as string | null,
+      sellPrice: null as string | null,
+      orders: null as number | null,
+      rating: null as string | null,
+      supplierName: null as string | null,
+      isHalalSafe: true as boolean | null,
+    };
+
     mockProducts.forEach((p, i) => {
       const id = String(i + 1);
-      this.products.set(id, { ...p, id, createdAt: dates[i] || new Date() });
+      const product = {
+        ...defaultNewFields,
+        ...p,
+        id,
+        createdAt: dates[i] || new Date(),
+        sellPrice: p.sellPrice || p.suggestedSellPrice,
+        orders: p.orders || Math.floor(Math.random() * 5000) + 500,
+        rating: p.rating || (3.5 + Math.random() * 1.5).toFixed(1),
+        supplierName: p.supplierName || "مورّد عام",
+        isHalalSafe: p.isHalalSafe ?? checkHalalSafe({ title: p.title }),
+      };
+      this.products.set(id, product);
     });
   }
 
@@ -319,9 +359,15 @@ export class MemStorage implements IStorage {
       category: product.category,
       niche: product.niche || null,
       sourcePlatform: product.sourcePlatform || null,
+      source: product.source || null,
       supplierPrice: product.supplierPrice,
       suggestedSellPrice: product.suggestedSellPrice,
+      sellPrice: product.sellPrice || null,
       estimatedMargin: product.estimatedMargin || null,
+      orders: product.orders || null,
+      rating: product.rating || null,
+      supplierName: product.supplierName || null,
+      isHalalSafe: product.isHalalSafe ?? true,
       trendScore: product.trendScore || null,
       saturationScore: product.saturationScore || null,
       opportunityScore: product.opportunityScore || null,
