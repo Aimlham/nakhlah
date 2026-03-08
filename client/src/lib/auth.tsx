@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { isSupabaseEnabled, getSupabaseClient, getAccessToken } from "./supabase";
+import { isSupabaseAvailable, getSupabaseClient, getAccessToken } from "./supabase";
 import { apiRequest } from "./queryClient";
 
 interface AuthUser {
@@ -28,10 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsubscribe: (() => void) | null = null;
 
     async function init() {
-      const sbEnabled = await isSupabaseEnabled();
       const supabase = getSupabaseClient();
 
-      if (sbEnabled && supabase) {
+      if (supabase) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!cancelled && session?.user) {
           setUser({
@@ -78,10 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const sbEnabled = await isSupabaseEnabled();
     const supabase = getSupabaseClient();
 
-    if (sbEnabled && supabase) {
+    if (supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
       setUser({
@@ -98,10 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (email: string, password: string, fullName: string) => {
-    const sbEnabled = await isSupabaseEnabled();
     const supabase = getSupabaseClient();
 
-    if (sbEnabled && supabase) {
+    if (supabase) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -124,10 +121,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
-    const sbEnabled = await isSupabaseEnabled();
     const supabase = getSupabaseClient();
 
-    if (sbEnabled && supabase) {
+    if (supabase) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -142,10 +138,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    const sbEnabled = await isSupabaseEnabled();
     const supabase = getSupabaseClient();
 
-    if (sbEnabled && supabase) {
+    if (supabase) {
       await supabase.auth.signOut();
       setUser(null);
       return;

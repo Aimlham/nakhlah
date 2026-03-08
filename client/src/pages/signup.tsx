@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,9 @@ import { Zap, Loader2 } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { isSupabaseEnabled } from "@/lib/supabase";
+import { isSupabaseAvailable } from "@/lib/supabase";
+
+const supabaseAvailable = isSupabaseAvailable();
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
@@ -16,12 +18,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [supabaseAvailable, setSupabaseAvailable] = useState(false);
   const { signup, loginWithGoogle } = useAuth();
-
-  useEffect(() => {
-    isSupabaseEnabled().then(setSupabaseAvailable);
-  }, []);
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
