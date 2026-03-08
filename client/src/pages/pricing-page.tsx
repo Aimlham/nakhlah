@@ -7,52 +7,52 @@ const plans = [
   {
     name: "Free",
     price: "$0",
-    period: "forever",
-    description: "Get started with basic product research",
+    period: "مجاناً للأبد",
+    description: "ابدأ بأبحاث المنتجات الأساسية",
     features: [
-      "50 product views/month",
-      "Basic trend data",
-      "Save up to 10 products",
-      "Community support",
+      "50 مشاهدة منتج/شهرياً",
+      "بيانات رواج أساسية",
+      "حفظ حتى 10 منتجات",
+      "دعم مجتمعي",
     ],
-    cta: "Current Plan",
+    cta: "باقتك الحالية",
     popular: false,
     current: true,
   },
   {
     name: "Pro",
     price: "$29",
-    period: "/month",
-    description: "Full access for serious sellers",
+    period: "/شهرياً",
+    description: "وصول كامل للبائعين المحترفين",
     features: [
-      "Unlimited product views",
-      "Full AI analysis & insights",
-      "Unlimited saved products",
-      "Priority support",
-      "Advanced filters & sorting",
-      "Export product data",
-      "Daily trend alerts",
+      "مشاهدات غير محدودة",
+      "تحليل ذكاء اصطناعي كامل",
+      "حفظ منتجات غير محدود",
+      "دعم ذو أولوية",
+      "فلاتر وترتيب متقدم",
+      "تصدير بيانات المنتجات",
+      "تنبيهات رواج يومية",
     ],
-    cta: "Upgrade to Pro",
+    cta: "ترقية للاحترافية",
     popular: true,
     current: false,
   },
   {
     name: "Enterprise",
     price: "$99",
-    period: "/month",
-    description: "For teams and agencies",
+    period: "/شهرياً",
+    description: "للفرق والوكالات",
     features: [
-      "Everything in Pro",
-      "API access",
-      "Custom integrations",
-      "Team collaboration (5 seats)",
-      "Dedicated account manager",
-      "White-label reports",
-      "Custom data feeds",
-      "SLA guarantee",
+      "كل مزايا الاحترافية",
+      "وصول API",
+      "تكاملات مخصصة",
+      "تعاون فريق (5 مقاعد)",
+      "مدير حساب مخصص",
+      "تقارير بعلامتك التجارية",
+      "تغذية بيانات مخصصة",
+      "ضمان مستوى الخدمة",
     ],
-    cta: "Contact Sales",
+    cta: "تواصل مع المبيعات",
     popular: false,
     current: false,
   },
@@ -62,8 +62,8 @@ export default function PricingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-pricing-title">Pricing</h1>
-        <p className="text-muted-foreground">Choose the plan that fits your needs.</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-pricing-title">الأسعار</h1>
+        <p className="text-muted-foreground">اختر الباقة المناسبة لاحتياجاتك.</p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
@@ -74,12 +74,14 @@ export default function PricingPage() {
           >
             {plan.popular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="no-default-active-elevate">Most Popular</Badge>
+                <Badge className="no-default-active-elevate">الأكثر شعبية</Badge>
               </div>
             )}
             <CardContent className="p-6 space-y-5">
               <div>
-                <h3 className="font-semibold text-lg">{plan.name}</h3>
+                <h3 className="font-semibold text-lg">
+                  {plan.name === "Free" ? "مجانية" : plan.name === "Pro" ? "احترافية" : "مؤسسات"}
+                </h3>
                 <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>
                 <div className="flex items-baseline gap-1 mt-3">
                   <span className="text-3xl font-bold">{plan.price}</span>

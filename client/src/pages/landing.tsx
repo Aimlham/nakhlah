@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/accordion";
 import {
   Zap, TrendingUp, Target, Link2, Package,
-  ArrowRight, CheckCircle2, BarChart3, Shield, Globe,
+  ArrowLeft, CheckCircle2, BarChart3, Shield, Globe,
   Moon, Sun,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
@@ -28,14 +28,14 @@ function LandingNav() {
         <span className="text-lg font-bold tracking-tight">TrendDrop</span>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
-        <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="Toggle theme" data-testid="button-landing-theme">
+        <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="تبديل المظهر" data-testid="button-landing-theme">
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="/login" data-testid="link-login">Log in</Link>
+          <Link href="/login" data-testid="link-login">تسجيل الدخول</Link>
         </Button>
         <Button asChild>
-          <Link href="/signup" data-testid="link-signup">Get Started</Link>
+          <Link href="/signup" data-testid="link-signup">ابدأ الآن</Link>
         </Button>
       </div>
     </nav>
@@ -48,31 +48,31 @@ function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3 dark:from-primary/10 dark:to-primary/5" />
       <div className="relative max-w-4xl mx-auto text-center space-y-6">
         <Badge variant="secondary" className="no-default-active-elevate">
-          AI-Powered Product Research
+          أبحاث منتجات بالذكاء الاصطناعي
         </Badge>
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-          Discover Winning Products{" "}
-          <span className="text-primary">Before They Go Viral</span>
+          اكتشف المنتجات الرابحة{" "}
+          <span className="text-primary">قبل أن تنتشر</span>
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-          Stop guessing. Use AI-powered trend analysis, opportunity scoring, and marketing 
-          insights to find profitable products for your e-commerce store.
+          توقف عن التخمين. استخدم تحليل الاتجاهات بالذكاء الاصطناعي وتقييم الفرص
+          والرؤى التسويقية للعثور على منتجات مربحة لمتجرك الإلكتروني.
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap pt-2">
           <Button size="lg" asChild>
             <Link href="/signup" data-testid="link-hero-signup">
-              Start Free Trial
-              <ArrowRight className="w-4 h-4 ml-2" />
+              ابدأ تجربتك المجانية
+              <ArrowLeft className="w-4 h-4 ms-2" />
             </Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="#features" data-testid="link-hero-features">See How It Works</Link>
+            <Link href="#features" data-testid="link-hero-features">شاهد كيف يعمل</Link>
           </Button>
         </div>
         <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> No credit card required</span>
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> 50 free product searches</span>
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Cancel anytime</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> لا حاجة لبطاقة ائتمان</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> 50 بحث مجاني عن المنتجات</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> إلغاء في أي وقت</span>
         </div>
       </div>
     </section>
@@ -124,12 +124,12 @@ function DemoSection() {
                     <p className="text-xs text-muted-foreground">{p.category}</p>
                   </div>
                   <div className="flex items-center justify-between gap-1">
-                    <ScoreBadge label="Score" score={p.score} />
+                    <ScoreBadge label="التقييم" score={p.score} />
                     <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{p.margin}</span>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Supplier: {p.supplier}</span>
-                    <span>Sell: {p.sell}</span>
+                    <span>المورّد: {p.supplier}</span>
+                    <span>البيع: {p.sell}</span>
                   </div>
                 </div>
               ))}
@@ -145,33 +145,33 @@ function FeaturesSection() {
   const features = [
     {
       icon: TrendingUp,
-      title: "Trend Detection",
-      description: "Real-time trend analysis across major platforms to spot rising products before they saturate.",
+      title: "كشف الاتجاهات",
+      description: "تحليل فوري للاتجاهات عبر المنصات الكبرى لاكتشاف المنتجات الصاعدة قبل تشبّع السوق.",
     },
     {
       icon: Target,
-      title: "Opportunity Scoring",
-      description: "Proprietary algorithm combining trend velocity, saturation level, and profit potential into one score.",
+      title: "تقييم الفرص",
+      description: "خوارزمية متقدمة تجمع بين سرعة الرواج ومستوى التشبّع وإمكانية الربح في تقييم واحد.",
     },
     {
       icon: BarChart3,
-      title: "AI Marketing Insights",
-      description: "Get AI-generated ad angles, hooks, and target audience analysis for every product.",
+      title: "رؤى تسويقية بالذكاء الاصطناعي",
+      description: "احصل على زوايا إعلانية وأفكار جذب وتحليل للجمهور المستهدف لكل منتج.",
     },
     {
       icon: Link2,
-      title: "Direct Supplier Links",
-      description: "One-click access to verified suppliers with competitive pricing for instant sourcing.",
+      title: "روابط مباشرة للموردين",
+      description: "وصول فوري إلى موردين موثوقين بأسعار تنافسية للتوريد المباشر.",
     },
     {
       icon: Globe,
-      title: "Multi-Platform Coverage",
-      description: "Products sourced from AliExpress, 1688, and other major supplier platforms worldwide.",
+      title: "تغطية متعددة المنصات",
+      description: "منتجات من AliExpress و1688 ومنصات توريد كبرى أخرى حول العالم.",
     },
     {
       icon: Shield,
-      title: "Reliable Data",
-      description: "Updated daily with verified pricing, margin calculations, and saturation metrics.",
+      title: "بيانات موثوقة",
+      description: "تحديث يومي مع تسعير موثق وحسابات هوامش الربح ومقاييس التشبّع.",
     },
   ];
 
@@ -179,9 +179,9 @@ function FeaturesSection() {
     <section id="features" className="py-20 px-6 bg-muted/30">
       <div className="max-w-6xl mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl font-bold tracking-tight">Everything You Need to Find Winners</h2>
+          <h2 className="text-3xl font-bold tracking-tight">كل ما تحتاجه لاكتشاف المنتجات الرابحة</h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Powerful tools designed specifically for e-commerce sellers and dropshippers.
+            أدوات قوية مصممة خصيصاً لبائعي التجارة الإلكترونية والدروبشيبنغ.
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -207,25 +207,25 @@ function PricingSection() {
     {
       name: "Free",
       price: "$0",
-      period: "forever",
-      features: ["50 product views/month", "Basic trend data", "Save up to 10 products", "Community support"],
-      cta: "Get Started",
+      period: "مجاناً للأبد",
+      features: ["50 مشاهدة منتج/شهرياً", "بيانات اتجاهات أساسية", "حفظ حتى 10 منتجات", "دعم المجتمع"],
+      cta: "ابدأ الآن",
       popular: false,
     },
     {
       name: "Pro",
       price: "$29",
-      period: "/month",
-      features: ["Unlimited product views", "Full AI analysis", "Unlimited saves", "Priority support", "Advanced filters", "Export data"],
-      cta: "Start Free Trial",
+      period: "/شهرياً",
+      features: ["مشاهدات غير محدودة", "تحليل ذكاء اصطناعي كامل", "حفظ غير محدود", "دعم ذو أولوية", "فلاتر متقدمة", "تصدير البيانات"],
+      cta: "ابدأ تجربتك المجانية",
       popular: true,
     },
     {
       name: "Enterprise",
       price: "$99",
-      period: "/month",
-      features: ["Everything in Pro", "API access", "Custom integrations", "Team collaboration", "Dedicated account manager", "White-label reports"],
-      cta: "Contact Sales",
+      period: "/شهرياً",
+      features: ["كل مزايا Pro", "الوصول عبر API", "تكاملات مخصصة", "تعاون الفريق", "مدير حساب مخصص", "تقارير بعلامتك التجارية"],
+      cta: "تواصل مع المبيعات",
       popular: false,
     },
   ];
@@ -234,8 +234,8 @@ function PricingSection() {
     <section id="pricing" className="py-20 px-6">
       <div className="max-w-5xl mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl font-bold tracking-tight">Simple, Transparent Pricing</h2>
-          <p className="text-muted-foreground">Start free, upgrade when you're ready.</p>
+          <h2 className="text-3xl font-bold tracking-tight">أسعار بسيطة وشفافة</h2>
+          <p className="text-muted-foreground">ابدأ مجاناً، وقم بالترقية عندما تكون جاهزاً.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-6">
           {plans.map((plan, i) => (
@@ -245,7 +245,7 @@ function PricingSection() {
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="no-default-active-elevate">Most Popular</Badge>
+                  <Badge className="no-default-active-elevate">الأكثر شعبية</Badge>
                 </div>
               )}
               <CardContent className="p-6 space-y-5">
@@ -283,24 +283,24 @@ function PricingSection() {
 function FAQSection() {
   const faqs = [
     {
-      q: "How does TrendDrop find trending products?",
-      a: "We analyze data from multiple e-commerce platforms, social media trends, and search patterns to identify products with high growth potential and low market saturation.",
+      q: "كيف يكتشف TrendDrop المنتجات الرائجة؟",
+      a: "نحلل البيانات من منصات التجارة الإلكترونية المتعددة واتجاهات وسائل التواصل الاجتماعي وأنماط البحث لتحديد المنتجات ذات إمكانات النمو العالية والتشبّع المنخفض في السوق.",
     },
     {
-      q: "What is the Opportunity Score?",
-      a: "The Opportunity Score is our proprietary metric that combines trend velocity, market saturation, and profit margin potential into a single 0-100 score. Higher scores indicate better opportunities.",
+      q: "ما هو تقييم الفرصة؟",
+      a: "تقييم الفرصة هو مقياسنا الخاص الذي يجمع بين سرعة الرواج وتشبّع السوق وإمكانية هامش الربح في تقييم واحد من 0 إلى 100. التقييمات الأعلى تشير إلى فرص أفضل.",
     },
     {
-      q: "Can I connect to my own store?",
-      a: "We're building integrations with Shopify, WooCommerce, and other major platforms. Stay tuned for updates!",
+      q: "هل يمكنني ربط متجري الخاص؟",
+      a: "نحن نعمل على تكاملات مع Shopify وWooCommerce ومنصات كبرى أخرى. ترقبوا التحديثات!",
     },
     {
-      q: "How accurate are the suggested selling prices?",
-      a: "Our pricing suggestions are based on market analysis of similar products across multiple platforms. They serve as a starting point - we recommend testing different price points for your specific audience.",
+      q: "ما مدى دقة أسعار البيع المقترحة؟",
+      a: "اقتراحات الأسعار لدينا مبنية على تحليل السوق لمنتجات مشابهة عبر منصات متعددة. وهي نقطة انطلاق - ننصح باختبار نقاط سعر مختلفة لجمهورك المحدد.",
     },
     {
-      q: "Is there a free trial?",
-      a: "Yes! Our Free plan gives you access to 50 product views per month with basic trend data. No credit card required to get started.",
+      q: "هل توجد تجربة مجانية؟",
+      a: "نعم! الباقة المجانية تمنحك الوصول إلى 50 مشاهدة منتج شهرياً مع بيانات اتجاهات أساسية. لا حاجة لبطاقة ائتمان للبدء.",
     },
   ];
 
@@ -308,12 +308,12 @@ function FAQSection() {
     <section className="py-20 px-6 bg-muted/30">
       <div className="max-w-2xl mx-auto">
         <div className="text-center space-y-3 mb-10">
-          <h2 className="text-3xl font-bold tracking-tight">Frequently Asked Questions</h2>
+          <h2 className="text-3xl font-bold tracking-tight">الأسئلة الشائعة</h2>
         </div>
         <Accordion type="single" collapsible className="w-full">
           {faqs.map((faq, i) => (
             <AccordionItem key={i} value={`faq-${i}`}>
-              <AccordionTrigger className="text-left" data-testid={`button-faq-${i}`}>
+              <AccordionTrigger className="text-start" data-testid={`button-faq-${i}`}>
                 {faq.q}
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground">
@@ -332,15 +332,15 @@ function FinalCTA() {
     <section className="py-20 px-6">
       <div className="max-w-3xl mx-auto text-center space-y-6">
         <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-          Ready to Find Your Next Winning Product?
+          مستعد لاكتشاف منتجك الرابح القادم؟
         </h2>
         <p className="text-lg text-muted-foreground">
-          Join thousands of e-commerce sellers who use TrendDrop to discover profitable products every day.
+          انضم إلى آلاف بائعي التجارة الإلكترونية الذين يستخدمون TrendDrop لاكتشاف منتجات مربحة كل يوم.
         </p>
         <Button size="lg" asChild>
           <Link href="/signup" data-testid="link-final-cta">
-            Get Started Free
-            <ArrowRight className="w-4 h-4 ml-2" />
+            ابدأ مجاناً
+            <ArrowLeft className="w-4 h-4 ms-2" />
           </Link>
         </Button>
       </div>
@@ -357,7 +357,7 @@ function Footer() {
           <span className="font-semibold">TrendDrop</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          &copy; 2026 TrendDrop. All rights reserved.
+          &copy; 2026 TrendDrop. جميع الحقوق محفوظة.
         </p>
       </div>
     </footer>

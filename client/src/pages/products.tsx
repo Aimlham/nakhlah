@@ -40,7 +40,7 @@ export default function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/saved"] });
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
     },
   });
 
@@ -85,8 +85,8 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">Products</h1>
-        <p className="text-muted-foreground">Discover trending products with high profit potential.</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-products-title">المنتجات</h1>
+        <p className="text-muted-foreground">اكتشف المنتجات الرائجة ذات الربحية العالية.</p>
       </div>
 
       <FilterBar
@@ -103,8 +103,8 @@ export default function ProductsPage() {
       {filtered.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="No products found"
-          description="Try adjusting your filters or search to find products."
+          title="لم يتم العثور على منتجات"
+          description="حاول تعديل الفلاتر أو البحث للعثور على منتجات."
         />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

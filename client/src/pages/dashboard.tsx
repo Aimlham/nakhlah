@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Package, TrendingUp, Star, Bookmark, ArrowRight } from "lucide-react";
+import { Package, TrendingUp, Star, Bookmark, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,46 +58,46 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight" data-testid="text-dashboard-title">
-          Welcome back{user?.fullName ? `, ${user.fullName}` : ""}
+          مرحباً بعودتك{user?.fullName ? `، ${user.fullName}` : ""}
         </h1>
-        <p className="text-muted-foreground">Here's what's trending in your product research.</p>
+        <p className="text-muted-foreground">إليك أحدث المنتجات الرائجة في أبحاثك.</p>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          title="Total Products"
+          title="إجمالي المنتجات"
           value={allProducts.length}
           icon={Package}
-          description="In database"
+          description="في قاعدة البيانات"
         />
         <KpiCard
-          title="Trending Today"
+          title="الرائج اليوم"
           value={trendingToday}
           icon={TrendingUp}
-          description="Score 80+"
-          trend={trendingToday > 0 ? "Hot right now" : undefined}
+          description="تقييم +80"
+          trend={trendingToday > 0 ? "رائج الآن" : undefined}
         />
         <KpiCard
-          title="High Opportunity"
+          title="فرص عالية"
           value={highOpportunity}
           icon={Star}
-          description="Opportunity 80+"
+          description="فرصة +80"
         />
         <KpiCard
-          title="Saved Products"
+          title="المنتجات المحفوظة"
           value={savedCount}
           icon={Bookmark}
-          description="Your collection"
+          description="مجموعتك"
         />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-4">
-            <CardTitle className="text-base font-semibold">Recent Products</CardTitle>
+            <CardTitle className="text-base font-semibold">أحدث المنتجات</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/products" data-testid="link-view-all-products">
-                View All <ArrowRight className="w-3 h-3 ml-1" />
+                عرض الكل <ArrowLeft className="w-3 h-3 ms-1" />
               </Link>
             </Button>
           </CardHeader>
@@ -124,10 +124,10 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-4">
-            <CardTitle className="text-base font-semibold">Top Opportunities</CardTitle>
+            <CardTitle className="text-base font-semibold">أفضل الفرص</CardTitle>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/products" data-testid="link-view-opportunities">
-                View All <ArrowRight className="w-3 h-3 ml-1" />
+                عرض الكل <ArrowLeft className="w-3 h-3 ms-1" />
               </Link>
             </Button>
           </CardHeader>

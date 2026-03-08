@@ -16,7 +16,7 @@ export function Topbar() {
           size="icon"
           variant="ghost"
           onClick={toggleTheme}
-          aria-label="Toggle theme"
+          aria-label="تبديل المظهر"
           data-testid="button-theme-toggle"
         >
           {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -25,7 +25,7 @@ export function Topbar() {
           size="icon"
           variant="ghost"
           onClick={logout}
-          aria-label="Log out"
+          aria-label="تسجيل الخروج"
           data-testid="button-logout"
         >
           <LogOut className="w-4 h-4" />

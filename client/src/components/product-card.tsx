@@ -32,7 +32,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
             <Package className="w-10 h-10 text-white/60" />
           )}
           <div className="absolute top-2 right-2">
-            <ScoreBadge label="Score" score={product.opportunityScore} />
+            <ScoreBadge label="التقييم" score={product.opportunityScore} />
           </div>
         </div>
 
@@ -53,15 +53,15 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
 
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
-              <p className="text-xs text-muted-foreground">Supplier</p>
+              <p className="text-xs text-muted-foreground">المورّد</p>
               <p className="text-sm font-semibold">{formatMoney(product.supplierPrice)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Sell Price</p>
+              <p className="text-xs text-muted-foreground">سعر البيع</p>
               <p className="text-sm font-semibold">{formatMoney(product.suggestedSellPrice)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Margin</p>
+              <p className="text-xs text-muted-foreground">الهامش</p>
               <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                 {formatMargin(product.estimatedMargin)}
               </p>
@@ -71,13 +71,13 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
           <div className="flex items-center gap-2">
             <Button asChild variant="default" className="flex-1">
               <Link href={`/products/${product.id}`} data-testid={`link-product-details-${product.id}`}>
-                Details
+                التفاصيل
               </Link>
             </Button>
             <Button
               size="icon"
               variant={isSaved ? "secondary" : "outline"}
-              aria-label={isSaved ? "Unsave product" : "Save product"}
+              aria-label={isSaved ? "إلغاء الحفظ" : "حفظ المنتج"}
               disabled={savePending}
               onClick={() => onToggleSave?.(product.id)}
               data-testid={`button-save-product-${product.id}`}

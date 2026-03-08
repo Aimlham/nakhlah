@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, Package,
+  ArrowRight, Bookmark, BookmarkCheck, ExternalLink, Package,
   TrendingUp, BarChart3, Target, Users, Megaphone, Lightbulb,
 } from "lucide-react";
 import { formatMoney, formatMargin, getCategoryGradient, parseAiSummary, cn } from "@/lib/utils";
@@ -43,7 +43,7 @@ export default function ProductDetailsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/saved"] });
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
     },
   });
 
@@ -64,9 +64,9 @@ export default function ProductDetailsPage() {
   if (!product) {
     return (
       <div className="text-center py-16">
-        <p className="text-muted-foreground">Product not found.</p>
+        <p className="text-muted-foreground">المنتج غير موجود.</p>
         <Button variant="outline" asChild className="mt-4">
-          <Link href="/products">Back to Products</Link>
+          <Link href="/products">العودة للمنتجات</Link>
         </Button>
       </div>
     );
@@ -78,8 +78,8 @@ export default function ProductDetailsPage() {
     <div className="space-y-6">
       <Button variant="ghost" size="sm" asChild>
         <Link href="/products" data-testid="link-back-products">
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Products
+          <ArrowRight className="w-4 h-4 me-1" />
+          العودة للمنتجات
         </Link>
       </Button>
 
@@ -122,14 +122,14 @@ export default function ProductDetailsPage() {
             <div className="space-y-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <Lightbulb className="w-5 h-5 text-primary" />
-                AI Analysis
+                تحليل الذكاء الاصطناعي
               </h2>
 
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Target className="w-4 h-4 text-primary" />
-                    Why This Product is Promising
+                    لماذا هذا المنتج واعد
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -141,7 +141,7 @@ export default function ProductDetailsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Users className="w-4 h-4 text-primary" />
-                    Target Audience
+                    الجمهور المستهدف
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -153,7 +153,7 @@ export default function ProductDetailsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Megaphone className="w-4 h-4 text-primary" />
-                    Ad Angles
+                    زوايا إعلانية
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -174,7 +174,7 @@ export default function ProductDetailsPage() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-primary" />
-                    Hook Ideas
+                    أفكار جذب
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -196,21 +196,21 @@ export default function ProductDetailsPage() {
             <Card>
               <CardContent className="p-4 text-center">
                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-                <p className="text-xs text-muted-foreground">Trend</p>
+                <p className="text-xs text-muted-foreground">الرواج</p>
                 <p className="text-xl font-bold">{product.trendScore || 0}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
                 <BarChart3 className="w-5 h-5 mx-auto mb-1 text-amber-500" />
-                <p className="text-xs text-muted-foreground">Saturation</p>
+                <p className="text-xs text-muted-foreground">التشبّع</p>
                 <p className="text-xl font-bold">{product.saturationScore || 0}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
                 <Target className="w-5 h-5 mx-auto mb-1 text-emerald-500" />
-                <p className="text-xs text-muted-foreground">Opportunity</p>
+                <p className="text-xs text-muted-foreground">الفرصة</p>
                 <p className="text-xl font-bold">{product.opportunityScore || 0}</p>
               </CardContent>
             </Card>
@@ -218,19 +218,19 @@ export default function ProductDetailsPage() {
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pricing Details</CardTitle>
+              <CardTitle className="text-sm font-medium">تفاصيل التسعير</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Supplier Price</span>
+                <span className="text-sm text-muted-foreground">سعر المورّد</span>
                 <span className="font-semibold">{formatMoney(product.supplierPrice)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Suggested Sell Price</span>
+                <span className="text-sm text-muted-foreground">سعر البيع المقترح</span>
                 <span className="font-semibold">{formatMoney(product.suggestedSellPrice)}</span>
               </div>
               <div className="border-t pt-3 flex items-center justify-between">
-                <span className="text-sm font-medium">Estimated Margin</span>
+                <span className="text-sm font-medium">هامش الربح المتوقع</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">
                   {formatMargin(product.estimatedMargin)}
                 </span>
@@ -242,8 +242,8 @@ export default function ProductDetailsPage() {
             {product.supplierLink && (
               <Button variant="outline" className="w-full" asChild>
                 <a href={product.supplierLink} target="_blank" rel="noopener noreferrer" data-testid="link-supplier">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View Supplier
+                  <ExternalLink className="w-4 h-4 me-2" />
+                  عرض المورّد
                 </a>
               </Button>
             )}
@@ -256,13 +256,13 @@ export default function ProductDetailsPage() {
             >
               {isSaved ? (
                 <>
-                  <BookmarkCheck className="w-4 h-4 mr-2" />
-                  Saved
+                  <BookmarkCheck className="w-4 h-4 me-2" />
+                  تم الحفظ
                 </>
               ) : (
                 <>
-                  <Bookmark className="w-4 h-4 mr-2" />
-                  Save Product
+                  <Bookmark className="w-4 h-4 me-2" />
+                  حفظ المنتج
                 </>
               )}
             </Button>

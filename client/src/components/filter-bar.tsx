@@ -29,23 +29,23 @@ export function FilterBar({
   return (
     <div className="space-y-3">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Search products..."
+          placeholder="ابحث عن منتجات..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9"
+          className="ps-9"
           data-testid="input-search"
         />
       </div>
       <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
         <Select value={category} onValueChange={onCategoryChange}>
           <SelectTrigger className="sm:w-[160px]" data-testid="select-category">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder="الفئة" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">جميع الفئات</SelectItem>
             {categories.map(c => (
               <SelectItem key={c} value={c}>{c}</SelectItem>
             ))}
@@ -54,10 +54,10 @@ export function FilterBar({
 
         <Select value={niche} onValueChange={onNicheChange}>
           <SelectTrigger className="sm:w-[160px]" data-testid="select-niche">
-            <SelectValue placeholder="Niche" />
+            <SelectValue placeholder="النيتش" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Niches</SelectItem>
+            <SelectItem value="all">جميع النيتشات</SelectItem>
             {niches.map(n => (
               <SelectItem key={n} value={n}>{n}</SelectItem>
             ))}
@@ -66,10 +66,10 @@ export function FilterBar({
 
         <Select value={platform} onValueChange={onPlatformChange}>
           <SelectTrigger className="sm:w-[160px]" data-testid="select-platform">
-            <SelectValue placeholder="Platform" />
+            <SelectValue placeholder="المنصة" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Platforms</SelectItem>
+            <SelectItem value="all">جميع المنصات</SelectItem>
             {platforms.map(p => (
               <SelectItem key={p} value={p}>{p}</SelectItem>
             ))}
@@ -78,12 +78,12 @@ export function FilterBar({
 
         <Select value={sort} onValueChange={onSortChange}>
           <SelectTrigger className="sm:w-[180px]" data-testid="select-sort">
-            <SelectValue placeholder="Sort by" />
+            <SelectValue placeholder="ترتيب حسب" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="newest">Newest First</SelectItem>
-            <SelectItem value="opportunity">Highest Opportunity</SelectItem>
-            <SelectItem value="margin">Highest Margin</SelectItem>
+            <SelectItem value="newest">الأحدث أولاً</SelectItem>
+            <SelectItem value="opportunity">أعلى فرصة</SelectItem>
+            <SelectItem value="margin">أعلى هامش ربح</SelectItem>
           </SelectContent>
         </Select>
       </div>

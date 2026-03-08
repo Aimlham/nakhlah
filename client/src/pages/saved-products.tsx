@@ -32,7 +32,7 @@ export default function SavedProductsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/saved"] });
     },
     onError: (err: Error) => {
-      toast({ title: "Error", description: err.message, variant: "destructive" });
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
     },
   });
 
@@ -54,16 +54,16 @@ export default function SavedProductsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-saved-title">Saved Products</h1>
-        <p className="text-muted-foreground">Products you've bookmarked for later review.</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-saved-title">المنتجات المحفوظة</h1>
+        <p className="text-muted-foreground">المنتجات التي حفظتها للمراجعة لاحقاً.</p>
       </div>
 
       {products.length === 0 ? (
         <EmptyState
           icon={Bookmark}
-          title="No saved products yet"
-          description="Browse products and save the ones you're interested in. They'll appear here."
-          actionLabel="Browse Products"
+          title="لا توجد منتجات محفوظة"
+          description="تصفّح المنتجات واحفظ ما يهمّك. ستظهر هنا."
+          actionLabel="تصفّح المنتجات"
           actionHref="/products"
         />
       ) : (

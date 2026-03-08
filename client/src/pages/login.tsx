@@ -25,8 +25,8 @@ export default function LoginPage() {
       navigate("/dashboard");
     } catch (err: any) {
       toast({
-        title: "Login failed",
-        description: err.message || "Invalid credentials. Please try again.",
+        title: "فشل تسجيل الدخول",
+        description: err.message || "بيانات غير صحيحة. حاول مرة أخرى.",
         variant: "destructive",
       });
     } finally {
@@ -46,17 +46,17 @@ export default function LoginPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Welcome back</CardTitle>
-            <CardDescription>Log in to your account to continue</CardDescription>
+            <CardTitle>مرحباً بعودتك</CardTitle>
+            <CardDescription>سجّل دخولك للمتابعة</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">البريد الإلكتروني</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="أدخل بريدك الإلكتروني"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -64,11 +64,11 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">كلمة المرور</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="أدخل كلمة المرور"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -76,17 +76,17 @@ export default function LoginPage() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading} data-testid="button-login">
-                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Log in
+                {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+                تسجيل الدخول
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
+          ليس لديك حساب؟{" "}
           <Link href="/signup" className="text-primary font-medium" data-testid="link-to-signup">
-            Sign up
+            إنشاء حساب
           </Link>
         </p>
       </div>

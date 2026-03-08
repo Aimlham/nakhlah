@@ -26,8 +26,8 @@ export default function SignupPage() {
       navigate("/dashboard");
     } catch (err: any) {
       toast({
-        title: "Sign up failed",
-        description: err.message || "Could not create account. Please try again.",
+        title: "فشل إنشاء الحساب",
+        description: err.message || "تعذّر إنشاء الحساب. حاول مرة أخرى.",
         variant: "destructive",
       });
     } finally {
@@ -47,17 +47,17 @@ export default function SignupPage() {
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Create your account</CardTitle>
-            <CardDescription>Start discovering winning products today</CardDescription>
+            <CardTitle>أنشئ حسابك</CardTitle>
+            <CardDescription>ابدأ باكتشاف المنتجات الرابحة اليوم</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">الاسم الكامل</Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="أدخل اسمك الكامل"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
@@ -65,11 +65,11 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">البريد الإلكتروني</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="أدخل بريدك الإلكتروني"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -77,11 +77,11 @@ export default function SignupPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">كلمة المرور</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Create a password (min. 6 characters)"
+                  placeholder="أنشئ كلمة مرور (6 أحرف على الأقل)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -90,17 +90,17 @@ export default function SignupPage() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading} data-testid="button-signup">
-                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Create Account
+                {loading && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}
+                إنشاء حساب
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          لديك حساب بالفعل؟{" "}
           <Link href="/login" className="text-primary font-medium" data-testid="link-to-login">
-            Log in
+            تسجيل الدخول
           </Link>
         </p>
       </div>

@@ -16,11 +16,11 @@ import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Products", url: "/products", icon: Package },
-  { title: "Saved", url: "/saved", icon: Bookmark },
-  { title: "Pricing", url: "/pricing", icon: CreditCard },
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "لوحة التحكم", url: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
+  { title: "المنتجات", url: "/products", icon: Package, key: "products" },
+  { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
+  { title: "الأسعار", url: "/pricing", icon: CreditCard, key: "pricing" },
+  { title: "الإعدادات", url: "/settings", icon: Settings, key: "settings" },
 ];
 
 export function AppSidebar() {
@@ -28,7 +28,7 @@ export function AppSidebar() {
   const { user } = useAuth();
 
   return (
-    <Sidebar>
+    <Sidebar side="right">
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground">
@@ -41,15 +41,15 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>التنقل</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
                 const isActive = location === item.url || (item.url !== "/dashboard" && location.startsWith(item.url));
                 return (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild data-active={isActive}>
-                      <Link href={item.url} data-testid={`link-nav-${item.title.toLowerCase()}`}>
+                      <Link href={item.url} data-testid={`link-nav-${item.key}`}>
                         <item.icon className="w-4 h-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -73,7 +73,7 @@ export function AppSidebar() {
               <span className="text-sm font-medium truncate" data-testid="text-sidebar-username">
                 {user.fullName || user.email}
               </span>
-              <span className="text-xs text-muted-foreground truncate">Free Plan</span>
+              <span className="text-xs text-muted-foreground truncate">الباقة المجانية</span>
             </div>
           </div>
         )}

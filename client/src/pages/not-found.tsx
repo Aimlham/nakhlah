@@ -9,12 +9,12 @@ export default function NotFound() {
         <div className="flex items-center justify-center w-16 h-16 rounded-full bg-muted mx-auto">
           <AlertCircle className="w-7 h-7 text-muted-foreground" />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-404-title">Page Not Found</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-404-title">الصفحة غير موجودة</h1>
         <p className="text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+          الصفحة التي تبحث عنها غير موجودة أو تم نقلها.
         </p>
         <Button asChild>
-          <Link href="/" data-testid="link-go-home">Go Home</Link>
+          <Link href="/" data-testid="link-go-home">العودة للرئيسية</Link>
         </Button>
       </div>
     </div>

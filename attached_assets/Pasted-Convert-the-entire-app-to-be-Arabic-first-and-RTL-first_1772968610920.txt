@@ -1,0 +1,44 @@
+Convert the entire app to be Arabic-first and RTL-first.
+
+Project direction:
+This product targets the Arabic-speaking market only as the main audience.
+Arabic must be the default and primary language across the whole app.
+English should be optional later, but not the default.
+
+Requirements:
+1. Make Arabic the default language everywhere
+2. Convert the layout to RTL where appropriate
+3. Update all visible UI text from English to professional, modern Arabic
+4. Keep the design premium and clean
+5. Do not break the current app structure
+6. Do not redesign everything from scratch
+7. Preserve all existing functionality
+8. Make sure typography, spacing, and alignment look natural in Arabic
+9. Ensure navbar, hero, buttons, cards, filters, product details, auth pages, dashboard, saved products, pricing, settings, and empty states all use Arabic
+10. Keep code structure clean and easy for later bilingual support
+
+Specific instructions:
+- Set html dir="rtl" and lang="ar" where needed
+- Make the main layout RTL
+- Use Arabic labels, buttons, headings, and descriptions
+- Replace English CTA text with Arabic equivalents
+- Update forms to Arabic labels and placeholders
+- Update product dashboard labels to Arabic
+- Update pricing page and FAQ to Arabic
+- Keep numbers and pricing readable
+- Make sure icons and spacing still look correct in RTL
+- Use clear Saudi/Gulf-friendly business Arabic, not overly formal translation
+- Keep product names themselves unchanged if they are mock product titles, unless they are UI labels
+- Prepare the codebase so English can be added later with a simple i18n structure, but do not fully implement English now unless already easy
+
+Important:
+- Do not add new features
+- Do not modify database schema
+- Do not break Supabase integration
+- Do not remove any working functionality
+- Focus only on Arabic-first UX and RTL polish
+
+After finishing:
+- summarize which pages were converted
+- mention any remaining English text that still needs manual review
+- verify the app still runs correctly

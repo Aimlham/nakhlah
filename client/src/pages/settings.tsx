@@ -11,28 +11,28 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-settings-title">Settings</h1>
-        <p className="text-muted-foreground">Manage your account preferences.</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-settings-title">الإعدادات</h1>
+        <p className="text-muted-foreground">إدارة تفضيلات حسابك.</p>
       </div>
 
       <div className="max-w-lg space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Profile</CardTitle>
-            <CardDescription>Your account information</CardDescription>
+            <CardTitle className="text-base">الملف الشخصي</CardTitle>
+            <CardDescription>معلومات حسابك</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="settings-name">Full Name</Label>
+              <Label htmlFor="settings-name">الاسم الكامل</Label>
               <Input
                 id="settings-name"
                 defaultValue={user?.fullName || ""}
-                placeholder="Your name"
+                placeholder="اسمك"
                 data-testid="input-settings-name"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="settings-email">Email</Label>
+              <Label htmlFor="settings-email">البريد الإلكتروني</Label>
               <Input
                 id="settings-email"
                 defaultValue={user?.email || ""}
@@ -40,18 +40,18 @@ export default function SettingsPage() {
                 data-testid="input-settings-email"
               />
             </div>
-            <Button data-testid="button-save-settings">Save Changes</Button>
+            <Button data-testid="button-save-settings">حفظ التغييرات</Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Plan</CardTitle>
-            <CardDescription>You are currently on the Free plan</CardDescription>
+            <CardTitle className="text-base">الباقة</CardTitle>
+            <CardDescription>أنت حالياً على الباقة المجانية</CardDescription>
           </CardHeader>
           <CardContent>
             <Button variant="outline" asChild>
-              <Link href="/pricing" data-testid="link-upgrade-plan">View Plans</Link>
+              <Link href="/pricing" data-testid="link-upgrade-plan">عرض الباقات</Link>
             </Button>
           </CardContent>
         </Card>
