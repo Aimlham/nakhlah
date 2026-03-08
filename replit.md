@@ -173,12 +173,14 @@ Key fields in the products table (Drizzle → Supabase):
 - **Dashboard**: Shows top 6 winning products with stats (avg profit, avg margin, high demand count, top score)
 
 ## AliExpress Importer
-- `ALIEXPRESS_API_KEY` — RapidAPI key for aliexpress-datahub endpoint
+- `APIFY_API_TOKEN` — Apify API token (get from apify.com/account#/integrations)
+- **Apify actor**: `epctex~aliexpress-scraper` — runs live AliExpress product scraping
 - **Service file**: `server/aliexpress-importer.ts`
-- **Pipeline**: Search → normalize → halal filter → quality filter (min orders/rating, fragile/heavy skip) → dedup → score → save
+- **Pipeline**: Apify actor run → normalize → halal filter → quality filter (min orders/rating, fragile/heavy skip) → dedup → score → save to Supabase
 - **Quality defaults**: orders_count >= 50, rating >= 4.0, skips fragile/heavy keywords
-- **Import route**: `POST /api/import/aliexpress` — accepts keyword + options, returns summary
-- **Status**: Requires ALIEXPRESS_API_KEY to activate. Without key, returns clear error message.
+- **Import route**: `POST /api/import/aliexpress` — accepts { keyword, halal_only, min_orders, min_rating, max_results }
+- **Status route**: `GET /api/import/aliexpress/status` — returns { active, configured, message }
+- **Status**: Requires APIFY_API_TOKEN to activate. Without token, returns clear error. No fake/mock data.
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`

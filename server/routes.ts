@@ -648,7 +648,7 @@ export async function registerRoutes(
     halal_only: z.boolean().optional().default(false),
     min_orders: z.number().int().min(0).max(100000).optional().default(50),
     min_rating: z.number().min(0).max(5).optional().default(4.0),
-    max_pages: z.number().int().min(1).max(5).optional().default(1),
+    max_results: z.number().int().min(1).max(100).optional().default(20),
   });
 
   app.post("/api/import/aliexpress", async (req: Request, res: Response) => {
@@ -663,14 +663,14 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
       }
 
-      const { keyword, halal_only, min_orders, min_rating, max_pages } = parsed.data;
+      const { keyword, halal_only, min_orders, min_rating, max_results } = parsed.data;
 
       const result = await importAliExpressProducts({
         keyword: keyword.trim(),
         halalOnly: halal_only,
         minOrders: min_orders,
         minRating: min_rating,
-        maxPages: max_pages,
+        maxResults: max_results,
       });
 
       res.json(result);
