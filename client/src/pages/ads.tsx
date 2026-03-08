@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,12 @@ import {
   Flame, Sparkles, Star, TrendingUp,
   ChevronDown, ChevronUp, LayoutGrid, LayoutList,
   Calendar as CalendarIcon, Clock, BarChart3, Tag,
+  Download, Loader2,
 } from "lucide-react";
 import { formatCompactNumber, cn } from "@/lib/utils";
 import { MineaAdCard, type EnrichedAd } from "@/components/minea-ad-card";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdsPage() {
   const [search, setSearch] = useState("");
@@ -24,10 +27,36 @@ export default function AdsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [durationFilter, setDurationFilter] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<string | null>(null);
+  const [importQuery, setImportQuery] = useState("");
+  const { toast } = useToast();
 
   const { data: adsData, isLoading } = useQuery<EnrichedAd[]>({
     queryKey: ["/api/ads"],
   });
+
+  const importTikTok = useMutation({
+    mutationFn: async (query: string) => {
+      const res = await apiRequest("POST", "/api/import/tiktok-ads", {
+        query,
+        max_results: 30,
+      });
+      return res.json();
+    },
+    onSuccess: (data: { imported: number; message: string }) => {
+      toast({ title: "تم الاستيراد", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/ads"] });
+      setImportQuery("");
+    },
+    onError: (err: Error) => {
+      toast({ title: "خطأ في الاستيراد", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleImport = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importQuery.trim()) return;
+    importTikTok.mutate(importQuery.trim());
+  };
 
   const allAds = adsData || [];
 
@@ -47,7 +76,7 @@ export default function AdsPage() {
   const adCountByProduct = useMemo(() => {
     const map: Record<string, number> = {};
     allAds.forEach(ad => {
-      map[ad.productId] = (map[ad.productId] || 0) + 1;
+      if (ad.productId) map[ad.productId] = (map[ad.productId] || 0) + 1;
     });
     return map;
   }, [allAds]);
@@ -55,7 +84,7 @@ export default function AdsPage() {
   const viewsByProduct = useMemo(() => {
     const map: Record<string, number> = {};
     allAds.forEach(ad => {
-      map[ad.productId] = (map[ad.productId] || 0) + (ad.views || 0);
+      if (ad.productId) map[ad.productId] = (map[ad.productId] || 0) + (ad.views || 0);
     });
     return map;
   }, [allAds]);
@@ -69,7 +98,9 @@ export default function AdsPage() {
         ad.productTitle.toLowerCase().includes(s) ||
         ad.platform.toLowerCase().includes(s) ||
         (ad.niche || "").toLowerCase().includes(s) ||
-        (ad.productNiche || "").toLowerCase().includes(s)
+        (ad.productNiche || "").toLowerCase().includes(s) ||
+        (ad.advertiserName || "").toLowerCase().includes(s) ||
+        (ad.adDescription || "").toLowerCase().includes(s)
       );
     }
 
@@ -170,6 +201,33 @@ export default function AdsPage() {
           </div>
         </div>
       </div>
+
+      <form onSubmit={handleImport} className="flex items-center gap-3 bg-muted/30 border border-border/50 rounded-xl p-3" data-testid="form-tiktok-import">
+        <div className="relative flex-1">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={importQuery}
+            onChange={(e) => setImportQuery(e.target.value)}
+            placeholder="ابحث واستورد إعلانات TikTok... (مثال: dropshipping, beauty products)"
+            className="ps-9 bg-background/80 border-border/40"
+            data-testid="input-tiktok-import"
+            disabled={importTikTok.isPending}
+          />
+        </div>
+        <Button
+          type="submit"
+          size="sm"
+          disabled={importTikTok.isPending || !importQuery.trim()}
+          data-testid="button-import-tiktok"
+        >
+          {importTikTok.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin me-1.5" />
+          ) : (
+            <Download className="w-4 h-4 me-1.5" />
+          )}
+          {importTikTok.isPending ? "جاري الاستيراد..." : "استيراد من TikTok"}
+        </Button>
+      </form>
 
       <div className="flex items-center justify-between gap-4">
         <Tabs value={platformTab} onValueChange={setPlatformTab}>
@@ -418,8 +476,8 @@ export default function AdsPage() {
                 <MineaAdCard
                   key={ad.id}
                   ad={ad}
-                  adCountForProduct={adCountByProduct[ad.productId]}
-                  totalViewsForProduct={viewsByProduct[ad.productId]}
+                  adCountForProduct={ad.productId ? adCountByProduct[ad.productId] : undefined}
+                  totalViewsForProduct={ad.productId ? viewsByProduct[ad.productId] : undefined}
                 />
               ))}
             </div>

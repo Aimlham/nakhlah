@@ -10,7 +10,7 @@ import { formatCompactNumber, getPlatformColor, daysSince, formatDateShort, trun
 
 export interface EnrichedAd {
   id: string;
-  productId: string;
+  productId: string | null;
   platform: string;
   niche: string | null;
   videoUrl: string;
@@ -22,6 +22,9 @@ export interface EnrichedAd {
   productTitle: string;
   productCategory: string;
   productNiche: string;
+  advertiserName?: string | null;
+  adDescription?: string | null;
+  landingPageUrl?: string | null;
 }
 
 interface MineaAdCardProps {
@@ -51,13 +54,22 @@ export function MineaAdCard({ ad, adCountForProduct, totalViewsForProduct }: Min
                 )}
               </div>
               <div className="min-w-0">
-                <Link href={`/products/${ad.productId}`}>
-                  <p className="text-sm font-semibold truncate cursor-pointer" data-testid={`text-minea-product-${ad.id}`}>
+                {ad.productId ? (
+                  <Link href={`/products/${ad.productId}`}>
+                    <p className="text-sm font-semibold truncate cursor-pointer" data-testid={`text-minea-product-${ad.id}`}>
+                      {ad.productTitle}
+                    </p>
+                  </Link>
+                ) : (
+                  <p className="text-sm font-semibold truncate" data-testid={`text-minea-product-${ad.id}`}>
                     {ad.productTitle}
                   </p>
-                </Link>
+                )}
                 <p className="text-[11px] text-muted-foreground">
-                  {adCountForProduct !== undefined && (
+                  {ad.advertiserName && (
+                    <span className="font-medium">{ad.advertiserName}</span>
+                  )}
+                  {!ad.advertiserName && adCountForProduct !== undefined && (
                     <span>{adCountForProduct} إعلانات نشطة</span>
                   )}
                   {totalViewsForProduct !== undefined && (

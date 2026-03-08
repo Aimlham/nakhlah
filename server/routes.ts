@@ -9,6 +9,7 @@ import { generateProductAnalysis } from "./openai";
 import { checkHalalSafe } from "./storage";
 import { importAliExpressProducts, getAliExpressStatus } from "./aliexpress-importer";
 import { importAmazonProducts, getAmazonStatus } from "./amazon-importer";
+import { importTikTokAds, getTikTokStatus } from "./tiktok-importer";
 import { isProductPublishable, qualifyProduct } from "@shared/qualification";
 import { z } from "zod";
 
@@ -385,16 +386,21 @@ export async function registerRoutes(
       if (search) {
         const q = (search as string).toLowerCase();
         ads = ads.filter(a => {
-          const product = productMap.get(a.productId);
-          return product?.title.toLowerCase().includes(q) || product?.category.toLowerCase().includes(q);
+          const product = a.productId ? productMap.get(a.productId) : null;
+          return (
+            product?.title.toLowerCase().includes(q) ||
+            product?.category.toLowerCase().includes(q) ||
+            (a.advertiserName || "").toLowerCase().includes(q) ||
+            (a.adDescription || "").toLowerCase().includes(q)
+          );
         });
       }
 
       const enriched = ads.map(ad => {
-        const product = productMap.get(ad.productId);
+        const product = ad.productId ? productMap.get(ad.productId) : null;
         return {
           ...ad,
-          productTitle: product?.title || "",
+          productTitle: product?.title || ad.advertiserName || ad.platform,
           productCategory: product?.category || "",
           productNiche: ad.niche || product?.niche || "",
         };
@@ -488,6 +494,45 @@ export async function registerRoutes(
 
   app.get("/api/import/amazon/status", async (_req: Request, res: Response) => {
     res.json(getAmazonStatus());
+  });
+
+  const tiktokImportSchema = z.object({
+    query: z.string().min(1).max(200),
+    start_date: z.string().optional(),
+    end_date: z.string().optional(),
+    max_results: z.number().int().min(1).max(100).optional().default(30),
+  });
+
+  app.post("/api/import/tiktok-ads", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const parsed = tiktokImportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
+      }
+
+      const { query, start_date, end_date, max_results } = parsed.data;
+
+      const result = await importTikTokAds({
+        query: query.trim(),
+        startDate: start_date,
+        endDate: end_date,
+        maxResults: max_results,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("[tiktok] Import route error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to import TikTok ads" });
+    }
+  });
+
+  app.get("/api/import/tiktok-ads/status", async (_req: Request, res: Response) => {
+    res.json(getTikTokStatus());
   });
 
   return httpServer;

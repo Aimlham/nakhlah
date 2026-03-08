@@ -16,7 +16,7 @@ Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + 
 ## External Dependencies
 - **Supabase**: Database (PostgreSQL) and authentication
 - **OpenAI API**: AI product analysis, marketing insights, ad angles, Arabic translation
-- **Apify**: Product importing from AliExpress (`piotrv1001/aliexpress-listings-scraper`) and Amazon (`igview-owner/amazon-search-scraper`)
+- **Apify**: Product importing from AliExpress (`piotrv1001/aliexpress-listings-scraper`), Amazon (`igview-owner/amazon-search-scraper`), and TikTok ads (`lexis-solutions~tiktok-ads-scraper`)
 - **Google Fonts**: IBM Plex Sans Arabic
 
 ## Environment Secrets
@@ -102,6 +102,8 @@ shared/
 - `GET /api/import/aliexpress/status` - AliExpress importer status
 - `POST /api/import/amazon` - Import Amazon products
 - `GET /api/import/amazon/status` - Amazon importer status
+- `POST /api/import/tiktok-ads` - Import TikTok ads via Apify
+- `GET /api/import/tiktok-ads/status` - TikTok importer status
 
 ## Product Qualification System (`shared/qualification.ts`)
 - `qualifyProduct(product)` → `{ isPublishable, reasons[] }`
@@ -131,3 +133,16 @@ shared/
 ## Amazon Importer
 - Actor: `igview-owner/amazon-search-scraper` (async)
 - Amazon = discovery-only source (no supplier link for dropshipping)
+
+## TikTok Ads Importer
+- Actor: `lexis-solutions~tiktok-ads-scraper` (async: start→poll→get)
+- File: `server/tiktok-importer.ts`
+- Saves to `product_ads` table with dedup via `externalAdId`
+- TikTok ads may not have a `productId` (nullable)
+- Extra columns: `advertiserName`, `adDescription`, `landingPageUrl`, `externalAdId`
+- Supabase migration needed for new columns (see server startup logs for SQL)
+
+## Supabase Migration Notes
+- New `product_ads` columns (`advertiser_name`, `ad_description`, `landing_page_url`, `external_ad_id`) must be added via Supabase Dashboard SQL Editor
+- `product_id` must be made nullable: `ALTER TABLE product_ads ALTER COLUMN product_id DROP NOT NULL;`
+- App probes for column existence at startup and gracefully skips unavailable columns

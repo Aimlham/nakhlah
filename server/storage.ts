@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd } from "@shared/schema";
+import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { supabaseConfigured } from "./supabase";
 import { SupabaseStorage } from "./supabase-storage";
@@ -18,6 +18,7 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   getAdsByProductId(productId: string): Promise<ProductAd[]>;
   getAllAds(): Promise<ProductAd[]>;
+  createAd(ad: InsertProductAd): Promise<ProductAd>;
   updateProductAiSummary(productId: string, aiSummary: string): Promise<void>;
   init?(): Promise<void>;
 }
@@ -393,6 +394,28 @@ export class MemStorage implements IStorage {
 
   async getAllAds(): Promise<ProductAd[]> {
     return Array.from(this.ads.values());
+  }
+
+  async createAd(ad: InsertProductAd): Promise<ProductAd> {
+    const id = randomUUID();
+    const newAd: ProductAd = {
+      id,
+      productId: ad.productId ?? null,
+      platform: ad.platform,
+      niche: ad.niche ?? null,
+      videoUrl: ad.videoUrl,
+      thumbnailUrl: ad.thumbnailUrl ?? null,
+      views: ad.views ?? 0,
+      likes: ad.likes ?? 0,
+      publishedAt: ad.publishedAt ?? null,
+      createdAt: new Date(),
+      advertiserName: ad.advertiserName ?? null,
+      adDescription: ad.adDescription ?? null,
+      landingPageUrl: ad.landingPageUrl ?? null,
+      externalAdId: ad.externalAdId ?? null,
+    };
+    this.ads.set(id, newAd);
+    return newAd;
   }
 
   async updateProductAiSummary(productId: string, aiSummary: string): Promise<void> {

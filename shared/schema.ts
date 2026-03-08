@@ -47,7 +47,7 @@ export const savedProducts = pgTable("saved_products", {
 
 export const productAds = pgTable("product_ads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  productId: varchar("product_id").notNull(),
+  productId: varchar("product_id"),
   platform: text("platform").notNull(),
   niche: text("niche"),
   videoUrl: text("video_url").notNull(),
@@ -56,6 +56,10 @@ export const productAds = pgTable("product_ads", {
   likes: integer("likes").default(0),
   publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
+  advertiserName: text("advertiser_name"),
+  adDescription: text("ad_description"),
+  landingPageUrl: text("landing_page_url"),
+  externalAdId: text("external_ad_id"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

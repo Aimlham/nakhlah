@@ -17,6 +17,36 @@ const NEW_COLUMNS = [
 let availableNewColumns: Set<string> = new Set();
 let columnsProbed = false;
 
+const AD_NEW_COLUMNS = [
+  "advertiser_name", "ad_description", "landing_page_url", "external_ad_id",
+];
+let adColumnsAvailable: Set<string> = new Set();
+let adColumnsProbed = false;
+
+async function probeAdColumns() {
+  if (adColumnsProbed || !supabaseAdmin) return;
+  adColumnsProbed = true;
+
+  for (const col of AD_NEW_COLUMNS) {
+    try {
+      const { error } = await supabaseAdmin.from("product_ads").select(col).limit(1);
+      if (!error) {
+        adColumnsAvailable.add(col);
+      }
+    } catch {}
+  }
+
+  const missing = AD_NEW_COLUMNS.filter(c => !adColumnsAvailable.has(c));
+  if (missing.length > 0) {
+    console.log("[supabase] Missing columns in product_ads table:", missing.join(", "));
+    console.log("[supabase] Run this SQL in Supabase Dashboard > SQL Editor:");
+    console.log(missing.map(c => `ALTER TABLE product_ads ADD COLUMN IF NOT EXISTS ${c} TEXT;`).join("\n"));
+    console.log("ALTER TABLE product_ads ALTER COLUMN product_id DROP NOT NULL;");
+  }
+
+  console.log(`[supabase] product_ads columns available: ${Array.from(adColumnsAvailable).join(", ") || "base only"}`);
+}
+
 async function probeColumns() {
   if (columnsProbed || !supabaseAdmin) return;
   columnsProbed = true;
@@ -102,6 +132,7 @@ export class SupabaseStorage implements IStorage {
 
   async init() {
     await probeColumns();
+    await probeAdColumns();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -285,6 +316,40 @@ export class SupabaseStorage implements IStorage {
     return getMockAds();
   }
 
+  async createAd(ad: import("@shared/schema").InsertProductAd): Promise<ProductAd> {
+    const insertData: Record<string, unknown> = {
+      product_id: ad.productId || null,
+      platform: ad.platform,
+      niche: ad.niche || null,
+      video_url: ad.videoUrl,
+      thumbnail_url: ad.thumbnailUrl || null,
+      views: ad.views ?? 0,
+      likes: ad.likes ?? 0,
+      published_at: ad.publishedAt || null,
+    };
+
+    if (adColumnsAvailable.has("advertiser_name")) {
+      insertData.advertiser_name = ad.advertiserName || null;
+    }
+    if (adColumnsAvailable.has("ad_description")) {
+      insertData.ad_description = ad.adDescription || null;
+    }
+    if (adColumnsAvailable.has("landing_page_url")) {
+      insertData.landing_page_url = ad.landingPageUrl || null;
+    }
+    if (adColumnsAvailable.has("external_ad_id")) {
+      insertData.external_ad_id = ad.externalAdId || null;
+    }
+
+    const { data, error } = await this.db
+      .from("product_ads")
+      .insert(insertData)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return mapProductAd(data);
+  }
+
   async updateProductAiSummary(productId: string, aiSummary: string): Promise<void> {
     const { error } = await this.db
       .from("products")
@@ -300,7 +365,7 @@ export class SupabaseStorage implements IStorage {
 function mapProductAd(row: Record<string, unknown>): ProductAd {
   return {
     id: row.id as string,
-    productId: row.product_id as string,
+    productId: (row.product_id as string) ?? null,
     platform: row.platform as string,
     niche: (row.niche as string) ?? null,
     videoUrl: row.video_url as string,
@@ -309,5 +374,9 @@ function mapProductAd(row: Record<string, unknown>): ProductAd {
     likes: (row.likes as number) ?? 0,
     publishedAt: row.published_at ? new Date(row.published_at as string) : null,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
+    advertiserName: (row.advertiser_name as string) ?? null,
+    adDescription: (row.ad_description as string) ?? null,
+    landingPageUrl: (row.landing_page_url as string) ?? null,
+    externalAdId: (row.external_ad_id as string) ?? null,
   };
 }
