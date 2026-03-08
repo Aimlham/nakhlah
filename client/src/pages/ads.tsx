@@ -462,8 +462,14 @@ export default function AdsPage() {
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-3" />
-              <p className="text-sm font-medium">لم يتم العثور على إعلانات</p>
-              <p className="text-xs text-muted-foreground mt-1">حاول تعديل الفلاتر أو البحث</p>
+              <p className="text-sm font-medium" data-testid="text-ads-empty">
+                {allAds.length === 0 ? "لا توجد إعلانات بعد" : "لم يتم العثور على إعلانات"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {allAds.length === 0
+                  ? "استخدم شريط البحث أعلاه لاستيراد إعلانات من TikTok"
+                  : "حاول تعديل الفلاتر أو البحث"}
+              </p>
             </div>
           ) : (
             <div className={cn(

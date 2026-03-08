@@ -11,12 +11,15 @@ TrendDrop is an Arabic-first RTL SaaS platform for dropshipping/e-commerce selle
 - No emojis
 
 ## System Architecture
-Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + TanStack Query. Backend: Express 5 (Node.js). Database: Supabase (PostgreSQL) with in-memory fallback. Auth: Supabase Auth with session-based fallback. AI: OpenAI API (gpt-4o-mini). Build: Vite.
+Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + TanStack Query. Backend: Express 5 (Node.js). Database: Supabase (PostgreSQL) with in-memory fallback (no seeded data). Auth: Supabase Auth with session-based fallback. AI: OpenAI API (gpt-4o-mini). Build: Vite.
+
+## Data Policy
+All data comes from real sources (Supabase database, Apify importers). No mock/fake/seeded data exists anywhere in the codebase. Pages show proper Arabic empty states when no data is available. The MemStorage fallback starts completely empty.
 
 ## External Dependencies
 - **Supabase**: Database (PostgreSQL) and authentication
 - **OpenAI API**: AI product analysis, marketing insights, ad angles, Arabic translation
-- **Apify**: Product importing from AliExpress (`piotrv1001/aliexpress-listings-scraper`), Amazon (`igview-owner/amazon-search-scraper`), and TikTok ads (`lexis-solutions~tiktok-ads-scraper`)
+- **Apify**: Product importing from AliExpress (`piotrv1001/aliexpress-listings-scraper`), Amazon (`igview-owner/amazon-search-scraper`), and TikTok ads (`lexis-solutions~tiktok-ads-scraper`). Note: TikTok ads actor requires a paid Apify subscription (free trial expired).
 - **Google Fonts**: IBM Plex Sans Arabic
 
 ## Environment Secrets
@@ -67,11 +70,12 @@ client/src/
 server/
   index.ts             - Express server entry
   routes.ts            - API endpoints
-  storage.ts           - IStorage interface + MemStorage fallback
+  storage.ts           - IStorage interface + MemStorage fallback (empty, no seeded data)
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation
   aliexpress-importer.ts - AliExpress product importer (Apify)
   amazon-importer.ts   - Amazon product importer (Apify)
+  tiktok-importer.ts   - TikTok ads importer (Apify)
   openai.ts            - OpenAI API client
 
 shared/

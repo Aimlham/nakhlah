@@ -8,7 +8,6 @@ import type {
 } from "@shared/schema";
 import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
-import { getMockAds } from "./mock-ads";
 
 const NEW_COLUMNS = [
   "source", "actual_sell_price", "orders_count", "rating",
@@ -296,11 +295,10 @@ export class SupabaseStorage implements IStorage {
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
     if (error) {
-      console.log("[supabase] product_ads table not available, using mock ads fallback");
-      return getMockAds().filter(ad => ad.productId === productId);
+      console.log("[supabase] product_ads query error:", error.message);
+      return [];
     }
-    if (data && data.length > 0) return data.map(mapProductAd);
-    return getMockAds().filter(ad => ad.productId === productId);
+    return (data || []).map(mapProductAd);
   }
 
   async getAllAds(): Promise<ProductAd[]> {
@@ -309,11 +307,10 @@ export class SupabaseStorage implements IStorage {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
-      console.log("[supabase] product_ads table not available, using mock ads fallback");
-      return getMockAds();
+      console.log("[supabase] product_ads query error:", error.message);
+      return [];
     }
-    if (data && data.length > 0) return data.map(mapProductAd);
-    return getMockAds();
+    return (data || []).map(mapProductAd);
   }
 
   async createAd(ad: import("@shared/schema").InsertProductAd): Promise<ProductAd> {
