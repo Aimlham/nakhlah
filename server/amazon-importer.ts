@@ -1,21 +1,22 @@
 import { storage, checkHalalSafe } from "./storage";
 import { calculateMargin, calculateTrendScore, calculateSaturationScore, calculateOpportunityScore } from "@shared/scoring";
-import type { InsertProduct, Product } from "@shared/schema";
+import type { InsertProduct } from "@shared/schema";
 
 const USD_TO_SAR = 3.75;
 
 const FRAGILE_KEYWORDS = ["glass", "ceramic", "porcelain", "crystal", "fragile"];
 const HEAVY_KEYWORDS = ["heavy", "oversized", "large furniture", "industrial"];
 
-const APIFY_ACTOR_ID = "piotrv1001~aliexpress-listings-scraper";
+const APIFY_ACTOR_ID = "igview-owner~amazon-search-scraper";
 const APIFY_BASE_URL = "https://api.apify.com/v2";
 
-interface AliExpressSearchOptions {
+interface AmazonSearchOptions {
   keyword: string;
   halalOnly?: boolean;
   minOrders?: number;
   minRating?: number;
   maxResults?: number;
+  country?: string;
 }
 
 interface ImportSummary {
@@ -25,63 +26,35 @@ interface ImportSummary {
   duplicate: number;
   totalFetched: number;
   errors: string[];
-  source: "aliexpress";
+  source: "amazon";
   apiActive: boolean;
 }
 
-interface ApifyRawItem {
-  id?: string | number;
-  title?: string;
-  name?: string;
-  imageUrl?: string;
-  image?: string;
-  additionalImages?: string[];
-  images?: string[];
-  price?: number | string;
-  originalPrice?: number | string;
-  salePrice?: number | string;
-  discountPrice?: number | string;
-  discountPercentage?: number;
+interface AmazonRawItem {
+  asin?: string;
+  product_title?: string;
+  product_url?: string;
+  product_photo?: string;
+  product_price?: string;
+  product_original_price?: string | null;
   currency?: string;
-  inStock?: boolean;
-  rating?: number | string;
-  averageStar?: number | string;
-  starRating?: number | string;
-  reviews?: number | string;
-  totalSold?: string | number;
-  orders?: number | string;
-  totalOrders?: number | string;
-  soldCount?: number | string;
-  store?: string | null;
-  storeName?: string;
-  shopName?: string;
-  sellerName?: string;
-  storeUrl?: string;
-  url?: string;
-  productUrl?: string;
-  link?: string;
-  categoryName?: string;
-  category?: string;
-  categoryId?: string | number;
-  productType?: string;
-  sellingPoints?: string[];
+  product_star_rating?: string | number;
+  product_num_ratings?: number;
+  is_best_seller?: boolean;
+  is_amazon_choice?: boolean;
+  is_prime?: boolean;
+  sales_volume?: string | null;
+  product_badge?: string | null;
+  delivery?: string | null;
   [key: string]: unknown;
 }
 
-function parseOrders(raw: string | number | undefined | null): number {
-  if (raw == null) return 0;
-  if (typeof raw === "number") return raw;
-  const cleaned = raw.replace(/[^0-9.kK+]/g, "");
-  if (!cleaned) {
-    const numMatch = raw.match(/[\d,.]+/);
-    if (numMatch) {
-      const num = parseFloat(numMatch[0].replace(/,/g, ""));
-      return Math.round(num) || 0;
-    }
-    return 0;
-  }
-  const num = parseFloat(cleaned.replace(/[kK+]/g, ""));
-  if (raw.toLowerCase().includes("k") || cleaned.toLowerCase().includes("k")) return Math.round(num * 1000);
+function parseSalesVolume(raw: string | null | undefined): number {
+  if (!raw) return 0;
+  const match = raw.match(/([\d,.]+)\s*[kK]?\+?\s*(bought|sold)/i);
+  if (!match) return 0;
+  let num = parseFloat(match[1].replace(/,/g, ""));
+  if (raw.toLowerCase().includes("k")) num *= 1000;
   return Math.round(num) || 0;
 }
 
@@ -104,78 +77,73 @@ function isFragileOrHeavy(title: string): boolean {
   return [...FRAGILE_KEYWORDS, ...HEAVY_KEYWORDS].some(kw => lower.includes(kw));
 }
 
-function normalizeCategory(raw: string | undefined): string {
-  if (!raw) return "General";
-  const map: Record<string, string> = {
-    "consumer electronics": "Electronics",
-    "phones & telecommunications": "Electronics",
-    "phones": "Electronics",
-    "computer & office": "Electronics",
-    "home & garden": "Home & Living",
-    "home improvement": "Home & Living",
-    "jewelry & accessories": "Accessories",
-    "jewelry": "Accessories",
-    "women's clothing": "Fashion",
-    "men's clothing": "Fashion",
-    "mother & kids": "Kids",
-    "toys & hobbies": "Toys",
-    "sports & entertainment": "Sports",
-    "beauty & health": "Beauty",
-    "beauty": "Beauty",
-    "automobiles & motorcycles": "Automotive",
-    "luggage & bags": "Fashion",
-    "shoes": "Fashion",
-    "pet products": "Pet Supplies",
-    "tools": "Tools",
-    "lights & lighting": "Home & Living",
-    "education & office supplies": "Office",
-  };
-  const lower = raw.toLowerCase();
-  for (const [key, val] of Object.entries(map)) {
-    if (lower.includes(key)) return val;
+function guessCategory(title: string): string {
+  const lower = title.toLowerCase();
+  const map: [string[], string][] = [
+    [["phone", "tablet", "laptop", "computer", "usb", "charger", "cable", "bluetooth", "wireless", "speaker", "headphone", "earphone", "earbuds", "camera", "drone"], "Electronics"],
+    [["kitchen", "home", "garden", "furniture", "lamp", "light", "decor", "storage", "organizer", "pillow", "blanket", "towel"], "Home & Living"],
+    [["shirt", "dress", "pants", "jacket", "coat", "shoe", "sneaker", "boot", "hat", "cap", "scarf", "bag", "wallet", "watch", "sunglasses", "jewelry", "ring", "necklace", "bracelet"], "Fashion"],
+    [["toy", "game", "puzzle", "doll", "lego", "figure", "plush"], "Toys"],
+    [["baby", "kid", "child", "infant", "toddler", "stroller"], "Kids"],
+    [["sport", "fitness", "gym", "yoga", "exercise", "outdoor", "camping", "hiking", "bicycle", "bike"], "Sports"],
+    [["makeup", "skincare", "beauty", "cosmetic", "hair", "shampoo", "cream", "serum", "perfume"], "Beauty"],
+    [["car", "auto", "vehicle", "motorcycle", "truck", "dash cam"], "Automotive"],
+    [["pet", "dog", "cat", "fish", "bird", "aquarium"], "Pet Supplies"],
+    [["tool", "drill", "wrench", "screwdriver", "hammer"], "Tools"],
+    [["office", "desk", "pen", "notebook", "printer", "paper"], "Office"],
+  ];
+  for (const [keywords, cat] of map) {
+    if (keywords.some(kw => lower.includes(kw))) return cat;
   }
-  return raw;
+  return "General";
 }
 
-function normalizeApifyItem(item: ApifyRawItem): {
+function normalizeAmazonItem(item: AmazonRawItem): {
   title: string;
   imageUrl: string | null;
-  supplierPriceUSD: number;
-  salePriceUSD: number;
+  priceUSD: number;
+  originalPriceUSD: number;
   ordersNum: number;
   ratingNum: number;
-  shopName: string | null;
+  numRatings: number;
   productUrl: string | null;
   category: string;
-  productId: string;
+  asin: string;
+  isBestSeller: boolean;
+  isAmazonChoice: boolean;
+  isPrime: boolean;
 } | null {
-  const title = (item.title || item.name || "").trim();
+  const title = (item.product_title || "").trim();
   if (!title) return null;
 
-  const supplierPriceUSD = parsePrice(item.originalPrice ?? item.price);
-  const salePriceUSD = parsePrice(item.price ?? item.salePrice ?? item.discountPrice);
-  if (supplierPriceUSD <= 0 && salePriceUSD <= 0) return null;
+  const priceUSD = parsePrice(item.product_price);
+  const originalPriceUSD = parsePrice(item.product_original_price) || priceUSD;
+  if (priceUSD <= 0) return null;
 
-  const imageUrl = item.imageUrl || item.image || (item.additionalImages && item.additionalImages[0]) || (item.images && item.images[0]) || null;
-  const ordersNum = parseOrders(item.totalSold ?? item.orders ?? item.totalOrders ?? item.soldCount);
-  const ratingNum = parseRating(item.rating ?? item.averageStar ?? item.starRating);
-  const shopName = (typeof item.store === "string" ? item.store : null) || item.storeName || item.shopName || item.sellerName || null;
-  const productUrl = item.url || item.productUrl || item.link || (item.id ? `https://aliexpress.com/item/${item.id}.html` : null);
-  const category = normalizeCategory(item.categoryName || item.category || item.productType);
-  const productId = item.id ? String(item.id) : "";
+  const imageUrl = item.product_photo || null;
+  const ordersNum = parseSalesVolume(item.sales_volume);
+  const ratingNum = parseRating(item.product_star_rating);
+  const numRatings = item.product_num_ratings || 0;
+  const productUrl = item.product_url || (item.asin ? `https://www.amazon.com/dp/${item.asin}` : null);
+  const category = guessCategory(title);
+  const asin = item.asin || "";
 
-  return { title, imageUrl, supplierPriceUSD, salePriceUSD, ordersNum, ratingNum, shopName, productUrl, category, productId };
+  return {
+    title, imageUrl, priceUSD, originalPriceUSD, ordersNum, ratingNum, numRatings,
+    productUrl, category, asin,
+    isBestSeller: item.is_best_seller || false,
+    isAmazonChoice: item.is_amazon_choice || false,
+    isPrime: item.is_prime || false,
+  };
 }
 
-function mapToInsertProduct(norm: NonNullable<ReturnType<typeof normalizeApifyItem>>): InsertProduct {
-  const effectiveSupplierUSD = norm.supplierPriceUSD > 0 ? norm.supplierPriceUSD : norm.salePriceUSD;
-  const supplierSAR = parseFloat((effectiveSupplierUSD * USD_TO_SAR).toFixed(2));
+function mapToInsertProduct(norm: NonNullable<ReturnType<typeof normalizeAmazonItem>>): InsertProduct {
+  const supplierUSD = norm.priceUSD * 0.6;
+  const supplierSAR = parseFloat((supplierUSD * USD_TO_SAR).toFixed(2));
 
-  const multiplier = effectiveSupplierUSD < 5 ? 3.5 : effectiveSupplierUSD < 15 ? 3 : effectiveSupplierUSD < 30 ? 2.5 : 2;
-  const suggestedSAR = parseFloat((effectiveSupplierUSD * multiplier * USD_TO_SAR).toFixed(2));
-  const actualSellSAR = norm.salePriceUSD > 0
-    ? parseFloat((norm.salePriceUSD * USD_TO_SAR).toFixed(2))
-    : suggestedSAR;
+  const multiplier = norm.priceUSD < 15 ? 2.5 : norm.priceUSD < 30 ? 2 : norm.priceUSD < 60 ? 1.8 : 1.5;
+  const suggestedSAR = parseFloat((norm.priceUSD * multiplier * USD_TO_SAR).toFixed(2));
+  const actualSellSAR = parseFloat((norm.priceUSD * USD_TO_SAR).toFixed(2));
 
   const margin = calculateMargin(supplierSAR, suggestedSAR);
   const isHalal = checkHalalSafe({ title: norm.title, description: "", category: norm.category, niche: "" });
@@ -196,31 +164,29 @@ function mapToInsertProduct(norm: NonNullable<ReturnType<typeof normalizeApifyIt
 
   const opportunityScore = calculateOpportunityScore(trendScore, saturationScore, margin, norm.ratingNum > 0 ? norm.ratingNum : null);
 
-  const supplierLink = norm.productUrl || "";
-
   return {
     title: norm.title,
     imageUrl: norm.imageUrl,
-    shortDescription: null,
+    shortDescription: norm.isBestSeller ? "Best Seller" : norm.isAmazonChoice ? "Amazon Choice" : null,
     category: norm.category,
     niche: null,
-    sourcePlatform: "AliExpress",
-    source: "aliexpress",
+    sourcePlatform: "Amazon",
+    source: "amazon",
     supplierPrice: String(supplierSAR),
     suggestedSellPrice: String(suggestedSAR),
     actualSellPrice: String(actualSellSAR),
     estimatedMargin: String(margin),
-    ordersCount: norm.ordersNum,
+    ordersCount: norm.ordersNum > 0 ? norm.ordersNum : norm.numRatings,
     rating: norm.ratingNum > 0 ? String(norm.ratingNum) : null,
-    supplierName: norm.shopName,
+    supplierName: "Amazon",
     isHalalSafe: isHalal,
-    discoverySource: "aliexpress",
-    supplierSource: "aliexpress",
+    discoverySource: "amazon",
+    supplierSource: "amazon",
     trendScore,
     saturationScore,
     opportunityScore,
     aiSummary: null,
-    supplierLink,
+    supplierLink: norm.productUrl || "",
   };
 }
 
@@ -238,21 +204,21 @@ async function pollRunStatus(runId: string, token: string, maxWaitMs: number = 1
   return "TIMED-OUT";
 }
 
-async function fetchViaApify(keyword: string, maxResults: number): Promise<ApifyRawItem[]> {
+async function fetchViaApify(keyword: string, maxResults: number, country: string): Promise<AmazonRawItem[]> {
   const token = process.env.APIFY_API_TOKEN;
   if (!token) {
-    console.log("[aliexpress] No APIFY_API_TOKEN set.");
+    console.log("[amazon] No APIFY_API_TOKEN set.");
     return [];
   }
 
-  const searchUrl = `https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(keyword)}`;
-
   const actorInput = {
-    searchUrls: [searchUrl],
+    keyword,
     maxItems: maxResults,
+    searchTerms: [keyword],
+    country,
   };
 
-  console.log(`[aliexpress] Starting Apify actor run for "${keyword}" (max ${maxResults} results)...`);
+  console.log(`[amazon] Starting Apify actor run for "${keyword}" (max ${maxResults} results, country: ${country})...`);
 
   try {
     const startUrl = `${APIFY_BASE_URL}/acts/${encodeURIComponent(APIFY_ACTOR_ID)}/runs?token=${token}`;
@@ -265,7 +231,7 @@ async function fetchViaApify(keyword: string, maxResults: number): Promise<Apify
 
     if (!startRes.ok) {
       const errorText = await startRes.text().catch(() => "");
-      console.error(`[aliexpress] Apify API error ${startRes.status}: ${errorText.slice(0, 300)}`);
+      console.error(`[amazon] Apify API error ${startRes.status}: ${errorText.slice(0, 300)}`);
 
       if (startRes.status === 401 || startRes.status === 403) {
         throw new Error("Invalid APIFY_API_TOKEN. Check your Apify API token.");
@@ -282,7 +248,7 @@ async function fetchViaApify(keyword: string, maxResults: number): Promise<Apify
       throw new Error("Failed to start Apify actor run");
     }
 
-    console.log(`[aliexpress] Actor run started: ${runId}. Polling for completion...`);
+    console.log(`[amazon] Actor run started: ${runId}. Polling for completion...`);
 
     const finalStatus = await pollRunStatus(runId, token);
     if (finalStatus !== "SUCCEEDED") {
@@ -295,17 +261,17 @@ async function fetchViaApify(keyword: string, maxResults: number): Promise<Apify
 
     if (!Array.isArray(items)) {
       const obj = items as any;
-      if (obj?.items && Array.isArray(obj.items)) return obj.items as ApifyRawItem[];
-      if (obj?.data && Array.isArray(obj.data)) return obj.data as ApifyRawItem[];
-      console.error("[aliexpress] Could not parse Apify response");
+      if (obj?.items && Array.isArray(obj.items)) return obj.items as AmazonRawItem[];
+      if (obj?.data && Array.isArray(obj.data)) return obj.data as AmazonRawItem[];
+      console.error("[amazon] Could not parse Apify response");
       return [];
     }
 
-    console.log(`[aliexpress] Apify returned ${items.length} items`);
-    return items as ApifyRawItem[];
+    console.log(`[amazon] Apify returned ${items.length} items`);
+    return items as AmazonRawItem[];
   } catch (err: any) {
     if (err.name === "TimeoutError" || err.name === "AbortError") {
-      console.error("[aliexpress] Apify request timed out.");
+      console.error("[amazon] Apify request timed out.");
       throw new Error("Apify request timed out. Try reducing max_results.");
     }
     throw err;
@@ -334,13 +300,14 @@ async function checkDuplicate(title: string, source: string): Promise<boolean> {
   }
 }
 
-export async function importAliExpressProducts(options: AliExpressSearchOptions): Promise<ImportSummary> {
+export async function importAmazonProducts(options: AmazonSearchOptions): Promise<ImportSummary> {
   const {
     keyword,
     halalOnly = false,
-    minOrders = 50,
-    minRating = 4.0,
+    minOrders = 0,
+    minRating = 3.5,
     maxResults = 20,
+    country = "US",
   } = options;
 
   const summary: ImportSummary = {
@@ -350,21 +317,21 @@ export async function importAliExpressProducts(options: AliExpressSearchOptions)
     duplicate: 0,
     totalFetched: 0,
     errors: [],
-    source: "aliexpress",
+    source: "amazon",
     apiActive: false,
   };
 
   const token = process.env.APIFY_API_TOKEN;
   if (!token) {
-    summary.errors.push("APIFY_API_TOKEN not configured. Add your Apify API token to enable live AliExpress imports.");
+    summary.errors.push("APIFY_API_TOKEN not configured.");
     return summary;
   }
 
   summary.apiActive = true;
 
-  let rawItems: ApifyRawItem[];
+  let rawItems: AmazonRawItem[];
   try {
-    rawItems = await fetchViaApify(keyword, maxResults);
+    rawItems = await fetchViaApify(keyword, maxResults, country);
   } catch (err: any) {
     summary.errors.push(err.message || "Failed to fetch from Apify");
     return summary;
@@ -373,15 +340,15 @@ export async function importAliExpressProducts(options: AliExpressSearchOptions)
   summary.totalFetched = rawItems.length;
 
   if (rawItems.length === 0) {
-    summary.errors.push("No products returned from Apify AliExpress scraper");
+    summary.errors.push("No products returned from Apify Amazon scraper");
     return summary;
   }
 
-  console.log(`[aliexpress] Processing ${rawItems.length} raw items for "${keyword}"`);
+  console.log(`[amazon] Processing ${rawItems.length} raw items for "${keyword}"`);
 
   for (const raw of rawItems) {
     try {
-      const normalized = normalizeApifyItem(raw);
+      const normalized = normalizeAmazonItem(raw);
       if (!normalized) {
         summary.skipped++;
         continue;
@@ -397,7 +364,7 @@ export async function importAliExpressProducts(options: AliExpressSearchOptions)
         }
       }
 
-      if (normalized.ordersNum < minOrders) {
+      if (minOrders > 0 && normalized.ordersNum < minOrders) {
         summary.skipped++;
         continue;
       }
@@ -412,7 +379,7 @@ export async function importAliExpressProducts(options: AliExpressSearchOptions)
         continue;
       }
 
-      const isDuplicate = await checkDuplicate(insert.title, "aliexpress");
+      const isDuplicate = await checkDuplicate(insert.title, "amazon");
       if (isDuplicate) {
         summary.duplicate++;
         continue;
@@ -425,11 +392,11 @@ export async function importAliExpressProducts(options: AliExpressSearchOptions)
     }
   }
 
-  console.log(`[aliexpress] Import complete: ${summary.imported} imported, ${summary.skipped} skipped, ${summary.unsafe} unsafe, ${summary.duplicate} duplicates`);
+  console.log(`[amazon] Import complete: ${summary.imported} imported, ${summary.skipped} skipped, ${summary.unsafe} unsafe, ${summary.duplicate} duplicates`);
   return summary;
 }
 
-export function getAliExpressStatus(): {
+export function getAmazonStatus(): {
   active: boolean;
   configured: boolean;
   message: string;
@@ -439,7 +406,7 @@ export function getAliExpressStatus(): {
     active: hasToken,
     configured: hasToken,
     message: hasToken
-      ? "AliExpress importer is active (Apify)"
-      : "AliExpress importer requires APIFY_API_TOKEN. Get your token from apify.com/account#/integrations and add it as a secret.",
+      ? "Amazon importer is active (Apify)"
+      : "Amazon importer requires APIFY_API_TOKEN.",
   };
 }

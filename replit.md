@@ -114,12 +114,13 @@ client/src/
 
 server/
   index.ts             - Express server entry
-  routes.ts            - API endpoints (auth, products, saved, ads, CJ, AliExpress import) with dual auth support
+  routes.ts            - API endpoints (auth, products, saved, ads, CJ, AliExpress, Amazon import) with dual auth support
   storage.ts           - IStorage interface + MemStorage (fallback) + conditional selection
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation of IStorage
   cj-dropshipping.ts   - CJ Dropshipping API client (auth, search, translate, scoring)
-  aliexpress-importer.ts - AliExpress product importer (RapidAPI, halal filter, quality filter, dedup)
+  aliexpress-importer.ts - AliExpress product importer (Apify: piotrv1001/aliexpress-listings-scraper)
+  amazon-importer.ts   - Amazon product importer (Apify: igview-owner/amazon-search-scraper)
   openai.ts            - OpenAI API client (product analysis)
 
 shared/
@@ -154,8 +155,10 @@ Key fields in the products table (Drizzle → Supabase):
 - `GET /api/saved/products` - Saved products for current user
 - `POST /api/saved/:productId` - Save a product
 - `DELETE /api/saved/:productId` - Unsave a product
-- `POST /api/import/aliexpress` - Import AliExpress products (keyword, halal_only, min_orders, min_rating, max_pages)
+- `POST /api/import/aliexpress` - Import AliExpress products (keyword, halal_only, min_orders, min_rating, max_results)
 - `GET /api/import/aliexpress/status` - AliExpress importer status (active/configured)
+- `POST /api/import/amazon` - Import Amazon products (keyword, halal_only, min_orders, min_rating, max_results, country)
+- `GET /api/import/amazon/status` - Amazon importer status (active/configured)
 
 ## CJ Dropshipping Integration
 - `CJ_API_TOKEN` — CJ API Key (obtained from cjdropshipping.com/myCJ.html#/apikey)
@@ -174,13 +177,24 @@ Key fields in the products table (Drizzle → Supabase):
 
 ## AliExpress Importer
 - `APIFY_API_TOKEN` — Apify API token (get from apify.com/account#/integrations)
-- **Apify actor**: `epctex~aliexpress-scraper` — runs live AliExpress product scraping
+- **Apify actor**: `piotrv1001/aliexpress-listings-scraper` — async run approach (start → poll → get results)
 - **Service file**: `server/aliexpress-importer.ts`
 - **Pipeline**: Apify actor run → normalize → halal filter → quality filter (min orders/rating, fragile/heavy skip) → dedup → score → save to Supabase
 - **Quality defaults**: orders_count >= 50, rating >= 4.0, skips fragile/heavy keywords
 - **Import route**: `POST /api/import/aliexpress` — accepts { keyword, halal_only, min_orders, min_rating, max_results }
 - **Status route**: `GET /api/import/aliexpress/status` — returns { active, configured, message }
-- **Status**: Requires APIFY_API_TOKEN to activate. Without token, returns clear error. No fake/mock data.
+- **Actor input**: `{ searchUrls: ["https://www.aliexpress.com/wholesale?SearchText=<keyword>"], maxItems }` → returns { id, title, price, originalPrice, imageUrl, rating, totalSold, store, ... }
+
+## Amazon Importer
+- Uses same `APIFY_API_TOKEN`
+- **Apify actor**: `igview-owner/amazon-search-scraper` — async run approach
+- **Service file**: `server/amazon-importer.ts`
+- **Pipeline**: Apify actor run → normalize → halal filter → quality filter → dedup → score → save to Supabase
+- **Import route**: `POST /api/import/amazon` — accepts { keyword, halal_only, min_orders, min_rating, max_results, country }
+- **Status route**: `GET /api/import/amazon/status` — returns { active, configured, message }
+- **Actor input**: `{ keyword, searchTerms: [keyword], maxItems, country }` → returns { asin, product_title, product_price, product_star_rating, product_num_ratings, sales_volume, ... }
+- **Category detection**: Auto-detects from product title keywords (Electronics, Fashion, Home & Living, etc.)
+- **Pricing model**: supplierPrice estimated at 60% of Amazon price, suggested sell price uses multiplier based on price range
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`
@@ -217,10 +231,11 @@ Key fields in the products table (Drizzle → Supabase):
 - Product cards with gradient overlay, pricing grid, source platform badge, orders count, star rating, supplier name, hover animation (shadow + translate), trending badge for opportunityScore >= 80, halal-unsafe badge
 - Product details with colored score metric cards, side-by-side AI analysis cards, sticky pricing sidebar, ad cards
 - CJ Winning Products page with halal filter toggle, demand/competition/profit sorting
-- AliExpress product importer with quality filters, halal safety, dedup
+- AliExpress product importer with quality filters, halal safety, dedup (Apify)
+- Amazon product importer with quality filters, halal safety, dedup (Apify)
 - Ad library page (/ads) with stats header, sort dropdown, colored platform badges, gradient overlays, dual action buttons
 - Halal-safe filtering: auto-detection on import using keyword blocklist, toggle filter in UI
-- Multi-source support: CJ (active), AliExpress (active with API key), Amazon/Alibaba (schema ready)
+- Multi-source support: CJ (active), AliExpress (active), Amazon (active) — all via Apify API
 - Save/unsave products
 - Product scoring engine with transparent, editable formulas (40% demand + 30% margin + 20% competition + 10% rating)
 - Dark/light mode toggle

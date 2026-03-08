@@ -9,6 +9,7 @@ import { generateProductAnalysis } from "./openai";
 import { searchCJProducts, translateProductToArabic, translateProductNamesToArabic, calculateProductScores, getWinningProducts, enrichProduct } from "./cj-dropshipping";
 import { checkHalalSafe } from "./storage";
 import { importAliExpressProducts, getAliExpressStatus } from "./aliexpress-importer";
+import { importAmazonProducts, getAmazonStatus } from "./amazon-importer";
 import { z } from "zod";
 
 const cjProductSchema = z.object({
@@ -682,6 +683,49 @@ export async function registerRoutes(
 
   app.get("/api/import/aliexpress/status", async (_req: Request, res: Response) => {
     res.json(getAliExpressStatus());
+  });
+
+  const amazonImportSchema = z.object({
+    keyword: z.string().min(1).max(200),
+    halal_only: z.boolean().optional().default(false),
+    min_orders: z.number().int().min(0).max(100000).optional().default(0),
+    min_rating: z.number().min(0).max(5).optional().default(3.5),
+    max_results: z.number().int().min(1).max(100).optional().default(20),
+    country: z.string().min(2).max(5).optional().default("US"),
+  });
+
+  app.post("/api/import/amazon", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const parsed = amazonImportSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
+      }
+
+      const { keyword, halal_only, min_orders, min_rating, max_results, country } = parsed.data;
+
+      const result = await importAmazonProducts({
+        keyword: keyword.trim(),
+        halalOnly: halal_only,
+        minOrders: min_orders,
+        minRating: min_rating,
+        maxResults: max_results,
+        country,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("[amazon] Import route error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to import Amazon products" });
+    }
+  });
+
+  app.get("/api/import/amazon/status", async (_req: Request, res: Response) => {
+    res.json(getAmazonStatus());
   });
 
   return httpServer;
