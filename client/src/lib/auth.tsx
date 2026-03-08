@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { isSupabaseAvailable, getSupabaseClient, getAccessToken } from "./supabase";
 
 interface AuthUser {
@@ -16,11 +16,36 @@ interface AuthContextType {
   logout: () => void;
 }
 
+const AUTH_USER_KEY = "trenddrop_auth_user";
+
+function saveUserToStorage(user: AuthUser | null) {
+  if (user) {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(AUTH_USER_KEY);
+  }
+}
+
+function loadUserFromStorage(): AuthUser | null {
+  try {
+    const stored = localStorage.getItem(AUTH_USER_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return null;
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => loadUserFromStorage());
   const [isLoading, setIsLoading] = useState(true);
+  const initDone = useRef(false);
+  const explicitLogout = useRef(false);
+
+  function updateUser(u: AuthUser | null) {
+    setUser(u);
+    saveUserToStorage(u);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -28,11 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     function setUserFromSession(session: any) {
       if (cancelled || !session?.user) return;
-      setUser({
+      const u: AuthUser = {
         id: session.user.id,
         email: session.user.email ?? "",
         fullName: (session.user.user_metadata?.full_name as string) ?? null,
-      });
+      };
+      updateUser(u);
     }
 
     async function init() {
@@ -40,19 +66,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (supabase) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (_event, session) => {
+          (event, session) => {
             if (cancelled) return;
             if (session?.user) {
               setUserFromSession(session);
-            } else {
-              setUser(null);
+            } else if (event === "SIGNED_OUT" || explicitLogout.current) {
+              updateUser(null);
+              explicitLogout.current = false;
             }
           }
         );
         unsubscribe = () => subscription.unsubscribe();
 
         const { data: { session } } = await supabase.auth.getSession();
-        setUserFromSession(session);
+        if (session?.user) {
+          setUserFromSession(session);
+        } else {
+          const stored = loadUserFromStorage();
+          if (!stored) {
+            updateUser(null);
+          }
+        }
+        initDone.current = true;
         if (!cancelled) setIsLoading(false);
         return;
       }
@@ -61,9 +96,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await fetch("/api/auth/me", { credentials: "include" });
         if (!cancelled && res.ok) {
           const data = await res.json();
-          if (data?.user) setUser(data.user);
+          if (data?.user) updateUser(data.user);
+          else updateUser(null);
         }
       } catch {}
+      initDone.current = true;
       if (!cancelled) setIsLoading(false);
     }
 
@@ -93,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           refresh_token: data.session.refresh_token,
         });
       }
-      setUser(data.user);
+      updateUser(data.user);
       return;
     }
 
@@ -105,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || "فشل تسجيل الدخول");
-    setUser(data.user);
+    updateUser(data.user);
   }, []);
 
   const signup = useCallback(async (email: string, password: string, fullName: string) => {
@@ -126,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refresh_token: data.session.refresh_token,
       });
     }
-    setUser(data.user);
+    updateUser(data.user);
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
@@ -148,15 +185,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const supabase = getSupabaseClient();
+    explicitLogout.current = true;
 
     if (supabase) {
       await supabase.auth.signOut();
-      setUser(null);
+      updateUser(null);
       return;
     }
 
     fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
-    setUser(null);
+    updateUser(null);
   }, []);
 
   return (
