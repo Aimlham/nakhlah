@@ -1,8 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { getAccessToken, supabaseConfigured } from "./supabase";
+import { getAccessToken } from "./supabase";
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  if (!supabaseConfigured) return {};
   const token = await getAccessToken();
   if (!token) return {};
   return { Authorization: `Bearer ${token}` };

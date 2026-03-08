@@ -57,6 +57,10 @@ export async function registerRoutes(
     );
   }
 
+  app.get("/api/config", (_req: Request, res: Response) => {
+    res.json({ supabaseEnabled: supabaseConfigured });
+  });
+
   app.post("/api/auth/signup", async (req: Request, res: Response) => {
     try {
       const { email, password, fullName } = req.body;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { supabase, supabaseConfigured, getAccessToken } from "./supabase";
+import { isSupabaseEnabled, getSupabaseClient, getAccessToken } from "./supabase";
 import { apiRequest } from "./queryClient";
 
 interface AuthUser {
@@ -23,49 +23,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (supabaseConfigured && supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
+    let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
+    async function init() {
+      const sbEnabled = await isSupabaseEnabled();
+      const supabase = getSupabaseClient();
+
+      if (sbEnabled && supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!cancelled && session?.user) {
           setUser({
             id: session.user.id,
             email: session.user.email ?? "",
             fullName: (session.user.user_metadata?.full_name as string) ?? null,
           });
         }
-        setIsLoading(false);
-      });
+        if (!cancelled) setIsLoading(false);
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          if (session?.user) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email ?? "",
-              fullName: (session.user.user_metadata?.full_name as string) ?? null,
-            });
-          } else {
-            setUser(null);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (_event, session) => {
+            if (cancelled) return;
+            if (session?.user) {
+              setUser({
+                id: session.user.id,
+                email: session.user.email ?? "",
+                fullName: (session.user.user_metadata?.full_name as string) ?? null,
+              });
+            } else {
+              setUser(null);
+            }
           }
-        }
-      );
+        );
+        unsubscribe = () => subscription.unsubscribe();
+        return;
+      }
 
-      return () => subscription.unsubscribe();
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+        if (!cancelled && res.ok) {
+          const data = await res.json();
+          if (data?.user) setUser(data.user);
+        }
+      } catch {}
+      if (!cancelled) setIsLoading(false);
     }
 
-    fetch("/api/auth/me", { credentials: "include" })
-      .then(res => {
-        if (res.ok) return res.json();
-        return null;
-      })
-      .then(data => {
-        if (data?.user) setUser(data.user);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    init();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    if (supabaseConfigured && supabase) {
+    const sbEnabled = await isSupabaseEnabled();
+    const supabase = getSupabaseClient();
+
+    if (sbEnabled && supabase) {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw new Error(error.message);
       setUser({
@@ -82,7 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signup = useCallback(async (email: string, password: string, fullName: string) => {
-    if (supabaseConfigured && supabase) {
+    const sbEnabled = await isSupabaseEnabled();
+    const supabase = getSupabaseClient();
+
+    if (sbEnabled && supabase) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -105,7 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    if (supabaseConfigured && supabase) {
+    const sbEnabled = await isSupabaseEnabled();
+    const supabase = getSupabaseClient();
+
+    if (sbEnabled && supabase) {
       await supabase.auth.signOut();
       setUser(null);
       return;
