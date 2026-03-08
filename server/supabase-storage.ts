@@ -7,6 +7,7 @@ import type {
 } from "@shared/schema";
 import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
+import { getMockAds } from "./mock-ads";
 
 function mapProduct(row: Record<string, unknown>): Product {
   return {
@@ -166,8 +167,12 @@ export class SupabaseStorage implements IStorage {
       .select("*")
       .eq("product_id", productId)
       .order("created_at", { ascending: false });
-    if (error) return [];
-    return (data ?? []).map(mapProductAd);
+    if (error) {
+      console.log("[supabase] product_ads table not available, using mock ads fallback");
+      return getMockAds().filter(ad => ad.productId === productId);
+    }
+    if (data && data.length > 0) return data.map(mapProductAd);
+    return getMockAds().filter(ad => ad.productId === productId);
   }
 
   async getAllAds(): Promise<ProductAd[]> {
@@ -175,8 +180,12 @@ export class SupabaseStorage implements IStorage {
       .from("product_ads")
       .select("*")
       .order("created_at", { ascending: false });
-    if (error) return [];
-    return (data ?? []).map(mapProductAd);
+    if (error) {
+      console.log("[supabase] product_ads table not available, using mock ads fallback");
+      return getMockAds();
+    }
+    if (data && data.length > 0) return data.map(mapProductAd);
+    return getMockAds();
   }
 }
 
@@ -185,10 +194,12 @@ function mapProductAd(row: Record<string, unknown>): ProductAd {
     id: row.id as string,
     productId: row.product_id as string,
     platform: row.platform as string,
+    niche: (row.niche as string) ?? null,
     videoUrl: row.video_url as string,
     thumbnailUrl: (row.thumbnail_url as string) ?? null,
     views: (row.views as number) ?? 0,
     likes: (row.likes as number) ?? 0,
+    publishedAt: row.published_at ? new Date(row.published_at as string) : null,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
 }

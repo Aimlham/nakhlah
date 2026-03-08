@@ -52,10 +52,12 @@ CREATE TABLE product_ads (
   id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id VARCHAR NOT NULL,
   platform TEXT NOT NULL,
+  niche TEXT,
   video_url TEXT NOT NULL,
   thumbnail_url TEXT,
   views INTEGER DEFAULT 0,
   likes INTEGER DEFAULT 0,
+  published_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```

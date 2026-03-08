@@ -41,10 +41,12 @@ export const productAds = pgTable("product_ads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   productId: varchar("product_id").notNull(),
   platform: text("platform").notNull(),
+  niche: text("niche"),
   videoUrl: text("video_url").notNull(),
   thumbnailUrl: text("thumbnail_url"),
   views: integer("views").default(0),
   likes: integer("likes").default(0),
+  publishedAt: timestamp("published_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

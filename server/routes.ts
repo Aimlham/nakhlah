@@ -259,7 +259,21 @@ export async function registerRoutes(
 
   app.get("/api/products/:id/ads", async (req: Request, res: Response) => {
     try {
-      const ads = await storage.getAdsByProductId(req.params.id);
+      let ads = await storage.getAdsByProductId(req.params.id);
+      if (ads.length === 0) {
+        const products = await storage.getAllProducts();
+        const sortedProducts = [...products].sort((a, b) =>
+          new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+        );
+        const productIndex = sortedProducts.findIndex(p => p.id === req.params.id);
+        if (productIndex >= 0) {
+          const mockIndex = String(productIndex + 1);
+          const allAds = await storage.getAllAds();
+          ads = allAds
+            .filter(a => a.productId === mockIndex)
+            .map(a => ({ ...a, productId: req.params.id }));
+        }
+      }
       res.json(ads);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch ads" });
@@ -271,6 +285,19 @@ export async function registerRoutes(
       let ads = await storage.getAllAds();
       const products = await storage.getAllProducts();
       const productMap = new Map(products.map(p => [p.id, p]));
+
+      const sortedProducts = [...products].sort((a, b) =>
+        new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+      );
+      const indexToIdMap = new Map<string, string>();
+      sortedProducts.forEach((p, i) => indexToIdMap.set(String(i + 1), p.id));
+
+      ads = ads.map(ad => {
+        if (productMap.has(ad.productId)) return ad;
+        const realId = indexToIdMap.get(ad.productId);
+        if (realId) return { ...ad, productId: realId };
+        return ad;
+      });
 
       const { search, platform, niche, minViews } = req.query;
 
@@ -285,6 +312,7 @@ export async function registerRoutes(
 
       if (niche && niche !== "all") {
         ads = ads.filter(a => {
+          if (a.niche === niche) return true;
           const product = productMap.get(a.productId);
           return product?.niche === niche;
         });
@@ -298,12 +326,15 @@ export async function registerRoutes(
         });
       }
 
-      const enriched = ads.map(ad => ({
-        ...ad,
-        productTitle: productMap.get(ad.productId)?.title || "",
-        productCategory: productMap.get(ad.productId)?.category || "",
-        productNiche: productMap.get(ad.productId)?.niche || "",
-      }));
+      const enriched = ads.map(ad => {
+        const product = productMap.get(ad.productId);
+        return {
+          ...ad,
+          productTitle: product?.title || "",
+          productCategory: product?.category || "",
+          productNiche: ad.niche || product?.niche || "",
+        };
+      });
 
       res.json(enriched);
     } catch (err: any) {

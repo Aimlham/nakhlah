@@ -387,10 +387,10 @@ function AdCard({ ad }: { ad: ProductAd }) {
             </div>
             <div className="flex items-center justify-between">
               <Badge variant="outline" className="text-xs" data-testid={`badge-ad-platform-${ad.id}`}>{ad.platform}</Badge>
-              {ad.createdAt && (
+              {(ad.publishedAt || ad.createdAt) && (
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
-                  {new Date(ad.createdAt).toLocaleDateString("ar-SA")}
+                  {new Date((ad.publishedAt || ad.createdAt)!).toLocaleDateString("ar-SA")}
                 </span>
               )}
             </div>

@@ -1,0 +1,224 @@
+Implement the following product research improvements in the existing Arabic-first RTL SaaS app without breaking the current architecture or Supabase integration.
+
+Important rules:
+- Keep Arabic as the default language
+- Keep RTL layout
+- Do not redesign the app from scratch
+- Do not break existing working features
+- Extend and improve the current MVP cleanly
+- Keep TypeScript and component structure clean
+- Use reusable components where possible
+- Preserve current Supabase integration and fallback behavior
+
+==================================================
+1) Ads System
+==================================================
+
+Add a complete Ads System for the MVP.
+
+A) Database preparation
+Prepare support for a new table called `product_ads`.
+If the Supabase table already exists, connect to it.
+If it does not exist yet, use mock fallback data so the app still works.
+
+Expected product_ads structure:
+- id
+- product_id
+- platform
+- niche
+- video_url
+- thumbnail_url
+- views
+- likes
+- published_at
+- created_at
+
+B) API routes
+Create these API routes:
+- /api/ads
+- /api/products/:id/ads
+
+Requirements:
+- support filtering by platform
+- support filtering by niche
+- support filtering by minimum views
+- support search when useful
+- return clean structured JSON
+- use Supabase if table exists
+- otherwise use local mock data
+
+C) Ads Library page
+Create a new page:
+- /ads
+
+Arabic title:
+- مكتبة الإعلانات
+
+Features:
+- ads grid
+- search input
+- filters:
+  - platform
+  - niche
+  - minimum views
+- responsive design
+- clean empty state
+- loading state
+- ad card must include:
+  - video preview or thumbnail
+  - platform
+  - views
+  - likes
+  - publish date
+  - related product name
+  - button to open the original ad if URL exists
+
+D) Product page ads section
+Inside the product details page add a section titled:
+- إعلانات المنتج على TikTok
+
+This section should:
+- load product-specific ads
+- display ad cards in a responsive grid
+- show video preview if possible
+- show thumbnail fallback if video preview is unavailable
+- show views, likes, publish date
+- look polished in Arabic RTL
+
+==================================================
+2) Product Cards Improvement
+==================================================
+
+Improve all product cards across the app.
+
+Requirements:
+- display image_url correctly
+- if image_url is missing, use a better fallback placeholder
+- add hover effect:
+  - subtle shadow increase
+  - slight upward movement
+- show badge:
+  - "ترند الآن" when opportunity score >= 80
+- show category badge
+- show niche badge if available
+- show source platform badge
+- preserve Arabic labels and RTL polish
+
+==================================================
+3) Filters Bar Improvement
+==================================================
+
+Upgrade the existing products filter bar.
+
+Keep current filters:
+- search
+- category
+- niche
+- platform
+- sorting
+
+Add these new filters:
+- minimum opportunity score
+- minimum profit margin
+- minimum trend score
+
+Requirements:
+- filters should work together
+- UI should remain compact and clean
+- Arabic labels only
+- responsive behavior on smaller screens
+
+==================================================
+4) Product Details Page Improvement
+==================================================
+
+Improve the product details page significantly.
+
+A) Metrics row
+Add a row with 4 metric cards:
+- الرواج
+- التشبع
+- الفرصة
+- الطلب المتوقع
+
+Each card should have:
+- icon
+- Arabic label
+- large number
+- consistent styling
+
+B) AI analysis cards
+Improve the AI analysis section so each card has a clear visual identity.
+
+Cards should include:
+- لماذا هذا المنتج واعد
+- الجمهور المستهدف
+- زوايا إعلانية
+
+Requirements:
+- use distinct soft colors
+- keep readability high
+- preserve RTL and Arabic typography
+- make the section look premium
+
+C) TikTok ads section
+Add the TikTok ads section below the AI analysis.
+
+==================================================
+5) Dashboard Improvement
+==================================================
+
+Upgrade the dashboard to feel more like a real SaaS research tool.
+
+A) KPI cards
+Display 5 KPI cards:
+- إجمالي المنتجات
+- جديد اليوم
+- الرائج
+- فرص عالية
+- المحفوظة
+
+B) Main dashboard layout
+Use a 3-column responsive layout for:
+- أحدث المنتجات
+- أفضل الفرص
+- المنتجات المحفوظة
+
+Requirements:
+- each list item should include small product thumbnail
+- title
+- category or niche
+- score where relevant
+- polished empty state for saved products
+- Arabic-first wording
+
+==================================================
+6) Data and Fallback Behavior
+==================================================
+
+Important:
+The `product_ads` table may not exist yet in Supabase.
+
+Requirements:
+- if `product_ads` exists, use real Supabase data
+- if it does not exist, use mock ads data
+- do not crash the app
+- clearly structure the data layer so real data can replace mock data later without major refactoring
+
+==================================================
+7) Engineering Quality
+==================================================
+
+Requirements:
+- keep code modular
+- keep imports clean
+- avoid dead code
+- avoid giant messy files
+- verify no build errors
+- do not change unrelated features
+- maintain current working auth and saved products behavior
+
+After finishing:
+1. summarize exactly what was implemented
+2. mention what is powered by Supabase vs mock fallback
+3. confirm the app still runs correctly

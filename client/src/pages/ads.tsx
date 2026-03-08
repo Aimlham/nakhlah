@@ -3,21 +3,24 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
-import { Eye, Heart, Play, Calendar, Search, Megaphone } from "lucide-react";
+import { Eye, Heart, Play, Calendar, Search, Megaphone, ExternalLink } from "lucide-react";
 import { formatCompactNumber } from "@/lib/utils";
 
 interface EnrichedAd {
   id: string;
   productId: string;
   platform: string;
+  niche: string | null;
   videoUrl: string;
   thumbnailUrl: string | null;
   views: number | null;
   likes: number | null;
+  publishedAt: string | null;
   createdAt: string | null;
   productTitle: string;
   productCategory: string;
@@ -50,7 +53,10 @@ export default function AdsPage() {
   const allAds = ads || [];
 
   const niches = useMemo(() => {
-    return [...new Set((allAdsUnfiltered || []).map(a => a.productNiche).filter(Boolean))];
+    const all = allAdsUnfiltered || [];
+    const adNiches = all.map(a => a.niche).filter(Boolean) as string[];
+    const productNiches = all.map(a => a.productNiche).filter(Boolean);
+    return [...new Set([...adNiches, ...productNiches])];
   }, [allAdsUnfiltered]);
 
   const platforms = useMemo(() => {
@@ -78,7 +84,7 @@ export default function AdsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-ads-title">الإعلانات</h1>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-ads-title">مكتبة الإعلانات</h1>
         <p className="text-muted-foreground">اكتشف أفضل إعلانات المنتجات على المنصات المختلفة.</p>
       </div>
 
@@ -155,30 +161,30 @@ export default function AdsPage() {
 }
 
 function AdLibraryCard({ ad }: { ad: EnrichedAd }) {
+  const displayDate = ad.publishedAt || ad.createdAt;
+
   return (
     <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1" data-testid={`ad-library-card-${ad.id}`}>
       <CardContent className="p-0">
-        <a href={ad.videoUrl} target="_blank" rel="noopener noreferrer" className="block">
-          <div className="relative h-48 rounded-t-md overflow-hidden bg-muted">
-            {ad.thumbnailUrl ? (
-              <img
-                src={ad.thumbnailUrl}
-                alt={ad.productTitle}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Play className="w-8 h-8 text-muted-foreground" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                <Play className="w-5 h-5 text-black ms-0.5" />
-              </div>
+        <div className="relative h-48 rounded-t-md overflow-hidden bg-muted cursor-pointer" onClick={() => window.open(ad.videoUrl, "_blank")}>
+          {ad.thumbnailUrl ? (
+            <img
+              src={ad.thumbnailUrl}
+              alt={ad.productTitle}
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Play className="w-8 h-8 text-muted-foreground" />
+            </div>
+          )}
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
+              <Play className="w-5 h-5 text-black ms-0.5" />
             </div>
           </div>
-        </a>
+        </div>
 
         <div className="p-3 space-y-2">
           <Link href={`/products/${ad.productId}`}>
@@ -192,13 +198,19 @@ function AdLibraryCard({ ad }: { ad: EnrichedAd }) {
           </div>
           <div className="flex items-center justify-between">
             <Badge variant="outline" className="text-xs" data-testid={`badge-ad-platform-${ad.id}`}>{ad.platform}</Badge>
-            {ad.createdAt && (
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
+            {displayDate && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1" data-testid={`text-ad-date-${ad.id}`}>
                 <Calendar className="w-3 h-3" />
-                {new Date(ad.createdAt).toLocaleDateString("ar-SA")}
+                {new Date(displayDate).toLocaleDateString("ar-SA")}
               </span>
             )}
           </div>
+          <Button variant="outline" size="sm" className="w-full" asChild data-testid={`button-open-ad-${ad.id}`}>
+            <a href={ad.videoUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="w-3.5 h-3.5" />
+              فتح الإعلان الأصلي
+            </a>
+          </Button>
         </div>
       </CardContent>
     </Card>
