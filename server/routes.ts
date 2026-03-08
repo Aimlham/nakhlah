@@ -12,16 +12,16 @@ import { z } from "zod";
 const cjProductSchema = z.object({
   id: z.string().min(1),
   nameEn: z.string().min(1),
-  bigImage: z.string().optional().default(""),
+  bigImage: z.string().nullable().optional().default(""),
   sellPrice: z.string().refine((v) => !isNaN(parseFloat(v)), "Invalid price"),
-  nowPrice: z.string().refine((v) => !isNaN(parseFloat(v)), "Invalid price").optional(),
-  listedNum: z.number().int().min(0).optional().default(0),
-  threeCategoryName: z.string().optional(),
-  twoCategoryName: z.string().optional(),
-  oneCategoryName: z.string().optional(),
-  description: z.string().optional(),
-  addMarkStatus: z.number().int().optional().default(0),
-  createAt: z.number().optional().default(0),
+  nowPrice: z.string().nullable().optional(),
+  listedNum: z.number().int().min(0).nullable().optional().default(0),
+  threeCategoryName: z.string().nullable().optional(),
+  twoCategoryName: z.string().nullable().optional(),
+  oneCategoryName: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  addMarkStatus: z.number().int().nullable().optional().default(0),
+  createAt: z.number().nullable().optional().default(0),
 });
 
 const SessionStore = MemoryStore(session);
