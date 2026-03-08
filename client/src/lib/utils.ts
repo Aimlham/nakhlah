@@ -30,6 +30,13 @@ export function getScoreBg(score: number | null): string {
   return "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300";
 }
 
+export function getScoreColor(score: number | null): string {
+  if (!score) return "text-muted-foreground";
+  if (score >= 80) return "text-emerald-500";
+  if (score >= 60) return "text-amber-500";
+  return "text-red-500";
+}
+
 export function getCategoryGradient(category: string): string {
   const gradients: Record<string, string> = {
     "Home & Living": "from-orange-400 to-rose-400",
@@ -40,8 +47,38 @@ export function getCategoryGradient(category: string): string {
     "Beauty": "from-pink-400 to-rose-400",
     "Pet Supplies": "from-amber-400 to-orange-400",
     "Travel": "from-sky-400 to-indigo-400",
+    "المنزل والمعيشة": "from-orange-400 to-rose-400",
+    "المطبخ": "from-emerald-400 to-teal-400",
+    "ديكور المنزل": "from-violet-400 to-purple-400",
+    "إلكترونيات": "from-blue-400 to-cyan-400",
+    "الصحة والعافية": "from-green-400 to-emerald-400",
+    "الجمال": "from-pink-400 to-rose-400",
+    "مستلزمات الحيوانات": "from-amber-400 to-orange-400",
+    "السفر": "from-sky-400 to-indigo-400",
   };
   return gradients[category] || "from-slate-400 to-slate-500";
+}
+
+export function getPlatformColor(platform: string): string {
+  const colors: Record<string, string> = {
+    "TikTok": "bg-black text-white dark:bg-white dark:text-black",
+    "Facebook": "bg-blue-600 text-white",
+    "Instagram": "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+    "YouTube": "bg-red-600 text-white",
+  };
+  return colors[platform] || "bg-muted text-muted-foreground";
+}
+
+export function timeSince(date: string | Date): string {
+  const now = new Date();
+  const d = new Date(date);
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "اليوم";
+  if (diffDays === 1) return "أمس";
+  if (diffDays < 7) return `منذ ${diffDays} أيام`;
+  if (diffDays < 30) return `منذ ${Math.floor(diffDays / 7)} أسابيع`;
+  return `منذ ${Math.floor(diffDays / 30)} أشهر`;
 }
 
 export interface AIAnalysis {

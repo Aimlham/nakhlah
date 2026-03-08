@@ -19,33 +19,41 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
 
   return (
     <Card
-      className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+      className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50"
       data-testid={`card-product-${product.id}`}
     >
       <CardContent className="p-0">
         <div className={cn(
-          "relative h-44 rounded-t-md bg-gradient-to-br flex items-center justify-center overflow-hidden",
+          "relative h-44 rounded-t-lg bg-gradient-to-br flex items-center justify-center overflow-hidden",
           getCategoryGradient(product.category)
         )}>
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.title}
-              className="w-full h-full object-cover rounded-t-md transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
           ) : (
             <Package className="w-10 h-10 text-white/60" />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
           <div className="absolute top-2 end-2">
             <ScoreBadge label="التقييم" score={product.opportunityScore} />
           </div>
           {isHighOpportunity && (
             <div className="absolute top-2 start-2" data-testid={`badge-trending-${product.id}`}>
-              <div className="inline-flex items-center gap-1 rounded-md bg-orange-500 text-white px-2 py-1 text-xs font-medium">
+              <div className="inline-flex items-center gap-1 rounded-md bg-orange-500 text-white px-2 py-1 text-xs font-medium shadow-sm">
                 <Flame className="w-3 h-3" />
                 ترند الآن
               </div>
+            </div>
+          )}
+          {product.sourcePlatform && (
+            <div className="absolute bottom-2 start-2">
+              <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm">
+                {product.sourcePlatform}
+              </Badge>
             </div>
           )}
         </div>
@@ -55,42 +63,37 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
             <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-title-${product.id}`}>
               {product.title}
             </h3>
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <Badge variant="secondary" className="text-xs">
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
                 {product.category}
               </Badge>
               {product.niche && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-[10px] px-2 py-0.5">
                   {product.niche}
                 </Badge>
               )}
             </div>
-            {product.sourcePlatform && (
-              <p className="text-xs text-muted-foreground mt-1" data-testid={`text-platform-${product.id}`}>
-                {product.sourcePlatform}
-              </p>
-            )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center bg-muted/30 rounded-lg p-2.5">
             <div>
-              <p className="text-xs text-muted-foreground">المورّد</p>
-              <p className="text-sm font-semibold">{formatMoney(product.supplierPrice)}</p>
+              <p className="text-[10px] text-muted-foreground mb-0.5">المورّد</p>
+              <p className="text-sm font-bold tabular-nums">{formatMoney(product.supplierPrice)}</p>
+            </div>
+            <div className="border-x border-border/50">
+              <p className="text-[10px] text-muted-foreground mb-0.5">البيع</p>
+              <p className="text-sm font-bold tabular-nums">{formatMoney(product.suggestedSellPrice)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">سعر البيع</p>
-              <p className="text-sm font-semibold">{formatMoney(product.suggestedSellPrice)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">الهامش</p>
-              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              <p className="text-[10px] text-muted-foreground mb-0.5">الهامش</p>
+              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
                 {formatMargin(product.estimatedMargin)}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="default" className="flex-1">
+            <Button asChild variant="default" className="flex-1 h-9 text-xs">
               <Link href={`/products/${product.id}`} data-testid={`link-product-details-${product.id}`}>
                 التفاصيل
               </Link>
@@ -98,6 +101,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
             <Button
               size="icon"
               variant={isSaved ? "secondary" : "outline"}
+              className="h-9 w-9 shrink-0"
               aria-label={isSaved ? "إلغاء الحفظ" : "حفظ المنتج"}
               disabled={savePending}
               onClick={() => onToggleSave?.(product.id)}

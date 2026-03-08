@@ -87,7 +87,7 @@ client/src/
     signup.tsx         - Signup form (email/password + Google OAuth, Arabic)
     forgot-password.tsx - Forgot password form (sends reset email, Arabic)
     reset-password.tsx - Reset password form (updates password via token, Arabic)
-    dashboard.tsx      - Dashboard with 5 KPIs, 3-column layout, saved products widget (Arabic)
+    dashboard.tsx      - Dashboard with gradient hero, 6 KPIs, trending grid, active ads, opportunities, new today, saved (Arabic)
     products.tsx       - Product listing with advanced filters (Arabic)
     product-details.tsx - Product details + AI analysis + TikTok ads section (Arabic)
     ads.tsx            - Ad library page with search/filter (Arabic)
@@ -153,11 +153,11 @@ shared/
 ## Key Features
 - Landing page with hero, features, pricing, FAQ (Arabic)
 - Auth with Supabase or session-based fallback
-- Dashboard with 5 KPIs (total products, avg opportunity, avg margin, trending, saved), 3-column layout, saved products widget
+- Dashboard with gradient hero header, search bar, 6 KPIs, trending products grid with pricing & details button, active ads with dual CTAs, best opportunities list, new today, saved products with empty state
 - Product listing with advanced filters: search, category, niche, platform, sort, min opportunity/margin/trend scores
-- Product cards with real Unsplash images, hover animation (shadow + translate), trending badge for opportunityScore >= 80, niche badge
-- Product details with 4-metric scores row, colored AI analysis cards, TikTok ads section with video previews
-- Ad library page (/ads) with search, platform/niche/views filters, ad cards grid
+- Product cards with gradient overlay, pricing grid, source platform badge, hover animation (shadow + translate), trending badge for opportunityScore >= 80
+- Product details with colored score metric cards, side-by-side AI analysis cards, sticky pricing sidebar, ad cards
+- Ad library page (/ads) with stats header, sort dropdown, colored platform badges, gradient overlays, dual action buttons
 - Save/unsave products
 - Product scoring engine with transparent, editable formulas
 - Dark/light mode toggle

@@ -1,0 +1,250 @@
+Redesign and upgrade the current Arabic-first RTL dashboard and ads experience so it feels much closer to a professional product-discovery tool like Minea, while preserving the current architecture and working Supabase integrations.
+
+Important:
+- Keep Arabic as the default language
+- Keep RTL layout
+- Do NOT break existing working features
+- Do NOT redesign from scratch blindly
+- Improve the existing UI/UX deeply
+- The final result should feel like a real dropshipping discovery platform, not a simple admin dashboard
+- Maintain current auth, saved products, products, and ads behavior
+- Use a premium dark dashboard style consistently
+- Keep the code modular and production-friendly
+
+==================================================
+GOAL
+==================================================
+
+Transform the current dashboard from a basic stats page into a "Discovery Command Center" for dropshipping users.
+
+The user should immediately see:
+- trending products
+- newest products
+- active ads
+- best opportunities
+- saved products
+
+The dashboard should feel visually rich, content-heavy, and useful immediately after login.
+
+==================================================
+1) DASHBOARD REDESIGN
+==================================================
+
+Redesign the main dashboard page with this structure:
+
+A) Top header section
+Add a clear dashboard header including:
+- Arabic title such as:
+  "اكتشف المنتجات والإعلانات الرائجة اليوم"
+- short supporting subtitle
+- global search bar
+- optional quick filter button
+- optional refresh button
+
+B) KPI row
+Create a compact KPI row with 6 cards:
+- إجمالي المنتجات
+- جديد اليوم
+- الرائج الآن
+- فرص عالية
+- الإعلانات الجارية
+- المحفوظة
+
+Requirements:
+- smaller and denser than the current cards
+- visually polished
+- strong icon hierarchy
+- dark premium styling
+- preserve Arabic readability
+
+C) Main dashboard content
+Build the dashboard as multiple rich sections:
+
+1. المنتجات الرائجة الآن
+- show 6 to 8 product cards
+- use a responsive grid
+- each card must include:
+  - product image
+  - title
+  - category
+  - niche
+  - source platform
+  - supplier price
+  - suggested sell price
+  - estimated margin
+  - opportunity score
+  - badge "ترند الآن" if score is high
+  - button to open details
+
+2. الإعلانات الجارية الآن
+- show a grid of ad cards directly inside dashboard
+- this is extremely important
+- each ad card must include:
+  - video preview or thumbnail
+  - product name
+  - platform
+  - views
+  - likes
+  - publish date
+  - running duration if available
+  - button to analyze ad or open ad page
+
+3. أفضل الفرص
+- compact list or mini cards
+- include thumbnail, title, margin, score
+
+4. جديد اليوم
+- list products added recently
+- include image thumbnail and metadata
+
+5. المنتجات المحفوظة
+- show saved products
+- if none, show a strong empty state with CTA
+
+Requirements:
+- dashboard should be content-rich, not empty
+- reduce unused whitespace
+- make the page scroll with meaningful sections
+- make it feel like a research feed, not a plain admin
+
+==================================================
+2) PRODUCT CARD REDESIGN
+==================================================
+
+Upgrade all product cards across the dashboard and products page.
+
+Requirements:
+- real product image if image_url exists
+- polished fallback image if missing
+- dark card style
+- stronger hierarchy
+- hover animation:
+  - slight lift
+  - stronger shadow
+  - smoother transition
+- badges:
+  - category
+  - niche
+  - source platform
+  - "ترند الآن" for high opportunity
+- improved footer row for:
+  - supplier price
+  - suggested sell price
+  - margin
+- cleaner Arabic labels
+
+==================================================
+3) ADS CARD REDESIGN
+==================================================
+
+Upgrade the ads cards significantly so they feel closer to a professional ad library.
+
+Each ad card should include:
+- large media area (video or thumbnail)
+- clear product/ad title
+- platform badge
+- niche badge if available
+- views count
+- likes count
+- publication date
+- running duration if available
+- original ad button
+- analyze ad button
+- better card spacing and information density
+
+Requirements:
+- visually richer cards
+- more useful than the current simple layout
+- dark design consistent with dashboard
+- Arabic labels
+- strong card hierarchy
+
+==================================================
+4) ADS PAGE IMPROVEMENT
+==================================================
+
+Improve the ads library page so it feels more like a browsing engine.
+
+Requirements:
+- stronger page header
+- better search and filters row
+- better card density
+- support:
+  - platform filter
+  - niche filter
+  - minimum views
+  - sorting
+- allow toggling between grid density if easy
+- make the page look more premium and data-rich
+
+==================================================
+5) DASHBOARD + ADS DATA CONNECTION
+==================================================
+
+Use the existing products and ads data sources.
+If some data is missing:
+- use graceful mock fallback
+- do not crash the app
+- keep components structured so real data can replace mock data later
+
+If product_ads data exists, use it in:
+- dashboard ads section
+- ads library page
+- product details ads section
+
+==================================================
+6) VISUAL DIRECTION
+==================================================
+
+Use this visual direction:
+- premium dark SaaS dashboard
+- richer content density
+- less empty whitespace
+- cards with layered information
+- stronger use of thumbnails and previews
+- clear section separation
+- better visual rhythm like a discovery platform
+
+Do NOT clone Minea exactly.
+Instead, capture the same feeling:
+- rich discovery
+- high density
+- useful browsing
+- immediate value after login
+
+==================================================
+7) PRODUCT DETAILS PAGE IMPROVEMENT
+==================================================
+
+Further improve the product details page so it matches the stronger dashboard quality.
+
+Requirements:
+- keep the product hero area
+- improve metrics cards
+- improve AI analysis cards
+- improve ads section styling
+- add a related ads / related products feel if possible
+- preserve Arabic RTL polish
+
+==================================================
+8) ENGINEERING QUALITY
+==================================================
+
+Requirements:
+- keep code modular
+- avoid giant messy files
+- avoid breaking current routing
+- preserve current auth and save functionality
+- keep TypeScript clean
+- ensure no build errors
+- keep reusable UI components where possible
+
+==================================================
+9) AFTER COMPLETION
+==================================================
+
+After implementing, summarize:
+1. what dashboard sections were upgraded
+2. what ads improvements were added
+3. what data is real vs mock fallback
+4. confirm the app still works correctly
