@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { isSupabaseAvailable, getSupabaseClient, getAccessToken } from "./supabase";
-import { apiRequest } from "./queryClient";
 
 interface AuthUser {
   id: string;
@@ -79,43 +78,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = getSupabaseClient();
 
     if (supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw new Error(error.message);
-      setUser({
-        id: data.user.id,
-        email: data.user.email ?? "",
-        fullName: (data.user.user_metadata?.full_name as string) ?? null,
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
       });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "فشل تسجيل الدخول");
+
+      if (data.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+      setUser(data.user);
       return;
     }
 
-    const res = await apiRequest("POST", "/api/auth/login", { email, password });
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+      credentials: "include",
+    });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "فشل تسجيل الدخول");
     setUser(data.user);
   }, []);
 
   const signup = useCallback(async (email: string, password: string, fullName: string) => {
     const supabase = getSupabaseClient();
 
-    if (supabase) {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      });
-      if (error) throw new Error(error.message);
-      if (data.user) {
-        setUser({
-          id: data.user.id,
-          email: data.user.email ?? "",
-          fullName: fullName,
-        });
-      }
-      return;
-    }
-
-    const res = await apiRequest("POST", "/api/auth/signup", { email, password, fullName });
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, fullName }),
+      credentials: "include",
+    });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "فشل إنشاء الحساب");
+
+    if (supabase && data.session) {
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+    }
     setUser(data.user);
   }, []);
 
