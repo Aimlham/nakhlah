@@ -28,8 +28,9 @@ async function getAccessToken(): Promise<string> {
     } catch {}
   }
 
-  const apiKey = process.env.CJ_API_TOKEN;
-  if (!apiKey) throw new Error("CJ_API_TOKEN not configured");
+  const rawKey = process.env.CJ_API_TOKEN;
+  if (!rawKey) throw new Error("CJ_API_TOKEN not configured");
+  const apiKey = rawKey.replace(/<[^>]*>/g, "").trim();
 
   const res = await fetch(`${CJ_BASE}/authentication/getAccessToken`, {
     method: "POST",
