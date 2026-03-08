@@ -41,14 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (supabase) {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
+          (_event, session) => {
             if (cancelled) return;
             if (session?.user) {
               setUserFromSession(session);
-              if (event === "SIGNED_IN" && window.location.hash.includes("access_token")) {
-                window.history.replaceState({}, "", "/dashboard");
-                window.location.replace("/dashboard");
-              }
             } else {
               setUser(null);
             }
