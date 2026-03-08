@@ -91,6 +91,7 @@ server/
 
 shared/
   schema.ts            - Drizzle schema + TypeScript types
+  scoring.ts           - Reusable product scoring engine (trend, saturation, opportunity, margin)
 ```
 
 ## API Routes
@@ -124,6 +125,15 @@ shared/
 - data-testid attributes use English keys for testing stability
 - Prepared for future i18n/bilingual support
 
+## Scoring Engine (`shared/scoring.ts`)
+- `scoreProduct(product)` — applies all scoring formulas to a Product, returns scored Product
+- `calculateMargin(supplierPrice, sellPrice)` — margin percentage from prices
+- `calculateTrendScore(...)` — uses existing score if present, otherwise estimates from margin/price/category
+- `calculateSaturationScore(...)` — uses existing score if present, otherwise estimates from price/margin/category
+- `calculateOpportunityScore(trend, saturation, margin)` — weighted: 40% trend + 30% anti-saturation + 30% margin
+- Applied server-side in API routes (`/api/products`, `/api/products/:id`, `/api/saved/products`)
+- All scores are 0-100 integers; margin is a percentage string with one decimal
+
 ## Key Features
 - Landing page with hero, features, pricing, FAQ (Arabic)
 - Auth with Supabase or session-based fallback
@@ -131,6 +141,7 @@ shared/
 - Product listing with search, category/niche/platform filters, sorting
 - Product details with scores, pricing, AI analysis (ad angles, hooks, target audience)
 - Save/unsave products
+- Product scoring engine with transparent, editable formulas
 - Dark/light mode toggle
 - Responsive design (mobile + desktop)
 

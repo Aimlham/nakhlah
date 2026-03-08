@@ -4,6 +4,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
+import { scoreProduct } from "@shared/scoring";
 
 const SessionStore = MemoryStore(session);
 
@@ -182,7 +183,7 @@ export async function registerRoutes(
   app.get("/api/products", async (_req: Request, res: Response) => {
     try {
       const products = await storage.getAllProducts();
-      res.json(products);
+      res.json(products.map(scoreProduct));
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch products" });
     }
@@ -194,7 +195,7 @@ export async function registerRoutes(
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-      res.json(product);
+      res.json(scoreProduct(product));
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch product" });
     }
@@ -220,7 +221,7 @@ export async function registerRoutes(
         return res.json([]);
       }
       const products = await storage.getSavedProducts(userId);
-      res.json(products);
+      res.json(products.map(scoreProduct));
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch saved products" });
     }

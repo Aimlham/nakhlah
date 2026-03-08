@@ -1,0 +1,152 @@
+Improve the existing SaaS product research application significantly without breaking the current architecture.
+
+Context:
+This app helps users discover winning products for dropshipping and e-commerce. The app is already connected to Supabase and has product listings, dashboards, and product detail pages.
+
+However the app currently looks like an MVP and lacks important real-world product research features.
+
+Your task is to upgrade the product discovery experience to make it feel like a professional product research tool similar to tools like Minea or Pipiads.
+
+Important constraints:
+- Do NOT break existing Supabase integrations
+- Do NOT remove existing features
+- Do NOT redesign the entire system
+- Only improve and extend it
+- Keep Arabic as the main language
+- Maintain RTL layout
+
+Major improvements required:
+
+1) Real product images
+Replace placeholder images with real product images when available.
+Ensure product cards display the real image_url from the database.
+Add fallback images if missing.
+
+2) Add TikTok Ads section inside the product page
+
+Create a new section titled:
+"إعلانات المنتج على TikTok"
+
+Each ad card must display:
+- video preview
+- view count
+- like count
+- publish date
+- link to original TikTok video
+
+Layout should be a responsive grid.
+
+3) Add a new main menu page called:
+"الإعلانات"
+
+This page will act as an Ad Library.
+
+Features:
+- TikTok ads grid
+- search ads
+- filter ads by niche
+- filter by views
+- filter by platform
+
+Ad card should show:
+- video preview
+- views
+- likes
+- platform
+- product name
+
+4) Improve product cards
+
+Product cards must include:
+- product image
+- opportunity score badge
+- supplier price
+- suggested sell price
+- estimated margin
+- category
+- platform source
+
+Add hover animation.
+
+5) Improve filters on products page
+
+Add filters for:
+- opportunity score
+- profit margin
+- category
+- niche
+- source platform
+- trending score
+
+6) Add product metrics panel
+
+On the product details page add a metrics row:
+
+- trend score
+- saturation score
+- opportunity score
+- estimated demand
+
+Display them as statistic cards.
+
+7) Add product videos section
+
+Add section:
+
+"فيديوهات المنتج"
+
+Display:
+- TikTok videos
+- product demo videos
+
+8) Improve AI analysis UI
+
+Enhance AI analysis cards:
+
+- لماذا هذا المنتج واعد
+- الجمهور المستهدف
+- زوايا إعلانية
+
+Add icons and improve readability.
+
+9) Improve dashboard
+
+Add new widgets:
+
+- عدد المنتجات الجديدة اليوم
+- المنتجات الأعلى فرصة
+- المنتجات الأكثر حفظًا
+
+10) Add trending badge
+
+On product cards show:
+
+🔥 ترند الآن
+
+if opportunity score is high.
+
+11) Improve performance
+
+- optimize product queries
+- add pagination
+- avoid loading too many items at once
+
+12) Add database preparation for ads
+
+Prepare a future table called:
+
+product_ads
+
+Fields:
+- id
+- product_id
+- platform
+- video_url
+- views
+- likes
+- created_at
+
+But do not break the current database.
+
+Finally:
+After implementing all improvements, summarize what was added and confirm the app still works correctly.
