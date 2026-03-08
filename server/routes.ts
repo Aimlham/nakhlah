@@ -6,6 +6,23 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { scoreProduct } from "@shared/scoring";
 import { generateProductAnalysis } from "./openai";
+import { searchCJProducts, translateProductToArabic, calculateProductScores } from "./cj-dropshipping";
+import { z } from "zod";
+
+const cjProductSchema = z.object({
+  id: z.string().min(1),
+  nameEn: z.string().min(1),
+  bigImage: z.string().optional().default(""),
+  sellPrice: z.string().refine((v) => !isNaN(parseFloat(v)), "Invalid price"),
+  nowPrice: z.string().refine((v) => !isNaN(parseFloat(v)), "Invalid price").optional(),
+  listedNum: z.number().int().min(0).optional().default(0),
+  threeCategoryName: z.string().optional(),
+  twoCategoryName: z.string().optional(),
+  oneCategoryName: z.string().optional(),
+  description: z.string().optional(),
+  addMarkStatus: z.number().int().optional().default(0),
+  createAt: z.number().optional().default(0),
+});
 
 const SessionStore = MemoryStore(session);
 
@@ -378,6 +395,132 @@ export async function registerRoutes(
       res.json(enriched);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch ads" });
+    }
+  });
+
+  app.get("/api/cj/search", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      if (!process.env.CJ_API_TOKEN) {
+        return res.status(500).json({ message: "CJ Dropshipping not configured" });
+      }
+
+      const { keyword, page, size, productFlag, categoryId } = req.query;
+      const result = await searchCJProducts({
+        keyword: keyword as string,
+        page: page ? parseInt(page as string) : 1,
+        size: size ? parseInt(size as string) : 20,
+        productFlag: productFlag !== undefined ? parseInt(productFlag as string) : undefined,
+        categoryId: categoryId as string,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("[cj] Search error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to search CJ products" });
+    }
+  });
+
+  app.post("/api/cj/import", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const parsed = cjProductSchema.safeParse(req.body?.product);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid product data", errors: parsed.error.flatten().fieldErrors });
+      }
+      const cjProduct = parsed.data;
+
+      const translated = await translateProductToArabic(cjProduct);
+      const scores = calculateProductScores(cjProduct);
+      const supplierPrice = cjProduct.nowPrice || cjProduct.sellPrice;
+
+      const newProduct = await storage.createProduct({
+        title: translated.title,
+        imageUrl: cjProduct.bigImage || null,
+        shortDescription: translated.shortDescription,
+        category: translated.category,
+        niche: translated.niche,
+        sourcePlatform: "CJ Dropshipping",
+        supplierPrice: supplierPrice,
+        suggestedSellPrice: scores.suggestedSellPrice,
+        estimatedMargin: scores.estimatedMargin,
+        trendScore: scores.trendScore,
+        saturationScore: scores.saturationScore,
+        opportunityScore: null,
+        aiSummary: null,
+        supplierLink: `https://cjdropshipping.com/product/detail-${cjProduct.id}.html`,
+      });
+
+      res.json(newProduct);
+    } catch (err: any) {
+      console.error("[cj] Import error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to import product" });
+    }
+  });
+
+  app.post("/api/cj/import-batch", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { products: cjProducts } = req.body;
+      if (!Array.isArray(cjProducts) || cjProducts.length === 0) {
+        return res.status(400).json({ message: "Products array required" });
+      }
+
+      const limit = Math.min(cjProducts.length, 10);
+      const imported = [];
+      const failed: { index: number; error: string }[] = [];
+
+      for (let i = 0; i < limit; i++) {
+        try {
+          const parsed = cjProductSchema.safeParse(cjProducts[i]);
+          if (!parsed.success) {
+            failed.push({ index: i, error: "Invalid product data" });
+            continue;
+          }
+          const cjProduct = parsed.data;
+          const translated = await translateProductToArabic(cjProduct);
+          const scores = calculateProductScores(cjProduct);
+          const supplierPrice = cjProduct.nowPrice || cjProduct.sellPrice;
+
+          const newProduct = await storage.createProduct({
+            title: translated.title,
+            imageUrl: cjProduct.bigImage || null,
+            shortDescription: translated.shortDescription,
+            category: translated.category,
+            niche: translated.niche,
+            sourcePlatform: "CJ Dropshipping",
+            supplierPrice: supplierPrice,
+            suggestedSellPrice: scores.suggestedSellPrice,
+            estimatedMargin: scores.estimatedMargin,
+            trendScore: scores.trendScore,
+            saturationScore: scores.saturationScore,
+            opportunityScore: null,
+            aiSummary: null,
+            supplierLink: `https://cjdropshipping.com/product/detail-${cjProduct.id}.html`,
+          });
+          imported.push(newProduct);
+        } catch (err: any) {
+          console.error(`[cj] Failed to import product ${i}:`, err.message);
+          failed.push({ index: i, error: err.message });
+        }
+      }
+
+      res.json({ imported: imported.length, failed: failed.length, products: imported, errors: failed });
+    } catch (err: any) {
+      console.error("[cj] Batch import error:", err.message);
+      res.status(500).json({ message: err.message || "Failed to batch import" });
     }
   });
 

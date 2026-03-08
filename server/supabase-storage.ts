@@ -2,6 +2,7 @@ import type {
   User,
   InsertUser,
   Product,
+  InsertProduct,
   SavedProduct,
   ProductAd,
 } from "@shared/schema";
@@ -159,6 +160,32 @@ export class SupabaseStorage implements IStorage {
       .eq("user_id", userId)
       .eq("product_id", productId);
     if (error) throw new Error(error.message);
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const row = {
+      title: product.title,
+      image_url: product.imageUrl || null,
+      short_description: product.shortDescription || null,
+      category: product.category,
+      niche: product.niche || null,
+      source_platform: product.sourcePlatform || null,
+      supplier_price: product.supplierPrice,
+      suggested_sell_price: product.suggestedSellPrice,
+      estimated_margin: product.estimatedMargin || null,
+      trend_score: product.trendScore || null,
+      saturation_score: product.saturationScore || null,
+      opportunity_score: product.opportunityScore || null,
+      ai_summary: product.aiSummary || null,
+      supplier_link: product.supplierLink || null,
+    };
+    const { data, error } = await this.db
+      .from("products")
+      .insert(row)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return this.mapProduct(data);
   }
 
   async getAdsByProductId(productId: string): Promise<ProductAd[]> {

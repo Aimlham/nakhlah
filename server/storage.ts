@@ -14,6 +14,7 @@ export interface IStorage {
   getSavedProducts(userId: string): Promise<Product[]>;
   saveProduct(userId: string, productId: string): Promise<SavedProduct>;
   unsaveProduct(userId: string, productId: string): Promise<void>;
+  createProduct(product: InsertProduct): Promise<Product>;
   getAdsByProductId(productId: string): Promise<ProductAd[]>;
   getAllAds(): Promise<ProductAd[]>;
   updateProductAiSummary(productId: string, aiSummary: string): Promise<void>;
@@ -306,6 +307,30 @@ export class MemStorage implements IStorage {
   async unsaveProduct(userId: string, productId: string): Promise<void> {
     const key = `${userId}:${productId}`;
     this.savedProducts.delete(key);
+  }
+
+  async createProduct(product: InsertProduct): Promise<Product> {
+    const id = randomUUID();
+    const newProduct: Product = {
+      id,
+      title: product.title,
+      imageUrl: product.imageUrl || null,
+      shortDescription: product.shortDescription || null,
+      category: product.category,
+      niche: product.niche || null,
+      sourcePlatform: product.sourcePlatform || null,
+      supplierPrice: product.supplierPrice,
+      suggestedSellPrice: product.suggestedSellPrice,
+      estimatedMargin: product.estimatedMargin || null,
+      trendScore: product.trendScore || null,
+      saturationScore: product.saturationScore || null,
+      opportunityScore: product.opportunityScore || null,
+      aiSummary: product.aiSummary || null,
+      supplierLink: product.supplierLink || null,
+      createdAt: new Date(),
+    };
+    this.products.set(id, newProduct);
+    return newProduct;
   }
 
   async getAdsByProductId(productId: string): Promise<ProductAd[]> {

@@ -98,6 +98,7 @@ client/src/
     products.tsx       - Product listing with advanced filters (Arabic)
     product-details.tsx - Product details + AI analysis + TikTok ads section (Arabic)
     ads.tsx            - Minea-style ads library with platform tabs, filter sidebar, sort, grid/list toggle (Arabic)
+    cj-products.tsx    - CJ Dropshipping product discovery with search, filters, import (Arabic)
     saved-products.tsx - User's saved products (Arabic)
     pricing-page.tsx   - Pricing plans (Arabic)
     auth-callback.tsx  - OAuth callback handler (processes tokens, redirects to dashboard)
@@ -105,10 +106,12 @@ client/src/
 
 server/
   index.ts             - Express server entry
-  routes.ts            - API endpoints (auth, products, saved, ads) with dual auth support
+  routes.ts            - API endpoints (auth, products, saved, ads, CJ) with dual auth support
   storage.ts           - IStorage interface + MemStorage (fallback) + conditional selection
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation of IStorage
+  cj-dropshipping.ts   - CJ Dropshipping API client (auth, search, translate, scoring)
+  openai.ts            - OpenAI API client (product analysis)
 
 shared/
   schema.ts            - Drizzle schema + TypeScript types
@@ -130,6 +133,17 @@ shared/
 - `GET /api/saved/products` - Saved products for current user
 - `POST /api/saved/:productId` - Save a product
 - `DELETE /api/saved/:productId` - Unsave a product
+
+## CJ Dropshipping Integration
+- `CJ_API_TOKEN` — CJ API Key (obtained from cjdropshipping.com/myCJ.html#/apikey)
+- **Service file**: `server/cj-dropshipping.ts` — handles auth token exchange (auto-refresh), product search, translation, scoring
+- **Auth flow**: API Key → `getAccessToken` (15-day validity) → auto-refreshes with refreshToken (180-day validity) → cached in memory
+- **API endpoints**:
+  - `GET /api/cj/search` — search CJ products (keyword, page, size, productFlag, categoryId)
+  - `POST /api/cj/import` — import single product (translates to Arabic via OpenAI, calculates scores, saves to DB)
+  - `POST /api/cj/import-batch` — import up to 10 products at once
+- **Frontend**: `/discover` page with search, flag filters (trending/new/video/slow-moving), grid view, import button
+- **productFlag values**: 0=Trending, 1=New, 2=Video, 3=Slow-moving
 
 ## Auth Flow
 - **Supabase mode**: Client uses `@supabase/supabase-js` for auth → gets JWT → sends `Authorization: Bearer <token>` header → server verifies with `supabase.auth.getUser(token)`
