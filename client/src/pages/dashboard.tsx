@@ -1,41 +1,29 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
-  Package, TrendingUp, Star, Bookmark, Flame, CalendarPlus,
-  ArrowLeft, Eye, Heart, Play, Calendar, ExternalLink,
-  Search, Megaphone, Zap, RefreshCw, Sparkles,
+  Package, Bookmark, Flame,
+  ArrowLeft, Search, Megaphone, Sparkles,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { KpiCard } from "@/components/kpi-card";
-import { ScoreBadge } from "@/components/score-badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
-import { formatMoney, formatMargin, formatCompactNumber, getCategoryGradient, getPlatformColor, timeSince, cn } from "@/lib/utils";
+import { cn, formatCompactNumber, getCategoryGradient, formatMoney, formatMargin } from "@/lib/utils";
+import { ScoreBadge } from "@/components/score-badge";
+import { MineaAdCard, type EnrichedAd } from "@/components/minea-ad-card";
 import type { Product } from "@shared/schema";
-
-interface EnrichedAd {
-  id: string;
-  productId: string;
-  platform: string;
-  niche: string | null;
-  videoUrl: string;
-  thumbnailUrl: string | null;
-  views: number | null;
-  likes: number | null;
-  publishedAt: string | null;
-  createdAt: string | null;
-  productTitle: string;
-  productCategory: string;
-  productNiche: string;
-}
+import { useState } from "react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("ads");
+  const [search, setSearch] = useState("");
 
-  const { data: products, isLoading } = useQuery<Product[]>({
+  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
 
@@ -50,52 +38,67 @@ export default function DashboardPage() {
   const allProducts = products || [];
   const allAds = adsData || [];
   const savedIds = new Set(savedData?.savedProductIds || []);
-  const savedCount = savedIds.size;
-  const trendingToday = allProducts.filter(p => (p.trendScore || 0) >= 80).length;
-  const highOpportunity = allProducts.filter(p => (p.opportunityScore || 0) >= 80).length;
+  const isLoading = productsLoading || adsLoading;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const newToday = allProducts.filter(p => {
-    if (!p.createdAt) return false;
-    const d = new Date(p.createdAt);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime() >= today.getTime();
-  }).length;
+  const adCountByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    allAds.forEach(ad => {
+      map[ad.productId] = (map[ad.productId] || 0) + 1;
+    });
+    return map;
+  }, [allAds]);
 
-  const trendingProducts = [...allProducts]
-    .filter(p => (p.trendScore || 0) >= 70)
-    .sort((a, b) => (b.trendScore || 0) - (a.trendScore || 0))
-    .slice(0, 8);
+  const viewsByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    allAds.forEach(ad => {
+      map[ad.productId] = (map[ad.productId] || 0) + (ad.views || 0);
+    });
+    return map;
+  }, [allAds]);
 
-  const topOpportunities = [...allProducts]
-    .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0))
-    .slice(0, 6);
+  const filteredAds = useMemo(() => {
+    let result = [...allAds];
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(ad =>
+        ad.productTitle.toLowerCase().includes(s) ||
+        ad.platform.toLowerCase().includes(s) ||
+        (ad.niche || "").toLowerCase().includes(s) ||
+        (ad.productNiche || "").toLowerCase().includes(s)
+      );
+    }
+    return result.sort((a, b) => (b.views || 0) - (a.views || 0));
+  }, [allAds, search]);
 
-  const recentProducts = [...allProducts]
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-    .slice(0, 6);
+  const filteredProducts = useMemo(() => {
+    let result = [...allProducts];
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(p =>
+        p.title.toLowerCase().includes(s) ||
+        p.category.toLowerCase().includes(s) ||
+        (p.niche || "").toLowerCase().includes(s)
+      );
+    }
+    return result.sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
+  }, [allProducts, search]);
 
-  const topAds = [...allAds]
-    .sort((a, b) => (b.views || 0) - (a.views || 0))
-    .slice(0, 6);
+  const topProducts = filteredProducts.slice(0, 8);
 
-  const mostSaved = allProducts
-    .filter(p => savedIds.has(p.id))
-    .slice(0, 6);
+  const quickFilterTags = [
+    { label: "الأكثر رواجاً", icon: Flame, color: "text-orange-500" },
+    { label: "فرص ذهبية", icon: Sparkles, color: "text-amber-500" },
+    { label: "جديد اليوم", icon: Package, color: "text-violet-500" },
+  ];
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-24 rounded-xl" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Skeleton key={i} className="h-20 rounded-lg" />
-          ))}
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-48 rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <Skeleton key={i} className="h-64 rounded-lg" />
+            <Skeleton key={i} className="h-[420px] rounded-lg" />
           ))}
         </div>
       </div>
@@ -103,331 +106,164 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="rounded-xl bg-gradient-to-l from-primary/10 via-primary/5 to-transparent border border-primary/10 p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-dashboard-title">
-              اكتشف المنتجات والإعلانات الرائجة اليوم
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {user?.fullName ? `مرحباً ${user.fullName} — ` : ""}ابحث واكتشف أفضل فرص الدروبشيبنق الآن
-            </p>
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-1 sm:w-72">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="ابحث عن منتجات أو إعلانات..."
-                className="ps-9 bg-background/60 backdrop-blur-sm"
-                data-testid="input-dashboard-search"
-              />
-            </div>
-          </div>
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-muted/50" data-testid="tabs-dashboard">
+            <TabsTrigger value="ads" className="gap-1.5 text-sm" data-testid="tab-ads">
+              <Megaphone className="w-4 h-4" />
+              مكتبة الإعلانات
+            </TabsTrigger>
+            <TabsTrigger value="products" className="gap-1.5 text-sm" data-testid="tab-products">
+              <Package className="w-4 h-4" />
+              المنتجات الرابحة
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="bg-muted/50 rounded-md px-2.5 py-1">
+            {activeTab === "ads" ? `${allAds.length} إعلان` : `${allProducts.length} منتج`}
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KpiCard
-          title="إجمالي المنتجات"
-          value={allProducts.length}
-          icon={Package}
-          iconBg="bg-blue-500/10"
-          iconColor="text-blue-500"
-        />
-        <KpiCard
-          title="جديد اليوم"
-          value={newToday}
-          icon={CalendarPlus}
-          iconBg="bg-violet-500/10"
-          iconColor="text-violet-500"
-        />
-        <KpiCard
-          title="الرائج الآن"
-          value={trendingToday}
-          icon={TrendingUp}
-          trend={trendingToday > 0 ? "نشط" : undefined}
-          iconBg="bg-orange-500/10"
-          iconColor="text-orange-500"
-        />
-        <KpiCard
-          title="فرص عالية"
-          value={highOpportunity}
-          icon={Star}
-          iconBg="bg-emerald-500/10"
-          iconColor="text-emerald-500"
-        />
-        <KpiCard
-          title="الإعلانات الجارية"
-          value={allAds.length}
-          icon={Megaphone}
-          iconBg="bg-pink-500/10"
-          iconColor="text-pink-500"
-        />
-        <KpiCard
-          title="المحفوظة"
-          value={savedCount}
-          icon={Bookmark}
-          iconBg="bg-amber-500/10"
-          iconColor="text-amber-500"
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder={activeTab === "ads" ? "ابحث عن إعلانات..." : "ابحث عن منتجات..."}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="ps-9"
+            data-testid="input-dashboard-search"
+          />
+        </div>
       </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-section-trending">
-            <Flame className="w-5 h-5 text-orange-500" />
-            المنتجات الرائجة الآن
-          </h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/products" data-testid="link-view-all-trending">
-              عرض الكل <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </Button>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {trendingProducts.map(product => (
-            <DashboardProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {quickFilterTags.map(tag => (
+          <Badge
+            key={tag.label}
+            variant="outline"
+            className="cursor-pointer hover:bg-muted/50 transition-colors text-xs px-3 py-1.5 shrink-0 gap-1.5"
+          >
+            <tag.icon className={cn("w-3.5 h-3.5", tag.color)} />
+            {tag.label}
+          </Badge>
+        ))}
+        <Badge
+          variant="outline"
+          className="cursor-pointer hover:bg-muted/50 transition-colors text-xs px-3 py-1.5 shrink-0 gap-1.5"
+        >
+          <Bookmark className="w-3.5 h-3.5 text-primary" />
+          المحفوظة ({savedIds.size})
+        </Badge>
+      </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold flex items-center gap-2" data-testid="text-section-ads">
-            <Megaphone className="w-5 h-5 text-pink-500" />
-            الإعلانات الجارية الآن
-          </h2>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/ads" data-testid="link-view-all-ads">
-              عرض الكل <ArrowLeft className="w-3.5 h-3.5" />
-            </Link>
-          </Button>
-        </div>
-        {adsLoading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-64 rounded-lg" />)}
+      {activeTab === "ads" ? (
+        filteredAds.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-medium">لا توجد إعلانات</p>
+            <p className="text-xs text-muted-foreground mt-1">حاول تعديل البحث</p>
           </div>
-        ) : topAds.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <Megaphone className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p>لا توجد إعلانات حالياً</p>
-            </CardContent>
-          </Card>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topAds.map(ad => (
-              <DashboardAdCard key={ad.id} ad={ad} />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="grid-dashboard-ads">
+            {filteredAds.map(ad => (
+              <MineaAdCard
+                key={ad.id}
+                ad={ad}
+                adCountForProduct={adCountByProduct[ad.productId]}
+                totalViewsForProduct={viewsByProduct[ad.productId]}
+              />
             ))}
           </div>
-        )}
-      </section>
-
-      <div className="grid lg:grid-cols-3 gap-6">
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-500" />
-              أفضل الفرص
-            </h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/products">
-                المزيد <ArrowLeft className="w-3 h-3" />
-              </Link>
-            </Button>
+        )
+      ) : (
+        filteredProducts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Package className="w-12 h-12 text-muted-foreground/30 mb-3" />
+            <p className="text-sm font-medium">لا توجد منتجات</p>
+            <p className="text-xs text-muted-foreground mt-1">حاول تعديل البحث</p>
           </div>
-          <div className="space-y-2">
-            {topOpportunities.map((product, index) => (
-              <Link key={product.id} href={`/products/${product.id}`}>
-                <Card className="transition-all duration-200 hover:bg-muted/50 cursor-pointer border-transparent hover:border-border" data-testid={`link-top-product-${product.id}`}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold text-muted-foreground w-5 text-center shrink-0 tabular-nums">
-                        #{index + 1}
-                      </span>
-                      <div className={cn(
-                        "w-9 h-9 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 overflow-hidden",
-                        getCategoryGradient(product.category)
-                      )}>
-                        {product.imageUrl ? (
-                          <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Package className="w-3.5 h-3.5 text-white/60" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{product.title}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                          <span>{formatMoney(product.supplierPrice)} → {formatMoney(product.suggestedSellPrice)}</span>
-                          <span className="text-emerald-500 font-medium">{formatMargin(product.estimatedMargin)}</span>
-                        </div>
-                      </div>
-                      <ScoreBadge label="" score={product.opportunityScore} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="grid-dashboard-products">
+            {topProducts.map(product => (
+              <DashboardProductCard key={product.id} product={product} isSaved={savedIds.has(product.id)} />
             ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-violet-500" />
-              جديد اليوم
-            </h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/products">
-                المزيد <ArrowLeft className="w-3 h-3" />
-              </Link>
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {recentProducts.map(product => (
-              <Link key={product.id} href={`/products/${product.id}`}>
-                <Card className="transition-all duration-200 hover:bg-muted/50 cursor-pointer border-transparent hover:border-border" data-testid={`link-recent-product-${product.id}`}>
-                  <CardContent className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "w-9 h-9 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 overflow-hidden",
-                        getCategoryGradient(product.category)
-                      )}>
-                        {product.imageUrl ? (
-                          <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Package className="w-3.5 h-3.5 text-white/60" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{product.title}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{product.category}</Badge>
-                          {product.niche && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.niche}</Badge>}
-                        </div>
-                      </div>
-                      {product.createdAt && (
-                        <span className="text-[10px] text-muted-foreground shrink-0">{timeSince(product.createdAt)}</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold flex items-center gap-2">
-              <Bookmark className="w-4 h-4 text-amber-500" />
-              المنتجات المحفوظة
-            </h2>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/saved" data-testid="link-view-saved">
-                المزيد <ArrowLeft className="w-3 h-3" />
-              </Link>
-            </Button>
-          </div>
-          {mostSaved.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="p-8 text-center">
-                <Bookmark className="w-8 h-8 mx-auto mb-3 text-muted-foreground/40" />
-                <p className="text-sm font-medium mb-1">لم تحفظ أي منتجات بعد</p>
-                <p className="text-xs text-muted-foreground mb-4">احفظ المنتجات المهمة للعودة إليها لاحقاً</p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/products" data-testid="link-browse-products">
-                    تصفح المنتجات
+            {filteredProducts.length > 8 && (
+              <div className="col-span-full flex justify-center pt-2">
+                <Button variant="outline" asChild>
+                  <Link href="/products" data-testid="link-view-all-products">
+                    عرض كل المنتجات ({filteredProducts.length})
+                    <ArrowLeft className="w-4 h-4" />
                   </Link>
                 </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {mostSaved.map(product => (
-                <Link key={product.id} href={`/products/${product.id}`}>
-                  <Card className="transition-all duration-200 hover:bg-muted/50 cursor-pointer border-transparent hover:border-border" data-testid={`link-saved-product-${product.id}`}>
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-9 h-9 rounded-md bg-gradient-to-br flex items-center justify-center shrink-0 overflow-hidden",
-                          getCategoryGradient(product.category)
-                        )}>
-                          {product.imageUrl ? (
-                            <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <Package className="w-3.5 h-3.5 text-white/60" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{product.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{product.category}</p>
-                        </div>
-                        <ScoreBadge label="" score={product.opportunityScore} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
+              </div>
+            )}
+          </div>
+        )
+      )}
     </div>
   );
 }
 
-function DashboardProductCard({ product }: { product: Product }) {
+function DashboardProductCard({ product, isSaved }: { product: Product; isSaved?: boolean }) {
   const isHighOpportunity = (product.opportunityScore || 0) >= 80;
 
   return (
     <Card
-      className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 h-full"
-      data-testid={`card-trending-${product.id}`}
+      className="group transition-all duration-200 hover:shadow-md h-full border-border/60"
+      data-testid={`card-product-${product.id}`}
     >
       <CardContent className="p-0">
         <div className={cn(
-          "relative h-36 rounded-t-lg bg-gradient-to-br flex items-center justify-center overflow-hidden",
+          "relative h-44 rounded-t-lg bg-gradient-to-br flex items-center justify-center overflow-hidden",
           getCategoryGradient(product.category)
         )}>
           {product.imageUrl ? (
             <img
               src={product.imageUrl}
               alt={product.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               loading="lazy"
             />
           ) : (
             <Package className="w-8 h-8 text-white/60" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-          <div className="absolute top-2 end-2">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          <div className="absolute top-2.5 end-2.5">
             <ScoreBadge label="" score={product.opportunityScore} />
           </div>
           {isHighOpportunity && (
-            <div className="absolute top-2 start-2">
-              <div className="inline-flex items-center gap-1 rounded-md bg-orange-500 text-white px-1.5 py-0.5 text-[10px] font-medium">
+            <div className="absolute top-2.5 start-2.5">
+              <Badge className="text-[10px] bg-orange-500 text-white border-0 gap-1">
                 <Flame className="w-3 h-3" />
                 ترند
-              </div>
+              </Badge>
             </div>
           )}
           {product.sourcePlatform && (
-            <div className="absolute bottom-2 start-2">
+            <div className="absolute bottom-2.5 start-2.5">
               <Badge variant="secondary" className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm">
                 {product.sourcePlatform}
               </Badge>
             </div>
           )}
         </div>
-        <div className="p-3 space-y-2">
-          <h3 className="text-sm font-semibold leading-tight line-clamp-1">{product.title}</h3>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{product.category}</Badge>
-            {product.niche && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.niche}</Badge>}
+
+        <div className="p-3 space-y-2.5">
+          <div>
+            <h3 className="text-sm font-semibold leading-tight line-clamp-1" data-testid={`text-product-title-${product.id}`}>
+              {product.title}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{product.category}</Badge>
+              {product.niche && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.niche}</Badge>}
+            </div>
           </div>
+
           <div className="grid grid-cols-3 gap-1 text-center bg-muted/30 rounded-md p-2 text-xs">
             <div>
               <p className="text-[10px] text-muted-foreground">المورّد</p>
@@ -442,79 +278,20 @@ function DashboardProductCard({ product }: { product: Product }) {
               <p className="font-bold text-emerald-500 tabular-nums">{formatMargin(product.estimatedMargin)}</p>
             </div>
           </div>
-          <Button asChild variant="default" size="sm" className="w-full">
-            <Link href={`/products/${product.id}`} data-testid={`link-trending-details-${product.id}`}>
-              التفاصيل
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
-function DashboardAdCard({ ad }: { ad: EnrichedAd }) {
-  const displayDate = ad.publishedAt || ad.createdAt;
-
-  return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1" data-testid={`card-dashboard-ad-${ad.id}`}>
-      <CardContent className="p-0">
-        <div
-          className="relative h-44 rounded-t-lg overflow-hidden bg-muted cursor-pointer"
-          onClick={() => window.open(ad.videoUrl, "_blank")}
-        >
-          {ad.thumbnailUrl ? (
-            <img
-              src={ad.thumbnailUrl}
-              alt={ad.productTitle}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <Play className="w-8 h-8 text-muted-foreground" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-              <Play className="w-5 h-5 text-black ms-0.5" />
-            </div>
-          </div>
-          <div className="absolute bottom-2 start-2 end-2 flex items-center justify-between">
-            <Badge className={cn("text-[10px]", getPlatformColor(ad.platform))}>{ad.platform}</Badge>
-            <div className="flex items-center gap-2 text-white text-xs">
-              <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {formatCompactNumber(ad.views || 0)}</span>
-              <span className="flex items-center gap-1"><Heart className="w-3 h-3" /> {formatCompactNumber(ad.likes || 0)}</span>
-            </div>
-          </div>
-        </div>
-        <div className="p-3 space-y-2">
-          <Link href={`/products/${ad.productId}`}>
-            <p className="text-sm font-medium truncate hover:text-primary transition-colors cursor-pointer">
-              {ad.productTitle}
-            </p>
-          </Link>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            {ad.niche && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{ad.niche}</Badge>}
-            {displayDate && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {timeSince(displayDate)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <Button variant="default" size="sm" className="flex-1 text-xs" asChild>
-              <a href={ad.videoUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-3 h-3" />
-                فتح الإعلان
-              </a>
-            </Button>
-            <Button variant="outline" size="sm" className="text-xs" asChild>
-              <Link href={`/products/${ad.productId}`}>
-                تحليل
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" size="sm" className="flex-1 text-xs">
+              <Link href={`/products/${product.id}`} data-testid={`link-product-details-${product.id}`}>
+                التفاصيل
               </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8 shrink-0"
+              data-testid={`button-save-${product.id}`}
+            >
+              <Bookmark className={cn("w-3.5 h-3.5", isSaved ? "fill-primary text-primary" : "")} />
             </Button>
           </div>
         </div>

@@ -81,6 +81,28 @@ export function timeSince(date: string | Date): string {
   return `منذ ${Math.floor(diffDays / 30)} أشهر`;
 }
 
+export function daysSince(date: string | Date): number {
+  const d = new Date(date);
+  const now = new Date();
+  return Math.max(0, Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+export function formatDateShort(date: string | Date): string {
+  const d = new Date(date);
+  const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+export function truncateUrl(url: string, maxLen: number = 40): string {
+  try {
+    const u = new URL(url);
+    const path = u.hostname + u.pathname;
+    return path.length > maxLen ? path.slice(0, maxLen) + "..." : path;
+  } catch {
+    return url.length > maxLen ? url.slice(0, maxLen) + "..." : url;
+  }
+}
+
 export interface AIAnalysis {
   whyPromising: string;
   targetAudience: string;

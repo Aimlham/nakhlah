@@ -1,283 +1,452 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/empty-state";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Eye, Heart, Play, Calendar, Search, Megaphone, ExternalLink,
-  SlidersHorizontal, ArrowUpDown, BarChart3, TrendingUp,
+  Eye, Search, Megaphone, Play, SlidersHorizontal,
+  Flame, Sparkles, Star, TrendingUp,
+  ChevronDown, ChevronUp, LayoutGrid, LayoutList,
+  Calendar as CalendarIcon, Clock, BarChart3, Tag,
 } from "lucide-react";
-import { formatCompactNumber, getPlatformColor, timeSince, cn } from "@/lib/utils";
-
-interface EnrichedAd {
-  id: string;
-  productId: string;
-  platform: string;
-  niche: string | null;
-  videoUrl: string;
-  thumbnailUrl: string | null;
-  views: number | null;
-  likes: number | null;
-  publishedAt: string | null;
-  createdAt: string | null;
-  productTitle: string;
-  productCategory: string;
-  productNiche: string;
-}
+import { formatCompactNumber, cn } from "@/lib/utils";
+import { MineaAdCard, type EnrichedAd } from "@/components/minea-ad-card";
 
 export default function AdsPage() {
   const [search, setSearch] = useState("");
-  const [platform, setPlatform] = useState("all");
-  const [niche, setNiche] = useState("all");
-  const [minViews, setMinViews] = useState("all");
-  const [sortBy, setSortBy] = useState("views");
+  const [platformTab, setPlatformTab] = useState("all");
+  const [sortBy, setSortBy] = useState("date");
+  const [selectedNiche, setSelectedNiche] = useState<string | null>(null);
+  const [minViews, setMinViews] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(true);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [durationFilter, setDurationFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<string | null>(null);
 
-  const queryParams = new URLSearchParams();
-  if (search) queryParams.set("search", search);
-  if (platform !== "all") queryParams.set("platform", platform);
-  if (niche !== "all") queryParams.set("niche", niche);
-  if (minViews !== "all") queryParams.set("minViews", minViews);
-  const queryString = queryParams.toString();
-  const adsUrl = queryString ? `/api/ads?${queryString}` : "/api/ads";
-
-  const { data: ads, isLoading } = useQuery<EnrichedAd[]>({
-    queryKey: [adsUrl],
-  });
-
-  const { data: allAdsUnfiltered } = useQuery<EnrichedAd[]>({
+  const { data: adsData, isLoading } = useQuery<EnrichedAd[]>({
     queryKey: ["/api/ads"],
   });
 
-  const allAds = ads || [];
+  const allAds = adsData || [];
 
   const niches = useMemo(() => {
-    const all = allAdsUnfiltered || [];
-    const adNiches = all.map(a => a.niche).filter(Boolean) as string[];
-    const productNiches = all.map(a => a.productNiche).filter(Boolean);
-    return [...new Set([...adNiches, ...productNiches])];
-  }, [allAdsUnfiltered]);
+    const nicheSet = new Set<string>();
+    allAds.forEach(ad => {
+      if (ad.niche) nicheSet.add(ad.niche);
+      if (ad.productNiche) nicheSet.add(ad.productNiche);
+    });
+    return [...nicheSet];
+  }, [allAds]);
 
   const platforms = useMemo(() => {
-    return [...new Set((allAdsUnfiltered || []).map(a => a.platform).filter(Boolean))];
-  }, [allAdsUnfiltered]);
+    return [...new Set(allAds.map(a => a.platform).filter(Boolean))];
+  }, [allAds]);
+
+  const adCountByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    allAds.forEach(ad => {
+      map[ad.productId] = (map[ad.productId] || 0) + 1;
+    });
+    return map;
+  }, [allAds]);
+
+  const viewsByProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    allAds.forEach(ad => {
+      map[ad.productId] = (map[ad.productId] || 0) + (ad.views || 0);
+    });
+    return map;
+  }, [allAds]);
 
   const filtered = useMemo(() => {
-    const sorted = [...allAds];
-    if (sortBy === "views") sorted.sort((a, b) => (b.views || 0) - (a.views || 0));
-    else if (sortBy === "likes") sorted.sort((a, b) => (b.likes || 0) - (a.likes || 0));
-    else if (sortBy === "date") sorted.sort((a, b) => new Date(b.publishedAt || b.createdAt || 0).getTime() - new Date(a.publishedAt || a.createdAt || 0).getTime());
-    return sorted;
-  }, [allAds, sortBy]);
+    let result = [...allAds];
 
-  const totalViews = allAds.reduce((sum, ad) => sum + (ad.views || 0), 0);
-  const totalLikes = allAds.reduce((sum, ad) => sum + (ad.likes || 0), 0);
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(ad =>
+        ad.productTitle.toLowerCase().includes(s) ||
+        ad.platform.toLowerCase().includes(s) ||
+        (ad.niche || "").toLowerCase().includes(s) ||
+        (ad.productNiche || "").toLowerCase().includes(s)
+      );
+    }
+
+    if (platformTab !== "all") {
+      result = result.filter(ad => ad.platform === platformTab);
+    }
+
+    if (selectedNiche) {
+      result = result.filter(ad => ad.niche === selectedNiche || ad.productNiche === selectedNiche);
+    }
+
+    if (minViews) {
+      const min = parseInt(minViews);
+      result = result.filter(ad => (ad.views || 0) >= min);
+    }
+
+    if (durationFilter) {
+      const now = new Date();
+      result = result.filter(ad => {
+        const pubDate = ad.publishedAt || ad.createdAt;
+        if (!pubDate) return false;
+        const days = Math.floor((now.getTime() - new Date(pubDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (durationFilter === "lt7") return days < 7;
+        if (durationFilter === "7to30") return days >= 7 && days <= 30;
+        if (durationFilter === "gt30") return days > 30;
+        return true;
+      });
+    }
+
+    if (dateFilter) {
+      const now = new Date();
+      result = result.filter(ad => {
+        const pubDate = ad.publishedAt || ad.createdAt;
+        if (!pubDate) return false;
+        const days = Math.floor((now.getTime() - new Date(pubDate).getTime()) / (1000 * 60 * 60 * 24));
+        if (dateFilter === "today") return days === 0;
+        if (dateFilter === "7days") return days <= 7;
+        if (dateFilter === "30days") return days <= 30;
+        return true;
+      });
+    }
+
+    if (sortBy === "views") result.sort((a, b) => (b.views || 0) - (a.views || 0));
+    else if (sortBy === "likes") result.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+    else if (sortBy === "date") result.sort((a, b) => new Date(b.publishedAt || b.createdAt || 0).getTime() - new Date(a.publishedAt || a.createdAt || 0).getTime());
+
+    return result;
+  }, [allAds, search, platformTab, selectedNiche, minViews, durationFilter, dateFilter, sortBy]);
+
+  const totalViews = filtered.reduce((sum, ad) => sum + (ad.views || 0), 0);
+
+  const quickFilters = [
+    { label: "الأكثر رواجاً", icon: Flame, color: "text-orange-500 bg-orange-500/10" },
+    { label: "فائزة الأسبوع", icon: Star, color: "text-amber-500 bg-amber-500/10" },
+    { label: "جاهز للتوسع", icon: TrendingUp, color: "text-emerald-500 bg-emerald-500/10" },
+    { label: "رواد السوق", icon: Sparkles, color: "text-violet-500 bg-violet-500/10" },
+  ];
+
+  const viewsFilters = [
+    { label: "الكل", value: null },
+    { label: "100K+", value: "100000" },
+    { label: "500K+", value: "500000" },
+    { label: "1M+", value: "1000000" },
+    { label: "5M+", value: "5000000" },
+  ];
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-12 w-full rounded-lg" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <Skeleton key={i} className="h-80 rounded-lg" />
-          ))}
+      <div className="space-y-4">
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-10 rounded-lg" />
+        <div className="flex gap-6">
+          <Skeleton className="w-56 h-[600px] rounded-lg hidden lg:block" />
+          <div className="flex-1 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <Skeleton key={i} className="h-[420px] rounded-lg" />
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl bg-gradient-to-l from-pink-500/10 via-purple-500/5 to-transparent border border-pink-500/10 p-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2" data-testid="text-ads-title">
-              <Megaphone className="w-6 h-6 text-pink-500" />
-              مكتبة الإعلانات
-            </h1>
-            <p className="text-muted-foreground mt-1">اكتشف أفضل إعلانات المنتجات على المنصات المختلفة</p>
+    <div className="space-y-5">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Play className="w-5 h-5 text-primary" />
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-1.5">
-                <BarChart3 className="w-4 h-4" />
-                <span className="font-semibold text-foreground">{filtered.length}</span>
-                <span>إعلان</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-1.5">
-                <Eye className="w-4 h-4" />
-                <span className="font-semibold text-foreground">{formatCompactNumber(totalViews)}</span>
-                <span>مشاهدة</span>
-              </div>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight" data-testid="text-ads-title">
+              تصفح الإعلانات
+            </h1>
+            <p className="text-xs text-muted-foreground">
+              اكتشف المنتجات الرابحة من خلال تصفح إعلانات Meta و TikTok على المنصات
+            </p>
           </div>
         </div>
       </div>
 
-      <Card className="border-border/50">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="ابحث عن إعلانات حسب المنتج أو التخصص..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="ps-9"
-                data-testid="input-search-ads"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Select value={platform} onValueChange={setPlatform}>
-                <SelectTrigger className="w-[130px]" data-testid="select-ads-platform">
-                  <SelectValue placeholder="المنصة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع المنصات</SelectItem>
-                  {platforms.map(p => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <div className="flex items-center justify-between gap-4">
+        <Tabs value={platformTab} onValueChange={setPlatformTab}>
+          <TabsList className="bg-muted/50" data-testid="tabs-ads-platform">
+            <TabsTrigger value="all" className="gap-1.5 text-sm" data-testid="tab-all">
+              <Megaphone className="w-3.5 h-3.5" />
+              الكل
+            </TabsTrigger>
+            {platforms.map(p => (
+              <TabsTrigger key={p} value={p} className="gap-1.5 text-sm" data-testid={`tab-${p.toLowerCase()}`}>
+                {p}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-              <Select value={niche} onValueChange={setNiche}>
-                <SelectTrigger className="w-[140px]" data-testid="select-ads-niche">
-                  <SelectValue placeholder="التخصص" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع التخصصات</SelectItem>
-                  {niches.map(n => (
-                    <SelectItem key={n} value={n}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={minViews} onValueChange={setMinViews}>
-                <SelectTrigger className="w-[140px]" data-testid="select-ads-views">
-                  <SelectValue placeholder="المشاهدات" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع المشاهدات</SelectItem>
-                  <SelectItem value="100000">100K+</SelectItem>
-                  <SelectItem value="500000">500K+</SelectItem>
-                  <SelectItem value="1000000">1M+</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[130px]" data-testid="select-ads-sort">
-                  <ArrowUpDown className="w-3.5 h-3.5" />
-                  <SelectValue placeholder="ترتيب" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="views">الأكثر مشاهدة</SelectItem>
-                  <SelectItem value="likes">الأكثر إعجاباً</SelectItem>
-                  <SelectItem value="date">الأحدث</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={Megaphone}
-          title="لم يتم العثور على إعلانات"
-          description="حاول تعديل الفلاتر أو البحث للعثور على إعلانات."
-        />
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(ad => (
-            <AdLibraryCard key={ad.id} ad={ad} />
-          ))}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="bg-muted/50 rounded-md px-2.5 py-1.5 flex items-center gap-1.5">
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span className="font-semibold text-foreground">{filtered.length}</span>
+            إعلان
+          </span>
+          <span className="bg-muted/50 rounded-md px-2.5 py-1.5 flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5" />
+            <span className="font-semibold text-foreground">{formatCompactNumber(totalViews)}</span>
+            مشاهدة
+          </span>
         </div>
-      )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="ابحث..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="ps-9"
+            data-testid="input-search-ads"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 border rounded-lg p-0.5">
+          <Button
+            variant={sortBy === "date" ? "secondary" : "ghost"}
+            size="sm"
+            className="text-xs gap-1"
+            onClick={() => setSortBy("date")}
+            data-testid="sort-date"
+          >
+            تاريخ النشر
+          </Button>
+          <Button
+            variant={sortBy === "views" ? "secondary" : "ghost"}
+            size="sm"
+            className="text-xs gap-1"
+            onClick={() => setSortBy("views")}
+            data-testid="sort-views"
+          >
+            المشاهدات
+          </Button>
+          <Button
+            variant={sortBy === "likes" ? "secondary" : "ghost"}
+            size="sm"
+            className="text-xs gap-1"
+            onClick={() => setSortBy("likes")}
+            data-testid="sort-likes"
+          >
+            الإعجابات
+          </Button>
+        </div>
+        <div className="flex items-center gap-0.5 border rounded-lg p-0.5">
+          <Button
+            variant={viewMode === "grid" ? "secondary" : "ghost"}
+            size="icon"
+            onClick={() => setViewMode("grid")}
+            data-testid="view-grid"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant={viewMode === "list" ? "secondary" : "ghost"}
+            size="icon"
+            onClick={() => setViewMode("list")}
+            data-testid="view-list"
+          >
+            <LayoutList className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        {quickFilters.map(tag => (
+          <Badge
+            key={tag.label}
+            variant="outline"
+            className="text-xs px-3 py-1.5 shrink-0 gap-1.5"
+            data-testid={`filter-quick-${tag.label}`}
+          >
+            <tag.icon className={cn("w-3.5 h-3.5", tag.color.split(" ")[0])} />
+            {tag.label}
+          </Badge>
+        ))}
+        <div className="ms-auto text-xs text-muted-foreground shrink-0">
+          عرض إعلان واحد لكل صفحة
+        </div>
+      </div>
+
+      <div className="flex gap-6">
+        <aside className={cn(
+          "w-56 shrink-0 hidden lg:block space-y-1 transition-all",
+          !showFilters && "lg:hidden"
+        )}>
+          <div className="flex items-center justify-between mb-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs font-semibold"
+              onClick={() => setShowFilters(!showFilters)}
+              data-testid="button-toggle-filters"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              الفلاتر
+              {showFilters ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </Button>
+          </div>
+
+          <FilterSection title="المشاهدات" icon={Eye}>
+            <div className="space-y-1">
+              {viewsFilters.map(f => (
+                <button
+                  key={f.label}
+                  onClick={() => setMinViews(f.value)}
+                  className={cn(
+                    "w-full text-start text-xs px-2.5 py-1.5 rounded-md transition-colors",
+                    minViews === f.value
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-muted/50"
+                  )}
+                  data-testid={`filter-views-${f.label}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection title="التخصص" icon={Tag}>
+            <div className="space-y-1">
+              <button
+                onClick={() => setSelectedNiche(null)}
+                className={cn(
+                  "w-full text-start text-xs px-2.5 py-1.5 rounded-md transition-colors",
+                  selectedNiche === null
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-muted/50"
+                )}
+                data-testid="filter-niche-all"
+              >
+                جميع التخصصات
+              </button>
+              {niches.map(n => (
+                <button
+                  key={n}
+                  onClick={() => setSelectedNiche(n === selectedNiche ? null : n)}
+                  className={cn(
+                    "w-full text-start text-xs px-2.5 py-1.5 rounded-md transition-colors",
+                    selectedNiche === n
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:bg-muted/50"
+                  )}
+                  data-testid={`filter-niche-${n}`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection title="مدة التشغيل" icon={Clock}>
+            <div className="space-y-1">
+              {[
+                { label: "الكل", value: null },
+                { label: "أقل من 7 أيام", value: "lt7" },
+                { label: "7-30 يوم", value: "7to30" },
+                { label: "أكثر من 30 يوم", value: "gt30" },
+              ].map(f => (
+                <button
+                  key={f.label}
+                  onClick={() => setDurationFilter(f.value)}
+                  className={cn(
+                    "w-full text-start text-xs px-2.5 py-1.5 rounded-md transition-colors",
+                    durationFilter === f.value
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground"
+                  )}
+                  data-testid={`filter-duration-${f.label}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection title="تاريخ النشر" icon={CalendarIcon}>
+            <div className="space-y-1">
+              {[
+                { label: "اليوم", value: "today" },
+                { label: "آخر 7 أيام", value: "7days" },
+                { label: "آخر 30 يوم", value: "30days" },
+                { label: "الكل", value: null },
+              ].map(f => (
+                <button
+                  key={f.label}
+                  onClick={() => setDateFilter(f.value)}
+                  className={cn(
+                    "w-full text-start text-xs px-2.5 py-1.5 rounded-md transition-colors",
+                    dateFilter === f.value
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground"
+                  )}
+                  data-testid={`filter-pubdate-${f.label}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+        </aside>
+
+        <div className="flex-1">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Megaphone className="w-12 h-12 text-muted-foreground/30 mb-3" />
+              <p className="text-sm font-medium">لم يتم العثور على إعلانات</p>
+              <p className="text-xs text-muted-foreground mt-1">حاول تعديل الفلاتر أو البحث</p>
+            </div>
+          ) : (
+            <div className={cn(
+              "gap-4",
+              viewMode === "grid"
+                ? "grid sm:grid-cols-2 xl:grid-cols-3"
+                : "flex flex-col"
+            )} data-testid="grid-ads">
+              {filtered.map(ad => (
+                <MineaAdCard
+                  key={ad.id}
+                  ad={ad}
+                  adCountForProduct={adCountByProduct[ad.productId]}
+                  totalViewsForProduct={viewsByProduct[ad.productId]}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function AdLibraryCard({ ad }: { ad: EnrichedAd }) {
-  const displayDate = ad.publishedAt || ad.createdAt;
+function FilterSection({ title, icon: Icon, children }: { title: string; icon: typeof Eye; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
 
   return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50" data-testid={`ad-library-card-${ad.id}`}>
-      <CardContent className="p-0">
-        <div className="relative h-52 rounded-t-lg overflow-hidden bg-muted cursor-pointer" onClick={() => window.open(ad.videoUrl, "_blank")}>
-          {ad.thumbnailUrl ? (
-            <img
-              src={ad.thumbnailUrl}
-              alt={ad.productTitle}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <Play className="w-10 h-10 text-muted-foreground" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
-              <Play className="w-6 h-6 text-black ms-0.5" />
-            </div>
-          </div>
-          <div className="absolute top-2 start-2">
-            <Badge className={cn("text-[10px] shadow-sm", getPlatformColor(ad.platform))} data-testid={`badge-ad-platform-${ad.id}`}>
-              {ad.platform}
-            </Badge>
-          </div>
-          <div className="absolute bottom-2 start-2 end-2 flex items-center justify-between text-white text-xs">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1" data-testid={`text-ad-views-${ad.id}`}>
-                <Eye className="w-3.5 h-3.5" /> {formatCompactNumber(ad.views || 0)}
-              </span>
-              <span className="flex items-center gap-1" data-testid={`text-ad-likes-${ad.id}`}>
-                <Heart className="w-3.5 h-3.5" /> {formatCompactNumber(ad.likes || 0)}
-              </span>
-            </div>
-            {displayDate && (
-              <span className="flex items-center gap-1 text-white/80" data-testid={`text-ad-date-${ad.id}`}>
-                <Calendar className="w-3 h-3" />
-                {timeSince(displayDate)}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="p-3 space-y-2.5">
-          <Link href={`/products/${ad.productId}`}>
-            <p className="text-sm font-semibold truncate hover:text-primary transition-colors cursor-pointer" data-testid={`text-ad-product-${ad.id}`}>
-              {ad.productTitle}
-            </p>
-          </Link>
-          {(ad.niche || ad.productNiche) && (
-            <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-              {ad.niche || ad.productNiche}
-            </Badge>
-          )}
-          <div className="flex items-center gap-2 pt-1">
-            <Button variant="default" size="sm" className="flex-1 h-8 text-xs" asChild data-testid={`button-open-ad-${ad.id}`}>
-              <a href={ad.videoUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-3.5 h-3.5" />
-                فتح الإعلان
-              </a>
-            </Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
-              <Link href={`/products/${ad.productId}`} data-testid={`button-analyze-ad-${ad.id}`}>
-                <TrendingUp className="w-3.5 h-3.5" />
-                تحليل
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="border-b border-border/30 pb-3">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full py-2 text-xs font-semibold text-foreground hover:text-primary transition-colors"
+        data-testid={`filter-section-${title}`}
+      >
+        <span className="flex items-center gap-1.5">
+          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+          {title}
+        </span>
+        {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+      {open && <div className="mt-1">{children}</div>}
+    </div>
   );
 }
