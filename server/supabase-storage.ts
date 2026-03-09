@@ -314,6 +314,7 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createAd(ad: import("@shared/schema").InsertProductAd): Promise<ProductAd> {
+    await probeAdColumns();
     const insertData: Record<string, unknown> = {
       product_id: ad.productId || null,
       platform: ad.platform,

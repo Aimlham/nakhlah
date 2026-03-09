@@ -16,9 +16,14 @@ interface ApifyRawAd {
   id?: string;
   ad_id?: string;
   adId?: string;
+  adTitle?: string;
   advertiser_name?: string;
   advertiserName?: string;
   business_name?: string;
+  paid_for_by?: string;
+  advertiserPaidForBy?: string;
+  adVideoUrl?: string | null;
+  adVideoCover?: string | null;
   videos?: Array<{
     cover_image_url?: string;
     video_url?: string;
@@ -35,13 +40,16 @@ interface ApifyRawAd {
   impressions?: number;
   total_impressions?: string;
   totalImpressions?: string;
+  adImpressions?: string | null;
+  adEstimatedAudience?: string | null;
   likes?: number;
   like_count?: number;
   first_shown_date?: string;
   firstShownDate?: string;
   last_shown_date?: string;
   lastShownDate?: string;
-  paid_for_by?: string;
+  adStartDate?: number | null;
+  adEndDate?: number | null;
   ad_text?: string;
   adText?: string;
   caption?: string;
@@ -50,7 +58,30 @@ interface ApifyRawAd {
   landingPageUrl?: string;
   target_regions?: string[];
   targetRegions?: string[];
+  targetingByLocation?: Array<{ region?: string; impressions?: string }>;
   [key: string]: unknown;
+}
+
+function parseImpressionRange(str: string | null | undefined): number {
+  if (!str) return 0;
+  const cleaned = str.replace(/,/g, "").trim();
+  const multiplier = (s: string) => {
+    if (s === "K" || s === "k") return 1000;
+    if (s === "M" || s === "m") return 1000000;
+    if (s === "B" || s === "b") return 1000000000;
+    return 1;
+  };
+  const rangeMatch = cleaned.match(/(\d+(?:\.\d+)?)([KkMmBb]?)\s*-\s*(\d+(?:\.\d+)?)([KkMmBb]?)/);
+  if (rangeMatch) {
+    const low = parseFloat(rangeMatch[1]) * multiplier(rangeMatch[2]);
+    const high = parseFloat(rangeMatch[3]) * multiplier(rangeMatch[4]);
+    return Math.round((low + high) / 2);
+  }
+  const singleMatch = cleaned.match(/(\d+(?:\.\d+)?)([KkMmBb]?)\+?/);
+  if (singleMatch) {
+    return Math.round(parseFloat(singleMatch[1]) * multiplier(singleMatch[2]));
+  }
+  return parseInt(cleaned.replace(/[^0-9]/g, "")) || 0;
 }
 
 function normalizeAd(raw: ApifyRawAd): {
@@ -64,10 +95,12 @@ function normalizeAd(raw: ApifyRawAd): {
   landingPageUrl: string;
   publishedAt: Date | null;
 } | null {
-  const externalId = raw.id || raw.ad_id || raw.adId || "";
+  const externalId = raw.adId || raw.ad_id || raw.id || "";
 
   let videoUrl = "";
-  if (raw.videos && raw.videos.length > 0) {
+  if (raw.adVideoUrl) {
+    videoUrl = raw.adVideoUrl;
+  } else if (raw.videos && raw.videos.length > 0) {
     videoUrl = raw.videos[0].video_url || raw.videos[0].url || "";
   }
   if (!videoUrl) {
@@ -75,7 +108,9 @@ function normalizeAd(raw: ApifyRawAd): {
   }
 
   let thumbnailUrl = "";
-  if (raw.videos && raw.videos.length > 0) {
+  if (raw.adVideoCover) {
+    thumbnailUrl = raw.adVideoCover;
+  } else if (raw.videos && raw.videos.length > 0) {
     thumbnailUrl = raw.videos[0].cover_image_url || "";
   }
   if (!thumbnailUrl) {
@@ -85,25 +120,36 @@ function normalizeAd(raw: ApifyRawAd): {
     thumbnailUrl = raw.image_urls[0];
   }
 
-  const advertiserName = raw.advertiser_name || raw.advertiserName || raw.business_name || raw.paid_for_by || "";
+  const advertiserName = raw.advertiser_name || raw.advertiserName || raw.business_name || raw.adTitle || raw.paid_for_by || "";
   const description = raw.ad_text || raw.adText || raw.caption || raw.description || "";
   const landingPageUrl = raw.landing_page_url || raw.landingPageUrl || "";
 
   let views = 0;
-  if (raw.reach) views = raw.reach;
-  else if (raw.impressions) views = raw.impressions;
-  else if (raw.total_impressions || raw.totalImpressions) {
-    const impStr = (raw.total_impressions || raw.totalImpressions || "0").replace(/[^0-9]/g, "");
-    views = parseInt(impStr) || 0;
+  if (raw.adImpressions) {
+    views = parseImpressionRange(raw.adImpressions);
+  } else if (raw.reach) {
+    views = raw.reach;
+  } else if (raw.impressions) {
+    views = raw.impressions;
+  } else if (raw.total_impressions || raw.totalImpressions) {
+    views = parseImpressionRange(raw.total_impressions || raw.totalImpressions);
+  } else if (raw.adEstimatedAudience) {
+    views = parseImpressionRange(raw.adEstimatedAudience);
   }
 
   const likes = raw.likes || raw.like_count || 0;
 
-  const dateStr = raw.first_shown_date || raw.firstShownDate || raw.last_shown_date || raw.lastShownDate;
   let publishedAt: Date | null = null;
-  if (dateStr) {
-    const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) publishedAt = d;
+  if (raw.adStartDate && typeof raw.adStartDate === "number") {
+    const ts = raw.adStartDate < 1e12 ? raw.adStartDate * 1000 : raw.adStartDate;
+    const d = new Date(ts);
+    if (!isNaN(d.getTime()) && d.getFullYear() > 2000) publishedAt = d;
+  } else {
+    const dateStr = raw.first_shown_date || raw.firstShownDate || raw.last_shown_date || raw.lastShownDate;
+    if (dateStr) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) publishedAt = d;
+    }
   }
 
   if (!videoUrl && !thumbnailUrl) return null;

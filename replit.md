@@ -139,12 +139,14 @@ shared/
 - Amazon = discovery-only source (no supplier link for dropshipping)
 
 ## TikTok Ads Importer
-- Actor: `lexis-solutions~tiktok-ads-scraper` (async: start→poll→get)
+- Actor: `lexis-solutions~tiktok-ads-scraper` (async: start→poll→get, requires paid Apify subscription)
 - File: `server/tiktok-importer.ts`
-- Saves to `product_ads` table with dedup via `externalAdId`
+- Saves to `product_ads` table with dedup via `externalAdId` + `videoUrl` fallback
 - TikTok ads may not have a `productId` (nullable)
 - Extra columns: `advertiserName`, `adDescription`, `landingPageUrl`, `externalAdId`
-- Supabase migration needed for new columns (see server startup logs for SQL)
+- Normalizer handles Apify's actual field names: `adVideoUrl`, `adVideoCover`, `adImpressions` (range like "1K-10K"), `adStartDate` (unix ms timestamp)
+- `parseImpressionRange()` converts impression strings like "1K-10K" to numeric midpoint (5500)
+- `probeAdColumns()` is called on every `createAd` to ensure column availability
 
 ## Supabase Migration Notes
 - New `product_ads` columns (`advertiser_name`, `ad_description`, `landing_page_url`, `external_ad_id`) must be added via Supabase Dashboard SQL Editor
