@@ -167,9 +167,43 @@ function normalizeAd(raw: ApifyRawAd): {
   };
 }
 
+function extractKeywords(text: string): Set<string> {
+  const stopWords = new Set(["for", "with", "and", "the", "a", "an", "in", "on", "of", "to", "is", "by", "at", "or", "it", "its", "your", "new", "best", "top", "hot", "get", "buy", "now"]);
+  return new Set(
+    text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w))
+  );
+}
+
+function matchAdToProduct(
+  adText: string,
+  queryKeywords: string,
+  products: Array<{ id: string; title: string; category: string; niche: string | null }>
+): string | null {
+  const adWords = extractKeywords(`${adText} ${queryKeywords}`);
+  if (adWords.size === 0) return null;
+
+  let bestMatch: { id: string; score: number } | null = null;
+
+  for (const product of products) {
+    const productWords = extractKeywords(product.title);
+    if (productWords.size === 0) continue;
+
+    const intersection = [...adWords].filter(w => productWords.has(w));
+    const score = intersection.length / Math.min(adWords.size, productWords.size);
+
+    if (score > 0.2 && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { id: product.id, score };
+    }
+  }
+
+  return bestMatch?.id || null;
+}
+
 export async function importTikTokAds(options: TikTokImportOptions): Promise<{
   imported: number;
   skipped: number;
+  linked: number;
   total: number;
   message: string;
 }> {
@@ -243,6 +277,14 @@ export async function importTikTokAds(options: TikTokImportOptions): Promise<{
   const rawItems: ApifyRawAd[] = await itemsRes.json();
   console.log(`[tiktok] Got ${rawItems.length} raw ads from Apify`);
 
+  const allProducts = await storage.getAllProducts();
+  const productList = allProducts.map(p => ({
+    id: p.id,
+    title: p.title,
+    category: p.category,
+    niche: p.niche,
+  }));
+
   const existingAds = await storage.getAllAds();
   const existingExternalIds = new Set(
     existingAds.filter(a => a.externalAdId).map(a => a.externalAdId)
@@ -253,6 +295,7 @@ export async function importTikTokAds(options: TikTokImportOptions): Promise<{
 
   let imported = 0;
   let skipped = 0;
+  let linked = 0;
 
   for (const raw of rawItems) {
     const normalized = normalizeAd(raw);
@@ -270,9 +313,12 @@ export async function importTikTokAds(options: TikTokImportOptions): Promise<{
       continue;
     }
 
+    const adText = [normalized.advertiserName, normalized.description, normalized.landingPageUrl].filter(Boolean).join(" ");
+    const matchedProductId = matchAdToProduct(adText, options.query, productList);
+
     try {
       const adInsert: InsertProductAd = {
-        productId: null,
+        productId: matchedProductId,
         platform: "TikTok",
         niche: null,
         videoUrl: normalized.videoUrl,
@@ -288,6 +334,7 @@ export async function importTikTokAds(options: TikTokImportOptions): Promise<{
 
       await storage.createAd(adInsert);
       imported++;
+      if (matchedProductId) linked++;
       if (normalized.externalId) existingExternalIds.add(normalized.externalId);
       if (normalized.videoUrl) existingVideoUrls.add(normalized.videoUrl);
     } catch (err: any) {
@@ -296,13 +343,14 @@ export async function importTikTokAds(options: TikTokImportOptions): Promise<{
     }
   }
 
-  console.log(`[tiktok] Import complete: ${imported} imported, ${skipped} skipped`);
+  console.log(`[tiktok] Import complete: ${imported} imported, ${linked} linked to products, ${skipped} skipped`);
 
   return {
     imported,
     skipped,
+    linked,
     total: rawItems.length,
-    message: `تم استيراد ${imported} إعلان من TikTok`,
+    message: `تم استيراد ${imported} إعلان من TikTok (${linked} مرتبط بمنتجات)`,
   };
 }
 
