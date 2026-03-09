@@ -152,12 +152,39 @@ export function MineaAdCard({ ad, adCountForProduct, totalViewsForProduct }: Min
             <ExternalLink className="w-3 h-3 shrink-0" />
           </a>
 
+          {ad.landingPageUrl && (
+            <a
+              href={ad.landingPageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-[11px] text-muted-foreground group/link"
+              data-testid={`link-minea-landing-${ad.id}`}
+            >
+              <span className="text-[10px] text-muted-foreground/70 shrink-0">صفحة المنتج</span>
+              <span className="truncate">{truncateUrl(ad.landingPageUrl)}</span>
+              <ExternalLink className="w-3 h-3 shrink-0" />
+            </a>
+          )}
+
           <div className="flex items-center gap-2 border-t border-border/50 pt-2.5">
-            <Button variant="outline" size="sm" className="flex-1 text-xs" asChild data-testid={`button-minea-analyze-${ad.id}`}>
-              <Link href={`/products/${ad.productId}`}>
-                تحليل الإعلان
-              </Link>
-            </Button>
+            {ad.productId ? (
+              <Button variant="outline" size="sm" className="flex-1 text-xs" asChild data-testid={`button-minea-analyze-${ad.id}`}>
+                <Link href={`/products/${ad.productId}`}>
+                  تحليل المنتج
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => window.open(ad.videoUrl, "_blank")}
+                data-testid={`button-minea-watch-${ad.id}`}
+              >
+                <Play className="w-3.5 h-3.5 me-1" />
+                مشاهدة الإعلان
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
