@@ -1,4 +1,4 @@
-export const HALAL_BLOCKED_KEYWORDS = [
+export const BLOCKED_KEYWORDS = [
   "wine", "beer", "vodka", "whiskey", "alcohol", "liquor", "rum", "tequila", "brandy",
   "pork", "bacon", "ham", "lard",
   "cross", "jesus", "christ", "crucifix", "bible",
@@ -9,7 +9,13 @@ export const HALAL_BLOCKED_KEYWORDS = [
   "vape", "cigarette", "smoking", "tobacco", "hookah",
 ];
 
-export function checkHalalSafeText(text: string): boolean {
+export const HALAL_BLOCKED_KEYWORDS = BLOCKED_KEYWORDS;
+
+export function checkContentSafe(text: string): boolean {
   const lower = text.toLowerCase();
-  return !HALAL_BLOCKED_KEYWORDS.some(keyword => lower.includes(keyword));
+  return !BLOCKED_KEYWORDS.some(keyword => lower.includes(keyword));
+}
+
+export function checkHalalSafeText(text: string): boolean {
+  return checkContentSafe(text);
 }

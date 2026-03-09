@@ -12,7 +12,6 @@ const APIFY_BASE_URL = "https://api.apify.com/v2";
 
 interface AmazonSearchOptions {
   keyword: string;
-  halalOnly?: boolean;
   minOrders?: number;
   minRating?: number;
   maxResults?: number;
@@ -278,20 +277,30 @@ async function fetchViaApify(keyword: string, maxResults: number, country: strin
   }
 }
 
+function extractCoreWords(title: string): Set<string> {
+  const stopWords = new Set(["for", "with", "and", "the", "a", "an", "in", "on", "of", "to", "is", "by", "at", "or"]);
+  return new Set(
+    title.toLowerCase().trim().split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w))
+  );
+}
+
 async function checkDuplicate(title: string, source: string): Promise<boolean> {
   try {
     const allProducts = await storage.getAllProducts();
     const normalizedTitle = title.toLowerCase().trim();
+    const coreWords = extractCoreWords(title);
     return allProducts.some(p => {
-      if (p.source !== source) return false;
       const existingTitle = (p.title || "").toLowerCase().trim();
       if (existingTitle === normalizedTitle) return true;
-      if (normalizedTitle.length > 20 && existingTitle.length > 20) {
-        const words1 = new Set(normalizedTitle.split(/\s+/));
-        const words2 = new Set(existingTitle.split(/\s+/));
-        const intersection = [...words1].filter(w => words2.has(w));
-        const similarity = intersection.length / Math.max(words1.size, words2.size);
-        return similarity > 0.8;
+      if (p.source !== source) return false;
+      if (coreWords.size > 3) {
+        const existingWords = extractCoreWords(p.title || "");
+        if (existingWords.size > 3) {
+          const intersection = [...coreWords].filter(w => existingWords.has(w));
+          const similarity = intersection.length / Math.min(coreWords.size, existingWords.size);
+          return similarity > 0.7;
+        }
       }
       return false;
     });
@@ -303,7 +312,6 @@ async function checkDuplicate(title: string, source: string): Promise<boolean> {
 export async function importAmazonProducts(options: AmazonSearchOptions): Promise<ImportSummary> {
   const {
     keyword,
-    halalOnly = false,
     minOrders = 0,
     minRating = 3.5,
     maxResults = 20,
@@ -358,10 +366,8 @@ export async function importAmazonProducts(options: AmazonSearchOptions): Promis
 
       if (!insert.isHalalSafe) {
         summary.unsafe++;
-        if (halalOnly) {
-          summary.skipped++;
-          continue;
-        }
+        summary.skipped++;
+        continue;
       }
 
       if (minOrders > 0 && normalized.ordersNum < minOrders) {

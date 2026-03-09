@@ -19,7 +19,6 @@ export default function ProductsPage() {
   const [minOpportunity, setMinOpportunity] = useState("all");
   const [minMargin, setMinMargin] = useState("all");
   const [minTrend, setMinTrend] = useState("all");
-  const [halalOnly, setHalalOnly] = useState(false);
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery<Product[]>({
@@ -78,8 +77,6 @@ export default function ProductsPage() {
     if (category !== "all") result = result.filter(p => p.category === category);
     if (niche !== "all") result = result.filter(p => p.niche === niche);
     if (platform !== "all") result = result.filter(p => p.source === platform);
-    if (halalOnly) result = result.filter(p => p.isHalalSafe !== false);
-
     if (minOpportunity !== "all") {
       const min = parseInt(minOpportunity, 10);
       result = result.filter(p => (p.opportunityScore || 0) >= min);
@@ -103,7 +100,7 @@ export default function ProductsPage() {
     });
 
     return result;
-  }, [products, search, category, niche, platform, sort, minOpportunity, minMargin, minTrend, halalOnly]);
+  }, [products, search, category, niche, platform, sort, minOpportunity, minMargin, minTrend]);
 
   if (isLoading) {
     return (
@@ -154,7 +151,6 @@ export default function ProductsPage() {
         minOpportunity={minOpportunity} onMinOpportunityChange={setMinOpportunity}
         minMargin={minMargin} onMinMarginChange={setMinMargin}
         minTrend={minTrend} onMinTrendChange={setMinTrend}
-        halalOnly={halalOnly} onHalalOnlyChange={setHalalOnly}
       />
 
       <p className="text-sm text-muted-foreground" data-testid="text-products-count">

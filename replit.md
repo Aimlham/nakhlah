@@ -34,7 +34,7 @@ All data comes from real sources (Supabase database, Apify importers). No mock/f
 1. **Ads Library** (`/ads`) — Browse trending ads to discover winning products
 2. **Winning Products** (`/products`) — Qualified products filtered through qualification system, with AliExpress links
 3. **Product Details** (`/products/:id`) — Full analysis, AI insights, "عرض على AliExpress" button
-4. **Dashboard** (`/dashboard`) — Overview KPIs, top winning products
+4. **Dashboard** (`/dashboard`) — Overview KPIs, top winning products, recent ads
 5. **Saved** (`/saved`) — User's bookmarked products
 
 ## File Structure
@@ -45,7 +45,7 @@ client/src/
     app-sidebar.tsx    - Navigation sidebar (side="right" for RTL)
     app-layout.tsx     - Authenticated page layout wrapper
     topbar.tsx         - Top bar with theme toggle and logout
-    product-card.tsx   - Product card with source badge, halal badge, scores
+    product-card.tsx   - Product card with source badge, scores
     score-badge.tsx    - Score indicator badge
     filter-bar.tsx     - Search + filter controls
     empty-state.tsx    - Empty state placeholder
@@ -81,7 +81,7 @@ server/
 shared/
   schema.ts            - Drizzle schema + TypeScript types
   scoring.ts           - Product scoring engine
-  halal.ts             - Halal keyword blocklist
+  halal.ts             - Content safety keyword blocklist
   qualification.ts     - Product qualification system
 ```
 
@@ -112,7 +112,7 @@ shared/
 ## Product Qualification System (`shared/qualification.ts`)
 - `qualifyProduct(product)` → `{ isPublishable, reasons[] }`
 - `isProductPublishable(product)` → boolean
-- **Criteria**: halal-safe, excluded keywords (phones/laptops/TVs/gaming), excluded categories, price range ($0.50-$80 USD), opportunityScore >= 55, rating >= 3.5, valid supplier price
+- **Criteria**: content-safe, excluded keywords (phones/laptops/TVs/gaming), excluded categories, price range ($0.50-$80 USD), opportunityScore >= 55, rating >= 3.5, valid supplier price
 - **Source roles**: AliExpress = supplier+discovery, Amazon = discovery-only
 - Products must have a valid `supplierLink` to AliExpress for the "عرض على AliExpress" button
 
@@ -131,7 +131,7 @@ shared/
 
 ## AliExpress Importer
 - Actor: `piotrv1001/aliexpress-listings-scraper` (async: start→poll→get)
-- Pipeline: Apify → normalize → halal filter → quality filter → dedup → score → save
+- Pipeline: Apify → normalize → content safety filter → quality filter → dedup → score → save
 - Products include `supplierLink` to AliExpress product page
 
 ## Amazon Importer
@@ -142,7 +142,7 @@ shared/
 - Actor: `lexis-solutions~tiktok-ads-scraper` (async: start→poll→get, requires paid Apify subscription)
 - File: `server/tiktok-importer.ts`
 - Saves to `product_ads` table with dedup via `externalAdId` + `videoUrl` fallback
-- TikTok ads may not have a `productId` (nullable)
+- TikTok ads have `productId` (nullable in DB) — ads without a linked product are filtered out from API responses
 - Extra columns: `advertiserName`, `adDescription`, `landingPageUrl`, `externalAdId`
 - Normalizer handles Apify's actual field names: `adVideoUrl`, `adVideoCover`, `adImpressions` (range like "1K-10K"), `adStartDate` (unix ms timestamp)
 - `parseImpressionRange()` converts impression strings like "1K-10K" to numeric midpoint (5500)

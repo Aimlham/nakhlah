@@ -6,11 +6,10 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { scoreProduct } from "@shared/scoring";
 import { generateProductAnalysis } from "./openai";
-import { checkHalalSafe } from "./storage";
 import { importAliExpressProducts, getAliExpressStatus } from "./aliexpress-importer";
 import { importAmazonProducts, getAmazonStatus } from "./amazon-importer";
 import { importTikTokAds, getTikTokStatus } from "./tiktok-importer";
-import { isProductPublishable, qualifyProduct } from "@shared/qualification";
+import { isProductPublishable } from "@shared/qualification";
 import { z } from "zod";
 
 const SessionStore = MemoryStore(session);
@@ -192,11 +191,6 @@ export async function registerRoutes(
       let products = await storage.getAllProducts();
       products = products.map(scoreProduct);
 
-      const { halal_only } = req.query;
-      if (halal_only === "true") {
-        products = products.filter(p => p.isHalalSafe !== false);
-      }
-
       res.json(products);
     } catch (err: any) {
       res.status(500).json({ message: err.message || "Failed to fetch products" });
@@ -369,13 +363,18 @@ export async function registerRoutes(
         });
       }
 
-      const enriched = ads.map(ad => {
-        const product = ad.productId ? productMap.get(ad.productId) : null;
+      const adsWithProducts = ads.filter(ad => {
+        if (!ad.productId) return false;
+        return productMap.has(ad.productId);
+      });
+
+      const enriched = adsWithProducts.map(ad => {
+        const product = productMap.get(ad.productId!)!;
         return {
           ...ad,
-          productTitle: product?.title || ad.advertiserName || ad.platform,
-          productCategory: product?.category || "",
-          productNiche: ad.niche || product?.niche || "",
+          productTitle: product.title,
+          productCategory: product.category,
+          productNiche: ad.niche || product.niche || "",
         };
       });
 
@@ -387,7 +386,6 @@ export async function registerRoutes(
 
   const aliexpressImportSchema = z.object({
     keyword: z.string().min(1).max(200),
-    halal_only: z.boolean().optional().default(false),
     min_orders: z.number().int().min(0).max(100000).optional().default(50),
     min_rating: z.number().min(0).max(5).optional().default(4.0),
     max_results: z.number().int().min(1).max(100).optional().default(20),
@@ -405,11 +403,10 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
       }
 
-      const { keyword, halal_only, min_orders, min_rating, max_results } = parsed.data;
+      const { keyword, min_orders, min_rating, max_results } = parsed.data;
 
       const result = await importAliExpressProducts({
         keyword: keyword.trim(),
-        halalOnly: halal_only,
         minOrders: min_orders,
         minRating: min_rating,
         maxResults: max_results,
@@ -428,7 +425,6 @@ export async function registerRoutes(
 
   const amazonImportSchema = z.object({
     keyword: z.string().min(1).max(200),
-    halal_only: z.boolean().optional().default(false),
     min_orders: z.number().int().min(0).max(100000).optional().default(0),
     min_rating: z.number().min(0).max(5).optional().default(3.5),
     max_results: z.number().int().min(1).max(100).optional().default(20),
@@ -447,11 +443,10 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
       }
 
-      const { keyword, halal_only, min_orders, min_rating, max_results, country } = parsed.data;
+      const { keyword, min_orders, min_rating, max_results, country } = parsed.data;
 
       const result = await importAmazonProducts({
         keyword: keyword.trim(),
-        halalOnly: halal_only,
         minOrders: min_orders,
         minRating: min_rating,
         maxResults: max_results,

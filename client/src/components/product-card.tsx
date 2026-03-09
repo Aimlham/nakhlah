@@ -70,17 +70,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
                   {product.sourcePlatform}
                 </Badge>
               )}
-              {product.isHalalSafe !== false && (
-                <Badge variant="secondary" className="text-[10px] bg-emerald-600/80 text-white border-0 backdrop-blur-sm" data-testid={`badge-halal-${product.id}`}>
-                  حلال
-                </Badge>
-              )}
             </div>
-            {product.isHalalSafe === false && (
-              <Badge variant="destructive" className="text-[10px] border-0 shadow-sm" data-testid={`badge-not-halal-${product.id}`}>
-                غير حلال
-              </Badge>
-            )}
           </div>
         </div>
 

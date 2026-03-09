@@ -3,15 +3,13 @@ import { Link } from "wouter";
 import {
   Trophy,
   TrendingUp,
-  DollarSign,
   Users,
   BarChart3,
   ArrowLeft,
-  Loader2,
   Flame,
-  ShieldCheck,
   Target,
   Sparkles,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { Product } from "@shared/schema";
+import { MineaAdCard, type EnrichedAd } from "@/components/minea-ad-card";
 
 function getScoreColor(score: number) {
   if (score >= 75) return "text-emerald-500";
@@ -59,7 +58,12 @@ export default function DashboardPage() {
     queryKey: ["/api/products"],
   });
 
+  const { data: adsData } = useQuery<EnrichedAd[]>({
+    queryKey: ["/api/ads"],
+  });
+
   const topProducts = (winningProducts || []).slice(0, 6);
+  const recentAds = (adsData || []).slice(0, 4);
 
   const totalWinning = winningProducts?.length || 0;
   const totalAll = allProducts?.length || 0;
@@ -255,6 +259,38 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </Link>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-blue-500" />
+          <h2 className="text-lg font-bold">أحدث الإعلانات</h2>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/ads" data-testid="link-view-all-ads">
+            عرض الكل
+            <ArrowLeft className="w-4 h-4 ms-1" />
+          </Link>
+        </Button>
+      </div>
+
+      {recentAds.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Megaphone className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
+            <p className="font-medium">لا توجد إعلانات بعد</p>
+            <p className="text-sm text-muted-foreground mt-1">استورد إعلانات من TikTok لاكتشاف المنتجات الرابحة</p>
+            <Button variant="outline" size="sm" className="mt-3" asChild>
+              <Link href="/ads">استيراد إعلانات</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="grid-dashboard-ads">
+          {recentAds.map(ad => (
+            <MineaAdCard key={ad.id} ad={ad} />
           ))}
         </div>
       )}

@@ -44,10 +44,6 @@ export function qualifyProduct(product: Product): QualificationResult {
     reasons.push("unsupported_source");
   }
 
-  if (product.isHalalSafe === false) {
-    reasons.push("not_halal");
-  }
-
   if (!SUPPLIER_SOURCES.includes(supplierSource) && DISCOVERY_ONLY_SOURCES.includes(source)) {
     reasons.push("no_supplier");
   }
