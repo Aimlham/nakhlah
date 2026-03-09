@@ -358,6 +358,31 @@ export class SupabaseStorage implements IStorage {
       throw new Error("Failed to update AI summary");
     }
   }
+
+  async updateProductPrices(productId: string, supplierPrice: string, suggestedSellPrice: string, actualSellPrice: string, estimatedMargin: string): Promise<void> {
+    const { error } = await this.db
+      .from("products")
+      .update({
+        supplier_price: supplierPrice,
+        suggested_sell_price: suggestedSellPrice,
+        actual_sell_price: actualSellPrice,
+        estimated_margin: estimatedMargin,
+      })
+      .eq("id", productId);
+    if (error) {
+      console.error("[supabase] Failed to update product prices:", error.message);
+    }
+  }
+
+  async findProductByTitle(title: string, source: string): Promise<Product | undefined> {
+    const { data } = await this.db
+      .from("products")
+      .select("*")
+      .eq("source", source)
+      .ilike("title", title);
+    if (!data || data.length === 0) return undefined;
+    return mapProduct(data[0]);
+  }
 }
 
 function mapProductAd(row: Record<string, unknown>): ProductAd {

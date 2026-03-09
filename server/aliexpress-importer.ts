@@ -151,9 +151,14 @@ function normalizeApifyItem(item: ApifyRawItem): {
   const title = (item.title || item.name || "").trim();
   if (!title) return null;
 
-  const supplierPriceUSD = parsePrice(item.originalPrice ?? item.price);
-  const salePriceUSD = parsePrice(item.price ?? item.salePrice ?? item.discountPrice);
-  if (supplierPriceUSD <= 0 && salePriceUSD <= 0) return null;
+  const priceVal = parsePrice(item.price);
+  const originalVal = parsePrice(item.originalPrice);
+  const saleVal = parsePrice(item.salePrice);
+  const discountVal = parsePrice(item.discountPrice);
+  const allPrices = [priceVal, originalVal, saleVal, discountVal].filter(p => p > 0);
+  if (allPrices.length === 0) return null;
+  const supplierPriceUSD = Math.max(...allPrices);
+  const salePriceUSD = Math.min(...allPrices);
 
   const imageUrl = item.imageUrl || item.image || (item.additionalImages && item.additionalImages[0]) || (item.images && item.images[0]) || null;
   const ordersNum = parseOrders(item.totalSold ?? item.orders ?? item.totalOrders ?? item.soldCount);
@@ -415,6 +420,24 @@ export async function importAliExpressProducts(options: AliExpressSearchOptions)
 
       if (isFragileOrHeavy(insert.title)) {
         summary.skipped++;
+        continue;
+      }
+
+      const existingProduct = await storage.findProductByTitle(insert.title, "aliexpress");
+      if (existingProduct) {
+        const currentSupplier = parseFloat(existingProduct.supplierPrice);
+        const newSupplier = parseFloat(insert.supplierPrice);
+        if (newSupplier < currentSupplier && newSupplier > 0) {
+          await storage.updateProductPrices(
+            existingProduct.id,
+            insert.supplierPrice,
+            insert.suggestedSellPrice,
+            insert.actualSellPrice || insert.suggestedSellPrice,
+            insert.estimatedMargin
+          );
+          console.log(`[aliexpress] Updated price: ${insert.title.substring(0, 40)} ${currentSupplier} -> ${newSupplier}`);
+        }
+        summary.duplicate++;
         continue;
       }
 

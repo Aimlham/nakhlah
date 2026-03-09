@@ -19,6 +19,8 @@ export interface IStorage {
   getAllAds(): Promise<ProductAd[]>;
   createAd(ad: InsertProductAd): Promise<ProductAd>;
   updateProductAiSummary(productId: string, aiSummary: string): Promise<void>;
+  updateProductPrices(productId: string, supplierPrice: string, suggestedSellPrice: string, actualSellPrice: string, estimatedMargin: string): Promise<void>;
+  findProductByTitle(title: string, source: string): Promise<Product | undefined>;
   init?(): Promise<void>;
 }
 
@@ -174,6 +176,27 @@ export class MemStorage implements IStorage {
       product.aiSummary = aiSummary;
       this.products.set(productId, product);
     }
+  }
+
+  async updateProductPrices(productId: string, supplierPrice: string, suggestedSellPrice: string, actualSellPrice: string, estimatedMargin: string): Promise<void> {
+    const product = this.products.get(productId);
+    if (product) {
+      product.supplierPrice = supplierPrice;
+      product.suggestedSellPrice = suggestedSellPrice;
+      product.actualSellPrice = actualSellPrice;
+      product.estimatedMargin = estimatedMargin;
+      this.products.set(productId, product);
+    }
+  }
+
+  async findProductByTitle(title: string, source: string): Promise<Product | undefined> {
+    const lower = title.toLowerCase().trim();
+    for (const p of this.products.values()) {
+      if (p.source === source && (p.title || "").toLowerCase().trim() === lower) {
+        return p;
+      }
+    }
+    return undefined;
   }
 }
 
