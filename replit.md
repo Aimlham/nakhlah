@@ -143,10 +143,16 @@ shared/
 - File: `server/tiktok-importer.ts`
 - Saves to `product_ads` table with dedup via `externalAdId` + `videoUrl` fallback
 - TikTok ads have `productId` (nullable in DB) — ads without a linked product are filtered out from API responses
+- **Auto-matching**: On import, ads are automatically linked to existing products via keyword similarity (min 2 shared keywords, 30% overlap threshold)
 - Extra columns: `advertiserName`, `adDescription`, `landingPageUrl`, `externalAdId`
 - Normalizer handles Apify's actual field names: `adVideoUrl`, `adVideoCover`, `adImpressions` (range like "1K-10K"), `adStartDate` (unix ms timestamp)
 - `parseImpressionRange()` converts impression strings like "1K-10K" to numeric midpoint (5500)
 - `probeAdColumns()` is called on every `createAd` to ensure column availability
+
+## Pricing Logic
+- **AliExpress**: `supplierPrice` = actual sale/discounted price (what we pay). `suggestedSellPrice` = supplierPrice × markup (3.5x under $5, 3x under $15, 2.5x under $30, 2x above). All in SAR (×3.75).
+- **Amazon**: `supplierPrice` = estimated AliExpress cost (Amazon price × 0.6). `suggestedSellPrice` = Amazon price × markup. `actualSellPrice` = Amazon retail price in SAR.
+- Rule: `supplierPrice` must ALWAYS be lower than `suggestedSellPrice` / `actualSellPrice`
 
 ## Supabase Migration Notes
 - New `product_ads` columns (`advertiser_name`, `ad_description`, `landing_page_url`, `external_ad_id`) must be added via Supabase Dashboard SQL Editor

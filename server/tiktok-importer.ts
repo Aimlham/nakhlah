@@ -190,9 +190,10 @@ function matchAdToProduct(
     if (productWords.size === 0) continue;
 
     const intersection = [...adWords].filter(w => productWords.has(w));
+    if (intersection.length < 2) continue;
     const score = intersection.length / Math.min(adWords.size, productWords.size);
 
-    if (score > 0.2 && (!bestMatch || score > bestMatch.score)) {
+    if (score > 0.3 && (!bestMatch || score > bestMatch.score)) {
       bestMatch = { id: product.id, score };
     }
   }

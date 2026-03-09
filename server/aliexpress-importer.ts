@@ -167,14 +167,14 @@ function normalizeApifyItem(item: ApifyRawItem): {
 }
 
 function mapToInsertProduct(norm: NonNullable<ReturnType<typeof normalizeApifyItem>>): InsertProduct {
-  const effectiveSupplierUSD = norm.supplierPriceUSD > 0 ? norm.supplierPriceUSD : norm.salePriceUSD;
-  const supplierSAR = parseFloat((effectiveSupplierUSD * USD_TO_SAR).toFixed(2));
+  const costUSD = norm.salePriceUSD > 0 && norm.salePriceUSD <= norm.supplierPriceUSD
+    ? norm.salePriceUSD
+    : (norm.supplierPriceUSD > 0 ? norm.supplierPriceUSD : norm.salePriceUSD);
+  const supplierSAR = parseFloat((costUSD * USD_TO_SAR).toFixed(2));
 
-  const multiplier = effectiveSupplierUSD < 5 ? 3.5 : effectiveSupplierUSD < 15 ? 3 : effectiveSupplierUSD < 30 ? 2.5 : 2;
-  const suggestedSAR = parseFloat((effectiveSupplierUSD * multiplier * USD_TO_SAR).toFixed(2));
-  const actualSellSAR = norm.salePriceUSD > 0
-    ? parseFloat((norm.salePriceUSD * USD_TO_SAR).toFixed(2))
-    : suggestedSAR;
+  const multiplier = costUSD < 5 ? 3.5 : costUSD < 15 ? 3 : costUSD < 30 ? 2.5 : 2;
+  const suggestedSAR = parseFloat((costUSD * multiplier * USD_TO_SAR).toFixed(2));
+  const actualSellSAR = suggestedSAR;
 
   const margin = calculateMargin(supplierSAR, suggestedSAR);
   const isHalal = checkHalalSafe({ title: norm.title, description: "", category: norm.category, niche: "" });
