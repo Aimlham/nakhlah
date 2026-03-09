@@ -9,12 +9,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
-  Zap, TrendingUp, Target, Link2, Package,
+  TrendingUp, Target, Link2, Package,
   ArrowLeft, CheckCircle2, BarChart3, Shield, Globe,
   Moon, Sun,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { ScoreBadge } from "@/components/score-badge";
+import nakhlahLogo from "@assets/nakhlah-logo.png";
 
 function LandingNav() {
   const { theme, toggleTheme } = useTheme();
@@ -22,10 +23,8 @@ function LandingNav() {
   return (
     <nav className="flex items-center justify-between gap-1 px-6 py-4 max-w-7xl mx-auto w-full">
       <div className="flex items-center gap-2">
-        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground">
-          <Zap className="w-4 h-4" />
-        </div>
-        <span className="text-lg font-bold tracking-tight">TrendDrop</span>
+        <img src={nakhlahLogo} alt="نخلة" className="w-8 h-8 rounded-md object-contain" />
+        <span className="text-lg font-bold tracking-tight">نخلة</span>
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <Button size="icon" variant="ghost" onClick={toggleTheme} aria-label="تبديل المظهر" data-testid="button-landing-theme">
@@ -283,7 +282,7 @@ function PricingSection() {
 function FAQSection() {
   const faqs = [
     {
-      q: "كيف يكتشف TrendDrop المنتجات الرائجة؟",
+      q: "كيف تكتشف نخلة المنتجات الرائجة؟",
       a: "نحلل البيانات من منصات التجارة الإلكترونية المتعددة واتجاهات وسائل التواصل الاجتماعي وأنماط البحث لتحديد المنتجات ذات إمكانات النمو العالية والتشبّع المنخفض في السوق.",
     },
     {
@@ -335,7 +334,7 @@ function FinalCTA() {
           مستعد لاكتشاف منتجك الرابح القادم؟
         </h2>
         <p className="text-lg text-muted-foreground">
-          انضم إلى آلاف بائعي التجارة الإلكترونية الذين يستخدمون TrendDrop لاكتشاف منتجات مربحة كل يوم.
+          انضم إلى آلاف بائعي التجارة الإلكترونية الذين يستخدمون نخلة لاكتشاف منتجات مربحة كل يوم.
         </p>
         <Button size="lg" asChild>
           <Link href="/signup" data-testid="link-final-cta">
@@ -353,11 +352,11 @@ function Footer() {
     <footer className="border-t py-8 px-6">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-primary" />
-          <span className="font-semibold">TrendDrop</span>
+          <img src={nakhlahLogo} alt="نخلة" className="w-4 h-4 object-contain" />
+          <span className="font-semibold">نخلة</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          &copy; 2026 TrendDrop. جميع الحقوق محفوظة.
+          &copy; 2026 نخلة. جميع الحقوق محفوظة.
         </p>
       </div>
     </footer>

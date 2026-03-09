@@ -5,11 +5,14 @@ const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
 const ACTOR_ID = "lexis-solutions~tiktok-ads-scraper";
 const APIFY_BASE = "https://api.apify.com/v2";
 
+const VALID_COUNTRIES = new Set(["all", "FR", "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "DE", "GR", "HU", "IS", "IE", "IT", "LV", "LI", "LT", "LU", "MT", "NL", "NO", "PL", "PT", "RO", "SK", "SI", "ES", "SE", "CH", "GB"]);
+
 interface TikTokImportOptions {
   query: string;
   startDate?: string;
   endDate?: string;
   maxResults?: number;
+  country?: string;
 }
 
 interface ApifyRawAd {
@@ -219,6 +222,9 @@ export async function importTikTokAds(options: TikTokImportOptions): Promise<{
   };
   if (options.startDate) input.startDate = options.startDate;
   if (options.endDate) input.endDate = options.endDate;
+  if (options.country && VALID_COUNTRIES.has(options.country)) {
+    input.country = options.country;
+  }
 
   const encodedActorId = encodeURIComponent(ACTOR_ID);
   const startRes = await fetch(`${APIFY_BASE}/acts/${encodedActorId}/runs`, {

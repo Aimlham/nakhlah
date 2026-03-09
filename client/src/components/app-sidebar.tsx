@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Package, Bookmark, CreditCard, Settings, Zap, Megaphone, Trophy } from "lucide-react";
+import { LayoutDashboard, Bookmark, CreditCard, Settings, Megaphone, Trophy } from "lucide-react";
+import nakhlahLogo from "@assets/nakhlah-logo.png";
 import {
   Sidebar,
   SidebarContent,
@@ -32,11 +33,9 @@ export function AppSidebar() {
     <Sidebar side="right">
       <SidebarHeader className="p-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground">
-            <Zap className="w-4 h-4" />
-          </div>
+          <img src={nakhlahLogo} alt="نخلة" className="w-8 h-8 rounded-md object-contain" />
           <span className="text-lg font-semibold tracking-tight" data-testid="text-brand-name">
-            TrendDrop
+            نخلة
           </span>
         </Link>
       </SidebarHeader>

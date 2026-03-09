@@ -16,7 +16,7 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AUTH_USER_KEY = "trenddrop_auth_user";
+const AUTH_USER_KEY = "nakhlah_auth_user";
 
 function saveUserToStorage(user: AuthUser | null) {
   if (user) {

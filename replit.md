@@ -1,7 +1,12 @@
-# TrendDrop - Winning Product Discovery Platform
+# Nakhlah (نخلة) - Winning Product Discovery Platform
 
 ## Overview
-TrendDrop is an Arabic-first RTL SaaS platform for dropshipping/e-commerce sellers. The core flow is: discover trending ads → identify winning products → go to AliExpress product page. The platform uses AI-powered opportunity scoring, supplier pricing, and marketing insights.
+Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for dropshipping/e-commerce sellers. The core flow is: discover trending ads → identify winning products → go to AliExpress product page. The platform uses AI-powered opportunity scoring, supplier pricing, and marketing insights. Domain: nakhlah.io
+
+## Branding
+- Site name: نخلة (Nakhlah)
+- Logo: 3D palm tree (`attached_assets/nakhlah-logo.png`)
+- Domain: nakhlah.io
 
 ## User Preferences
 - Clean, modern SaaS dashboard style
@@ -31,10 +36,10 @@ All data comes from real sources (Supabase database, Apify importers). No mock/f
 - `SESSION_SECRET` — Express session secret
 
 ## App Flow
-1. **Ads Library** (`/ads`) — Browse trending ads to discover winning products
-2. **Winning Products** (`/products`) — Qualified products filtered through qualification system, with AliExpress links
-3. **Product Details** (`/products/:id`) — Full analysis, AI insights, "عرض على AliExpress" button
-4. **Dashboard** (`/dashboard`) — Overview KPIs, top winning products, recent ads
+1. **Dashboard** (`/dashboard`) — Overview KPIs, recent ads section (shown first), then top winning products
+2. **Ads Library** (`/ads`) — Browse trending ads to discover winning products
+3. **Winning Products** (`/products`) — Qualified products filtered through qualification system, with AliExpress links
+4. **Product Details** (`/products/:id`) — Full analysis, AI insights, "عرض على AliExpress" button
 5. **Saved** (`/saved`) — User's bookmarked products
 
 ## File Structure
@@ -106,7 +111,7 @@ shared/
 - `GET /api/import/aliexpress/status` - AliExpress importer status
 - `POST /api/import/amazon` - Import Amazon products
 - `GET /api/import/amazon/status` - Amazon importer status
-- `POST /api/import/tiktok-ads` - Import TikTok ads via Apify
+- `POST /api/import/tiktok-ads` - Import TikTok ads via Apify (supports `country` param)
 - `GET /api/import/tiktok-ads/status` - TikTok importer status
 
 ## Product Qualification System (`shared/qualification.ts`)
@@ -133,6 +138,7 @@ shared/
 - Actor: `piotrv1001/aliexpress-listings-scraper` (async: start→poll→get)
 - Pipeline: Apify → normalize → content safety filter → quality filter → dedup → score → save
 - Products include `supplierLink` to AliExpress product page
+- On duplicate: updates price if new price is lower
 
 ## Amazon Importer
 - Actor: `igview-owner/amazon-search-scraper` (async)
@@ -145,9 +151,7 @@ shared/
 - TikTok ads have `productId` (nullable in DB) — ads without a linked product are filtered out from API responses
 - **Auto-matching**: On import, ads are automatically linked to existing products via keyword similarity (min 2 shared keywords, 30% overlap threshold)
 - Extra columns: `advertiserName`, `adDescription`, `landingPageUrl`, `externalAdId`
-- Normalizer handles Apify's actual field names: `adVideoUrl`, `adVideoCover`, `adImpressions` (range like "1K-10K"), `adStartDate` (unix ms timestamp)
-- `parseImpressionRange()` converts impression strings like "1K-10K" to numeric midpoint (5500)
-- `probeAdColumns()` is called on every `createAd` to ensure column availability
+- Supported countries: all, FR, AT, BE, BG, HR, CY, CZ, DK, EE, FI, DE, GR, HU, IS, IE, IT, LV, LI, LT, LU, MT, NL, NO, PL, PT, RO, SK, SI, ES, SE, CH, GB (no Saudi/Gulf support in TikTok Ad Library API)
 
 ## Pricing Logic
 - **AliExpress**: `supplierPrice` = actual sale/discounted price (what we pay). `suggestedSellPrice` = supplierPrice × markup (3.5x under $5, 3x under $15, 2.5x under $30, 2x above). All in SAR (×3.75).

@@ -150,6 +150,38 @@ export default function DashboardPage() {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-blue-500" />
+          <h2 className="text-lg font-bold">أحدث الإعلانات</h2>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/ads" data-testid="link-view-all-ads">
+            عرض الكل
+            <ArrowLeft className="w-4 h-4 ms-1" />
+          </Link>
+        </Button>
+      </div>
+
+      {recentAds.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Megaphone className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
+            <p className="font-medium">لا توجد إعلانات بعد</p>
+            <p className="text-sm text-muted-foreground mt-1">استورد إعلانات من TikTok لاكتشاف المنتجات الرابحة</p>
+            <Button variant="outline" size="sm" className="mt-3" asChild>
+              <Link href="/ads">استيراد إعلانات</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="grid-dashboard-ads">
+          {recentAds.map(ad => (
+            <MineaAdCard key={ad.id} ad={ad} />
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-amber-500" />
           <h2 className="text-lg font-bold">أفضل المنتجات الرابحة</h2>
         </div>
@@ -259,38 +291,6 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </Link>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Megaphone className="w-5 h-5 text-blue-500" />
-          <h2 className="text-lg font-bold">أحدث الإعلانات</h2>
-        </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/ads" data-testid="link-view-all-ads">
-            عرض الكل
-            <ArrowLeft className="w-4 h-4 ms-1" />
-          </Link>
-        </Button>
-      </div>
-
-      {recentAds.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Megaphone className="w-8 h-8 mx-auto text-muted-foreground/40 mb-3" />
-            <p className="font-medium">لا توجد إعلانات بعد</p>
-            <p className="text-sm text-muted-foreground mt-1">استورد إعلانات من TikTok لاكتشاف المنتجات الرابحة</p>
-            <Button variant="outline" size="sm" className="mt-3" asChild>
-              <Link href="/ads">استيراد إعلانات</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="grid-dashboard-ads">
-          {recentAds.map(ad => (
-            <MineaAdCard key={ad.id} ad={ad} />
           ))}
         </div>
       )}

@@ -50,7 +50,7 @@ export async function registerRoutes(
   if (!supabaseConfigured) {
     app.use(
       session({
-        secret: process.env.SESSION_SECRET || "trenddrop-dev-secret",
+        secret: process.env.SESSION_SECRET || "nakhlah-dev-secret",
         resave: false,
         saveUninitialized: false,
         store: new SessionStore({ checkPeriod: 86400000 }),
@@ -469,6 +469,7 @@ export async function registerRoutes(
     start_date: z.string().optional(),
     end_date: z.string().optional(),
     max_results: z.number().int().min(1).max(100).optional().default(30),
+    country: z.string().optional(),
   });
 
   app.post("/api/import/tiktok-ads", async (req: Request, res: Response) => {
@@ -490,6 +491,7 @@ export async function registerRoutes(
         startDate: start_date,
         endDate: end_date,
         maxResults: max_results,
+        country: parsed.data.country,
       });
 
       res.json(result);

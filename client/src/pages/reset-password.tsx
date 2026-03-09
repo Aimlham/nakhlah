@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Zap, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import nakhlahLogo from "@assets/nakhlah-logo.png";
 import { getSupabaseClient } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
@@ -113,10 +114,8 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center p-6 bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex items-center justify-center gap-2">
-          <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary text-primary-foreground">
-            <Zap className="w-5 h-5" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight">TrendDrop</span>
+          <img src={nakhlahLogo} alt="نخلة" className="w-10 h-10 rounded-md object-contain" />
+          <span className="text-2xl font-bold tracking-tight">نخلة</span>
         </div>
 
         <Card>
