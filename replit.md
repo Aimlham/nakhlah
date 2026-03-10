@@ -158,6 +158,18 @@ shared/
 - **Amazon**: `supplierPrice` = estimated AliExpress cost (Amazon price × 0.6). `suggestedSellPrice` = Amazon price × markup. `actualSellPrice` = Amazon retail price in SAR.
 - Rule: `supplierPrice` must ALWAYS be lower than `suggestedSellPrice` / `actualSellPrice`
 
+## Production Security
+- **Helmet**: Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) — CSP disabled for SPA compatibility
+- **CORS**: Production-only restriction to `nakhlah.io` / `www.nakhlah.io`; dev mode allows all origins
+- **Rate limiting**: 200 req/15min for API, 20 req/15min for auth endpoints
+- **HTTPS redirect**: Forces HTTPS in production via `x-forwarded-proto` header check (Railway proxy)
+- **Trust proxy**: Enabled in production for correct client IP detection behind Railway proxy
+- **Cookies**: `secure: true` and `sameSite: strict` in production
+- **Error masking**: Internal error details hidden from clients in production
+- **Process guards**: `uncaughtException` and `unhandledRejection` handlers prevent silent crashes
+- **Body limits**: JSON and URL-encoded bodies capped at 1MB
+- **Packages**: `helmet`, `cors`, `express-rate-limit`
+
 ## Supabase Migration Notes
 - New `product_ads` columns (`advertiser_name`, `ad_description`, `landing_page_url`, `external_ad_id`) must be added via Supabase Dashboard SQL Editor
 - `product_id` must be made nullable: `ALTER TABLE product_ads ALTER COLUMN product_id DROP NOT NULL;`

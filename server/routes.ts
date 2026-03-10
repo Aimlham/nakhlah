@@ -13,6 +13,12 @@ import { isProductPublishable } from "@shared/qualification";
 import { z } from "zod";
 
 const SessionStore = MemoryStore(session);
+const isProdEnv = process.env.NODE_ENV === "production";
+
+function safeErrorMessage(err: any, fallback: string): string {
+  if (isProdEnv) return fallback;
+  return err?.message || fallback;
+}
 
 async function getAuthUserId(req: Request): Promise<string | null> {
   if (supabaseConfigured) {
@@ -47,18 +53,25 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  const isProd = process.env.NODE_ENV === "production";
+
   if (!supabaseConfigured) {
+    const sessionSecret = process.env.SESSION_SECRET;
+    if (isProd && !sessionSecret) {
+      throw new Error("SESSION_SECRET environment variable is required in production");
+    }
+
     app.use(
       session({
-        secret: process.env.SESSION_SECRET || "nakhlah-dev-secret",
+        secret: sessionSecret || "nakhlah-dev-secret",
         resave: false,
         saveUninitialized: false,
         store: new SessionStore({ checkPeriod: 86400000 }),
         cookie: {
           maxAge: 24 * 60 * 60 * 1000,
           httpOnly: true,
-          secure: false,
-          sameSite: "lax",
+          secure: isProd,
+          sameSite: isProd ? "strict" : "lax",
         },
       })
     );
@@ -124,7 +137,7 @@ export async function registerRoutes(
       (req.session as any).userId = user.id;
       res.json({ user: { id: user.id, email: user.username, fullName: user.fullName } });
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Server error" });
+      res.status(500).json({ message: safeErrorMessage(err, "Server error") });
     }
   });
 
@@ -163,7 +176,7 @@ export async function registerRoutes(
       (req.session as any).userId = user.id;
       res.json({ user: { id: user.id, email: user.username, fullName: user.fullName } });
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Server error" });
+      res.status(500).json({ message: safeErrorMessage(err, "Server error") });
     }
   });
 
@@ -193,7 +206,7 @@ export async function registerRoutes(
 
       res.json(products);
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch products" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch products") });
     }
   });
 
@@ -206,7 +219,7 @@ export async function registerRoutes(
         .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
       res.json(winning);
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch winning products" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch winning products") });
     }
   });
 
@@ -218,7 +231,7 @@ export async function registerRoutes(
       }
       res.json(scoreProduct(product));
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch product" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch product") });
     }
   });
 
@@ -231,7 +244,7 @@ export async function registerRoutes(
       const ids = await storage.getSavedProductIds(userId);
       res.json({ savedProductIds: ids });
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch saved IDs" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch saved IDs") });
     }
   });
 
@@ -244,7 +257,7 @@ export async function registerRoutes(
       const products = await storage.getSavedProducts(userId);
       res.json(products.map(scoreProduct));
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch saved products" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch saved products") });
     }
   });
 
@@ -261,7 +274,7 @@ export async function registerRoutes(
       const saved = await storage.saveProduct(userId, req.params.productId);
       res.json(saved);
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to save product" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to save product") });
     }
   });
 
@@ -274,7 +287,7 @@ export async function registerRoutes(
       await storage.unsaveProduct(userId, req.params.productId);
       res.json({ success: true });
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to unsave product" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to unsave product") });
     }
   });
 
@@ -283,7 +296,7 @@ export async function registerRoutes(
       const ads = await storage.getAdsByProductId(req.params.id);
       res.json(ads);
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch ads" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch ads") });
     }
   });
 
@@ -321,7 +334,7 @@ export async function registerRoutes(
       res.json({ aiSummary });
     } catch (err: any) {
       console.error("[openai] Analysis error:", err.message);
-      res.status(500).json({ message: err.message || "Failed to generate analysis" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to generate analysis") });
     }
   });
 
@@ -380,7 +393,7 @@ export async function registerRoutes(
 
       res.json(enriched);
     } catch (err: any) {
-      res.status(500).json({ message: err.message || "Failed to fetch ads" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch ads") });
     }
   });
 
@@ -415,7 +428,7 @@ export async function registerRoutes(
       res.json(result);
     } catch (err: any) {
       console.error("[aliexpress] Import route error:", err.message);
-      res.status(500).json({ message: err.message || "Failed to import AliExpress products" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to import AliExpress products") });
     }
   });
 
@@ -456,7 +469,7 @@ export async function registerRoutes(
       res.json(result);
     } catch (err: any) {
       console.error("[amazon] Import route error:", err.message);
-      res.status(500).json({ message: err.message || "Failed to import Amazon products" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to import Amazon products") });
     }
   });
 
@@ -497,7 +510,7 @@ export async function registerRoutes(
       res.json(result);
     } catch (err: any) {
       console.error("[tiktok] Import route error:", err.message);
-      res.status(500).json({ message: err.message || "Failed to import TikTok ads" });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to import TikTok ads") });
     }
   });
 
