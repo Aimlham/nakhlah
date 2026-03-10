@@ -3,4 +3,24 @@ dist
 .DS_Store
 server/public
 vite.config.ts.*
-*.tar.gz.cj-token.json
+*.tar.gz
+.cj-token.json
+
+# Environment / secrets
+.env
+.env.*
+
+# Replit-specific
+.replit
+.local/
+replit.nix
+.cache/
+.config/
+.upm/
+
+# Logs
+*.log
+/tmp/
+
+# Generated screenshots
+/tmp/testing-screenshots/
