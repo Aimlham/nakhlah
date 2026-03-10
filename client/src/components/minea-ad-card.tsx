@@ -25,6 +25,19 @@ export interface EnrichedAd {
   advertiserName?: string | null;
   adDescription?: string | null;
   landingPageUrl?: string | null;
+  externalAdId?: string | null;
+}
+
+function getTikTokLibraryUrl(ad: EnrichedAd): string {
+  if (ad.advertiserName) {
+    const cleanName = ad.advertiserName.split(" ")[0].replace(/[^a-zA-Z0-9._-]/g, "");
+    return `https://library.tiktok.com/ads?region=all&adv_name=${encodeURIComponent(cleanName)}`;
+  }
+  return `https://library.tiktok.com/ads?region=all`;
+}
+
+function isTikTokCdnUrl(url: string): boolean {
+  return url.includes("tiktokcdn.com") || url.includes("library.tiktok.com/api/v1/cdn");
 }
 
 interface MineaAdCardProps {
@@ -117,7 +130,7 @@ export function MineaAdCard({ ad, adCountForProduct, totalViewsForProduct }: Min
 
         <div
           className="relative mx-3 rounded-lg overflow-hidden bg-muted cursor-pointer aspect-[4/5]"
-          onClick={() => window.open(ad.videoUrl, "_blank")}
+          onClick={() => window.open(isTikTokCdnUrl(ad.videoUrl) ? getTikTokLibraryUrl(ad) : ad.videoUrl, "_blank")}
         >
           {ad.thumbnailUrl ? (
             <img
@@ -141,14 +154,14 @@ export function MineaAdCard({ ad, adCountForProduct, totalViewsForProduct }: Min
 
         <div className="p-3 pt-2.5 space-y-2.5">
           <a
-            href={ad.videoUrl}
+            href={isTikTokCdnUrl(ad.videoUrl) ? getTikTokLibraryUrl(ad) : ad.videoUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-[11px] text-muted-foreground group/link"
             data-testid={`link-minea-adurl-${ad.id}`}
           >
-            <span className="text-[10px] text-muted-foreground/70 shrink-0">رابط الإعلان</span>
-            <span className="truncate">{truncateUrl(ad.videoUrl)}</span>
+            <span className="text-[10px] text-muted-foreground/70 shrink-0">عرض في TikTok</span>
+            <span className="truncate">{ad.advertiserName || truncateUrl(ad.videoUrl)}</span>
             <ExternalLink className="w-3 h-3 shrink-0" />
           </a>
 
@@ -178,7 +191,7 @@ export function MineaAdCard({ ad, adCountForProduct, totalViewsForProduct }: Min
                 variant="outline"
                 size="sm"
                 className="flex-1 text-xs"
-                onClick={() => window.open(ad.videoUrl, "_blank")}
+                onClick={() => window.open(isTikTokCdnUrl(ad.videoUrl) ? getTikTokLibraryUrl(ad) : ad.videoUrl, "_blank")}
                 data-testid={`button-minea-watch-${ad.id}`}
               >
                 <Play className="w-3.5 h-3.5 me-1" />
@@ -190,7 +203,8 @@ export function MineaAdCard({ ad, adCountForProduct, totalViewsForProduct }: Min
               size="icon"
               onClick={() => {
                 if (navigator.clipboard) {
-                  navigator.clipboard.writeText(ad.videoUrl);
+                  const url = isTikTokCdnUrl(ad.videoUrl) ? getTikTokLibraryUrl(ad) : ad.videoUrl;
+                  navigator.clipboard.writeText(url);
                 }
               }}
               data-testid={`button-minea-copy-${ad.id}`}
