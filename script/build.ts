@@ -47,12 +47,24 @@ async function buildAll() {
   ];
   const externals = allDeps.filter((dep) => !allowlist.includes(dep));
 
+  // ESM bundles need a shim so that bundled CJS dependencies can still call
+  // require(), and so import.meta.dirname / __dirname resolve correctly.
+  const esmShim = [
+    `import{createRequire}from"module";`,
+    `import{fileURLToPath}from"url";`,
+    `import path from"path";`,
+    `const require=createRequire(import.meta.url);`,
+    `const __filename=fileURLToPath(import.meta.url);`,
+    `const __dirname=path.dirname(__filename);`,
+  ].join("");
+
   await esbuild({
     entryPoints: ["server/index.ts"],
     platform: "node",
     bundle: true,
-    format: "cjs",
-    outfile: "dist/index.cjs",
+    format: "esm",
+    outfile: "dist/index.js",
+    banner: { js: esmShim },
     define: {
       "process.env.NODE_ENV": '"production"',
     },
