@@ -1,0 +1,54 @@
+We need to stop adding new features and fix the SaaS access logic first.
+
+Current problems:
+1. Users can register and log in too easily without subscription enforcement
+2. I want subscription to be required before the user can actually use the app
+3. I am logged in, but the site still shows no products, even though data exists in the developer/database side
+4. Recent important changes have not been pushed to GitHub yet
+
+Your task:
+
+PHASE 1 — subscription enforcement
+Implement proper SaaS access control using this rule:
+- users may register and log in
+- but if they do not have an active subscription, they must be redirected to the pricing/subscription page before accessing protected app pages
+- protected pages should include dashboard, products, ads, favorites, and any paid feature pages
+- allowed pages for non-subscribed logged-in users:
+  - pricing
+  - payment callback
+  - account/settings
+  - logout
+- active subscribed users can access the full app
+
+Do not block account creation itself.
+Block product usage without active subscription.
+
+PHASE 2 — investigate missing products
+Audit why products are visible in the database/dev side but not appearing in the actual app UI.
+Check:
+- which table/page/query the frontend is using
+- whether the API is returning empty results
+- whether frontend filters are hiding the data
+- whether auth/subscription checks are blocking the results
+- whether dev data and production data are different
+
+Then fix the root cause with minimal changes.
+
+PHASE 3 — Git safety
+After all fixes, prepare the project for a safe GitHub push.
+Show me:
+- exact files changed
+- git status summary
+- exact commit message suggestion
+- exact commands to commit and push safely
+
+Important rules:
+- inspect the current project structure first
+- do not refactor unrelated parts
+- keep changes minimal
+- explain clearly in simple Arabic-friendly terms
+- after finishing, tell me exactly:
+  1. how subscription enforcement now works
+  2. why products were missing
+  3. which files were changed
+  4. what I should push to GitHub

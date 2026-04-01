@@ -17,11 +17,11 @@ const EXCLUDED_CATEGORIES_EXACT = [
   "Large Appliances", "Major Appliances",
 ];
 
-const SUPPLIER_SOURCES = ["aliexpress", "alibaba"];
+const SUPPLIER_SOURCES = ["aliexpress", "alibaba", "cj", "cjdropshipping"];
 
 const DISCOVERY_ONLY_SOURCES = ["amazon"];
 
-const SUPPORTED_SOURCES = ["aliexpress", "alibaba", "amazon"];
+const SUPPORTED_SOURCES = ["aliexpress", "alibaba", "amazon", "cj", "cjdropshipping"];
 
 export interface QualificationResult {
   isPublishable: boolean;
