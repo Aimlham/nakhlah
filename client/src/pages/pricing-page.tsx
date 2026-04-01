@@ -26,8 +26,9 @@ export default function PricingPage() {
     try {
       const res = await apiRequest("POST", "/api/payments/create", { plan: "pro" });
       const data = await res.json();
-      if (data.redirectUrl) {
-        window.location.href = data.redirectUrl;
+      const url = data.invoiceUrl || data.redirectUrl;
+      if (url) {
+        window.location.href = url;
       } else {
         toast({ title: "خطأ", description: "تعذر إنشاء جلسة الدفع", variant: "destructive" });
       }
