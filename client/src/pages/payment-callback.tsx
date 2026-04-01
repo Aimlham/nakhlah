@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { queryClient } from "@/lib/queryClient";
 
 type Status = "loading" | "paid" | "failed" | "unknown";
 
@@ -41,8 +42,12 @@ export default function PaymentCallbackPage() {
       })
       .then((data: { status: string; plan?: string }) => {
         if (data.status === "paid") {
-          setStatus("paid");
           if (data.plan) setPlan(data.plan);
+          // Invalidate subscription cache so SubscribedRoute picks up new status
+          queryClient.invalidateQueries({ queryKey: ["/api/payments/subscription"] });
+          setStatus("paid");
+          // Auto-redirect to products after 2 seconds
+          setTimeout(() => navigate("/products"), 2000);
         } else if (data.status === "pending") {
           // Webhook may still be in flight — show pending state
           setStatus("loading");
@@ -87,18 +92,18 @@ export default function PaymentCallbackPage() {
             <h2 className="text-2xl font-bold">تم الدفع بنجاح!</h2>
             {planLabel && (
               <p className="text-muted-foreground">
-                تم تفعيل الباقة {planLabel}
+                تم تفعيل باقة {planLabel}
               </p>
             )}
             <p className="text-sm text-muted-foreground">
-              ستنعكس التغييرات على حسابك خلال دقائق
+              سيتم تحويلك للمنتجات تلقائياً...
             </p>
             <Button
               className="w-full"
-              onClick={() => navigate("/dashboard")}
-              data-testid="button-go-dashboard"
+              onClick={() => navigate("/products")}
+              data-testid="button-go-products"
             >
-              الذهاب للوحة التحكم
+              انتقل للمنتجات الآن
             </Button>
           </>
         )}
