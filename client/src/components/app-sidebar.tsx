@@ -73,7 +73,7 @@ export function AppSidebar() {
               <span className="text-sm font-medium truncate" data-testid="text-sidebar-username">
                 {user.fullName || user.email}
               </span>
-              <span className="text-xs text-muted-foreground truncate">الباقة المجانية</span>
+              <span className="text-xs text-muted-foreground truncate">نخلة برو</span>
             </div>
           </div>
         )}

@@ -3,10 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { data: sub } = useQuery<{ status: string; plan?: string }>({
+    queryKey: ["/api/payments/subscription"],
+  });
+  const isActive = sub?.status === "active";
 
   return (
     <div className="space-y-6">
@@ -46,13 +52,23 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">الباقة</CardTitle>
-            <CardDescription>أنت حالياً على الباقة المجانية</CardDescription>
+            <CardTitle className="text-base">الاشتراك</CardTitle>
+            <CardDescription>
+              {isActive ? "اشتراكك نشط" : "لا يوجد اشتراك نشط حالياً"}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button variant="outline" asChild>
-              <Link href="/pricing" data-testid="link-upgrade-plan">عرض الباقات</Link>
-            </Button>
+          <CardContent className="space-y-3">
+            {isActive && (
+              <div className="flex items-center gap-2">
+                <Badge data-testid="badge-plan-name">نخلة برو</Badge>
+                <span className="text-sm text-muted-foreground">99 ريال / شهرياً</span>
+              </div>
+            )}
+            {!isActive && (
+              <Button asChild data-testid="link-upgrade-plan">
+                <Link href="/pricing">اشترك الآن</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

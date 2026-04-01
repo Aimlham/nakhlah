@@ -60,7 +60,7 @@ function HeroSection() {
         <div className="flex items-center justify-center gap-3 flex-wrap pt-2">
           <Button size="lg" asChild>
             <Link href="/signup" data-testid="link-hero-signup">
-              ابدأ تجربتك المجانية
+              اشترك الآن
               <ArrowLeft className="w-4 h-4" />
             </Link>
           </Button>
@@ -69,8 +69,8 @@ function HeroSection() {
           </Button>
         </div>
         <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> لا حاجة لبطاقة ائتمان</span>
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> 50 بحث مجاني عن المنتجات</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> 99 ريال فقط شهرياً</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> وصول كامل لجميع المزايا</span>
           <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> إلغاء في أي وقت</span>
         </div>
       </div>
@@ -202,78 +202,48 @@ function FeaturesSection() {
 }
 
 function PricingSection() {
-  const plans = [
-    {
-      name: "Free",
-      price: "$0",
-      period: "مجاناً للأبد",
-      features: ["50 مشاهدة منتج/شهرياً", "بيانات اتجاهات أساسية", "حفظ حتى 10 منتجات", "دعم المجتمع"],
-      cta: "ابدأ الآن",
-      popular: false,
-    },
-    {
-      name: "Pro",
-      price: "$29",
-      period: "/شهرياً",
-      features: ["مشاهدات غير محدودة", "تحليل ذكاء اصطناعي كامل", "حفظ غير محدود", "دعم ذو أولوية", "فلاتر متقدمة", "تصدير البيانات"],
-      cta: "ابدأ تجربتك المجانية",
-      popular: true,
-    },
-    {
-      name: "Enterprise",
-      price: "$99",
-      period: "/شهرياً",
-      features: ["كل مزايا Pro", "الوصول عبر API", "تكاملات مخصصة", "تعاون الفريق", "مدير حساب مخصص", "تقارير بعلامتك التجارية"],
-      cta: "تواصل مع المبيعات",
-      popular: false,
-    },
+  const features = [
+    "مشاهدات غير محدودة للمنتجات",
+    "تحليل ذكاء اصطناعي كامل",
+    "حفظ غير محدود للمنتجات",
+    "مكتبة إعلانات TikTok",
+    "روابط موردين AliExpress و CJ",
+    "فلاتر متقدمة",
+    "دعم ذو أولوية",
   ];
 
   return (
     <section id="pricing" className="py-20 px-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-lg mx-auto">
         <div className="text-center space-y-3 mb-12">
-          <h2 className="text-3xl font-bold tracking-tight">أسعار بسيطة وشفافة</h2>
-          <p className="text-muted-foreground">ابدأ مجاناً، وقم بالترقية عندما تكون جاهزاً.</p>
+          <h2 className="text-3xl font-bold tracking-tight">سعر واحد. وصول كامل.</h2>
+          <p className="text-muted-foreground">كل ما تحتاجه لاكتشاف المنتجات الرابحة.</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          {plans.map((plan, i) => (
-            <Card
-              key={i}
-              className={`hover-elevate relative ${plan.popular ? "border-primary border-2" : ""}`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="no-default-active-elevate">الأكثر شعبية</Badge>
-                </div>
-              )}
-              <CardContent className="p-6 space-y-5">
-                <div>
-                  <h3 className="font-semibold text-lg">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1 mt-1">
-                    <span className="text-3xl font-bold">{plan.price}</span>
-                    <span className="text-sm text-muted-foreground">{plan.period}</span>
-                  </div>
-                </div>
-                <ul className="space-y-2">
-                  {plan.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full"
-                  variant={plan.popular ? "default" : "outline"}
-                  asChild
-                >
-                  <Link href="/signup">{plan.cta}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card className="hover-elevate relative border-primary border-2">
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <Badge className="no-default-active-elevate">نخلة برو</Badge>
+          </div>
+          <CardContent className="p-8 space-y-6">
+            <div className="text-center">
+              <div className="flex items-baseline justify-center gap-1">
+                <span className="text-5xl font-bold">99</span>
+                <span className="text-xl text-muted-foreground">ريال</span>
+                <span className="text-sm text-muted-foreground">/شهرياً</span>
+              </div>
+            </div>
+            <ul className="space-y-3">
+              {features.map((f, j) => (
+                <li key={j} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Button className="w-full" size="lg" asChild>
+              <Link href="/signup" data-testid="link-pricing-signup">اشترك الآن</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </section>
   );
@@ -298,8 +268,8 @@ function FAQSection() {
       a: "اقتراحات الأسعار لدينا مبنية على تحليل السوق لمنتجات مشابهة عبر منصات متعددة. وهي نقطة انطلاق - ننصح باختبار نقاط سعر مختلفة لجمهورك المحدد.",
     },
     {
-      q: "هل توجد تجربة مجانية؟",
-      a: "نعم! الباقة المجانية تمنحك الوصول إلى 50 مشاهدة منتج شهرياً مع بيانات اتجاهات أساسية. لا حاجة لبطاقة ائتمان للبدء.",
+      q: "هل يمكنني إلغاء الاشتراك في أي وقت؟",
+      a: "نعم، يمكنك إلغاء اشتراكك في أي وقت دون أي رسوم إضافية. ستظل تتمتع بالوصول الكامل حتى نهاية فترة الاشتراك المدفوعة.",
     },
   ];
 
