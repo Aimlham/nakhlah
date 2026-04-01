@@ -549,8 +549,7 @@ export async function registerRoutes(
   const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
 
   const PLANS: Record<string, { nameAr: string; amountHalalas: number }> = {
-    pro:        { nameAr: "باقة احترافية - نخلة", amountHalalas: 10900 },
-    enterprise: { nameAr: "باقة مؤسسات - نخلة",  amountHalalas: 37100 },
+    pro: { nameAr: "نخلة برو - اشتراك شهري", amountHalalas: 9900 },
   };
 
   function moyasarAuth(): string {
@@ -558,7 +557,7 @@ export async function registerRoutes(
   }
 
   const createPaymentSchema = z.object({
-    plan: z.enum(["pro", "enterprise"]),
+    plan: z.enum(["pro"]),
   });
 
   // ── 1. Create Invoice ──────────────────────────────────────────────────────

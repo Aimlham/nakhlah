@@ -60,9 +60,7 @@ export default function PaymentCallbackPage() {
       });
   }, []);
 
-  const planLabel =
-    plan === "pro"        ? "الاحترافية" :
-    plan === "enterprise" ? "مؤسسات"     : "";
+  const planLabel = plan === "pro" ? "نخلة برو" : "";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background" dir="rtl">

@@ -6,72 +6,25 @@ import { CheckCircle2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
-const plans = [
-  {
-    key: null,
-    name: "مجانية",
-    priceDisplay: "مجاناً",
-    period: "للأبد",
-    description: "ابدأ بأبحاث المنتجات الأساسية",
-    features: [
-      "50 مشاهدة منتج/شهرياً",
-      "بيانات اتجاهات أساسية",
-      "حفظ حتى 10 منتجات",
-      "دعم مجتمعي",
-    ],
-    cta: "باقتك الحالية",
-    popular: false,
-    current: true,
-  },
-  {
-    key: "pro",
-    name: "احترافية",
-    priceDisplay: "109",
-    period: "ر.س / شهرياً",
-    description: "وصول كامل للبائعين المحترفين",
-    features: [
-      "مشاهدات غير محدودة",
-      "تحليل ذكاء اصطناعي كامل",
-      "حفظ منتجات غير محدود",
-      "دعم ذو أولوية",
-      "فلاتر وترتيب متقدم",
-      "تصدير بيانات المنتجات",
-      "تنبيهات رواج يومية",
-    ],
-    cta: "ترقية للاحترافية",
-    popular: true,
-    current: false,
-  },
-  {
-    key: "enterprise",
-    name: "مؤسسات",
-    priceDisplay: "371",
-    period: "ر.س / شهرياً",
-    description: "للفرق والوكالات",
-    features: [
-      "كل مزايا الاحترافية",
-      "وصول API",
-      "تكاملات مخصصة",
-      "تعاون فريق (5 مقاعد)",
-      "مدير حساب مخصص",
-      "تقارير بعلامتك التجارية",
-      "تغذية بيانات مخصصة",
-      "ضمان مستوى الخدمة",
-    ],
-    cta: "ترقية للمؤسسات",
-    popular: false,
-    current: false,
-  },
+const PRO_FEATURES = [
+  "وصول كامل لجميع المنتجات الرابحة",
+  "تحليل ذكاء اصطناعي لكل منتج",
+  "رابط مورّد مباشر من AliExpress",
+  "حفظ منتجات غير محدود",
+  "فلاتر وترتيب متقدم",
+  "إعلانات TikTok الرابحة",
+  "تنبيهات رواج يومية",
+  "دعم ذو أولوية",
 ];
 
 export default function PricingPage() {
   const { toast } = useToast();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function handleUpgrade(planKey: string) {
-    setLoadingPlan(planKey);
+  async function handleUpgrade() {
+    setLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/payments/create", { plan: planKey });
+      const res = await apiRequest("POST", "/api/payments/create", { plan: "pro" });
       const data = await res.json();
       if (data.redirectUrl) {
         window.location.href = data.redirectUrl;
@@ -87,68 +40,60 @@ export default function PricingPage() {
         variant: "destructive",
       });
     } finally {
-      setLoadingPlan(null);
+      setLoading(false);
     }
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-pricing-title">الأسعار</h1>
-        <p className="text-muted-foreground">اختر الباقة المناسبة لاحتياجاتك.</p>
+        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-pricing-title">الاشتراك</h1>
+        <p className="text-muted-foreground">اشترك للوصول الكامل لمنصة نخلة.</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
-        {plans.map((plan) => (
-          <Card
-            key={plan.name}
-            className={`hover-elevate relative ${plan.popular ? "border-primary border-2" : ""}`}
-            data-testid={`card-plan-${plan.key ?? "free"}`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="no-default-active-elevate">الأكثر شعبية</Badge>
-              </div>
-            )}
-            <CardContent className="p-6 space-y-5">
-              <div>
-                <h3 className="font-semibold text-lg">{plan.name}</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>
-                <div className="flex items-baseline gap-1 mt-3">
-                  <span className="text-3xl font-bold" data-testid={`text-price-${plan.key ?? "free"}`}>
-                    {plan.priceDisplay}
-                  </span>
-                  <span className="text-sm text-muted-foreground">{plan.period}</span>
-                </div>
-              </div>
+      <div className="flex justify-center">
+        <Card
+          className="hover-elevate relative border-primary border-2 w-full max-w-sm"
+          data-testid="card-plan-pro"
+        >
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+            <Badge className="no-default-active-elevate">الباقة الوحيدة</Badge>
+          </div>
 
-              <ul className="space-y-2">
-                {plan.features.map((f, j) => (
-                  <li key={j} className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
+          <CardContent className="p-8 space-y-6">
+            <div className="text-center">
+              <h2 className="text-xl font-bold">نخلة برو</h2>
+              <p className="text-sm text-muted-foreground mt-1">وصول كامل لجميع المزايا</p>
+              <div className="flex items-baseline justify-center gap-1 mt-4">
+                <span className="text-4xl font-bold" data-testid="text-price-pro">99</span>
+                <span className="text-muted-foreground">ر.س / شهرياً</span>
+              </div>
+            </div>
 
-              <Button
-                className="w-full"
-                variant={plan.current ? "secondary" : plan.popular ? "default" : "outline"}
-                disabled={plan.current || loadingPlan === plan.key}
-                onClick={() => plan.key && handleUpgrade(plan.key)}
-                data-testid={`button-plan-${plan.key ?? "free"}`}
-              >
-                {loadingPlan === plan.key ? (
-                  <Loader2 className="w-4 h-4 animate-spin me-2" />
-                ) : null}
-                {plan.cta}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+            <ul className="space-y-3">
+              {PRO_FEATURES.map((f, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={handleUpgrade}
+              disabled={loading}
+              data-testid="button-plan-pro"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : null}
+              اشترك الآن
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
-      <p className="text-xs text-muted-foreground max-w-xl">
+      <p className="text-xs text-muted-foreground text-center">
         جميع المدفوعات تتم عبر بوابة Moyasar الآمنة. تدعم مدى، فيزا، وماستركارد.
         الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة.
       </p>
