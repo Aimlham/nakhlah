@@ -150,26 +150,18 @@ process.on("unhandledRejection", (reason) => {
 });
 
 (async () => {
+  // Health check responds immediately — registered before anything else
   app.get("/api/health", (_req: Request, res: Response) => {
     res.json({ status: "ok" });
   });
-
-  if (storage.init) {
-    await storage.init();
-  }
 
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = isProd ? "Internal Server Error" : err.message || "Internal Server Error";
-
     console.error("Internal Server Error:", err);
-
-    if (res.headersSent) {
-      return next(err);
-    }
-
+    if (res.headersSent) return next(err);
     return res.status(status).json({ message });
   });
 
@@ -181,9 +173,22 @@ process.on("unhandledRejection", (reason) => {
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(port, "0.0.0.0", () => {
-    log(`serving on port ${port}`);
+
+  // Listen first — autoscale health checks pass immediately
+  await new Promise<void>((resolve, reject) => {
+    httpServer.listen(port, "0.0.0.0", () => {
+      log(`serving on port ${port}`);
+      resolve();
+    });
+    httpServer.once("error", reject);
   });
+
+  // Non-blocking storage warm-up after the server is already accepting connections
+  if (storage.init) {
+    storage.init().catch((err) => {
+      console.error("[storage] init error (non-fatal):", err);
+    });
+  }
 })().catch((err) => {
   console.error("Fatal startup error:", err);
   process.exit(1);
