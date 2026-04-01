@@ -90,6 +90,15 @@ shared/
   qualification.ts     - Product qualification system
 ```
 
+## Moyasar Payment Integration
+- **Flow**: User clicks upgrade → POST `/api/payments/create` → backend calls Moyasar API → returns `redirectUrl` → frontend redirects user → Moyasar payment page → redirect to `/payment/callback?status=paid&id=...` → frontend verifies via GET `/api/payments/verify/:id`
+- **Plans**: Pro = 109 ر.س/month (10,900 halalas), Enterprise = 371 ر.س/month (37,100 halalas)
+- **Pricing page**: `client/src/pages/pricing-page.tsx` — real SAR prices, upgrade buttons call Moyasar
+- **Callback page**: `client/src/pages/payment-callback.tsx` — handles paid/failed states
+- **Backend routes**: `POST /api/payments/create`, `GET /api/payments/verify/:id`
+- **Security**: Secret key server-side only (`MOYASAR_SECRET_KEY`). Publishable key available as `MOYASAR_PUBLISHABLE_KEY` for future embedded form use.
+- **Currency**: SAR, supports مدى / Visa / Mastercard via Moyasar
+
 ## API Routes
 - `GET /api/config` - Supabase enabled check
 - `POST /api/auth/signup` - Create account

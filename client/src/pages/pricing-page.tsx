@@ -1,13 +1,17 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    period: "مجاناً للأبد",
+    key: null,
+    name: "مجانية",
+    priceDisplay: "مجاناً",
+    period: "للأبد",
     description: "ابدأ بأبحاث المنتجات الأساسية",
     features: [
       "50 مشاهدة منتج/شهرياً",
@@ -20,9 +24,10 @@ const plans = [
     current: true,
   },
   {
-    name: "Pro",
-    price: "$29",
-    period: "/شهرياً",
+    key: "pro",
+    name: "احترافية",
+    priceDisplay: "109",
+    period: "ر.س / شهرياً",
     description: "وصول كامل للبائعين المحترفين",
     features: [
       "مشاهدات غير محدودة",
@@ -38,9 +43,10 @@ const plans = [
     current: false,
   },
   {
-    name: "Enterprise",
-    price: "$99",
-    period: "/شهرياً",
+    key: "enterprise",
+    name: "مؤسسات",
+    priceDisplay: "371",
+    period: "ر.س / شهرياً",
     description: "للفرق والوكالات",
     features: [
       "كل مزايا الاحترافية",
@@ -52,13 +58,39 @@ const plans = [
       "تغذية بيانات مخصصة",
       "ضمان مستوى الخدمة",
     ],
-    cta: "تواصل مع المبيعات",
+    cta: "ترقية للمؤسسات",
     popular: false,
     current: false,
   },
 ];
 
 export default function PricingPage() {
+  const { toast } = useToast();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  async function handleUpgrade(planKey: string) {
+    setLoadingPlan(planKey);
+    try {
+      const res = await apiRequest("POST", "/api/payments/create", { plan: planKey });
+      const data = await res.json();
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        toast({ title: "خطأ", description: "تعذر إنشاء جلسة الدفع", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({
+        title: "خطأ في الدفع",
+        description: err.message?.includes("503")
+          ? "خدمة الدفع غير متاحة حالياً"
+          : "تعذر الاتصال ببوابة الدفع، حاول مجدداً",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingPlan(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -67,10 +99,11 @@ export default function PricingPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6 max-w-4xl">
-        {plans.map((plan, i) => (
+        {plans.map((plan) => (
           <Card
-            key={i}
+            key={plan.name}
             className={`hover-elevate relative ${plan.popular ? "border-primary border-2" : ""}`}
+            data-testid={`card-plan-${plan.key ?? "free"}`}
           >
             {plan.popular && (
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -79,15 +112,16 @@ export default function PricingPage() {
             )}
             <CardContent className="p-6 space-y-5">
               <div>
-                <h3 className="font-semibold text-lg">
-                  {plan.name === "Free" ? "مجانية" : plan.name === "Pro" ? "احترافية" : "مؤسسات"}
-                </h3>
+                <h3 className="font-semibold text-lg">{plan.name}</h3>
                 <p className="text-sm text-muted-foreground mt-0.5">{plan.description}</p>
                 <div className="flex items-baseline gap-1 mt-3">
-                  <span className="text-3xl font-bold">{plan.price}</span>
+                  <span className="text-3xl font-bold" data-testid={`text-price-${plan.key ?? "free"}`}>
+                    {plan.priceDisplay}
+                  </span>
                   <span className="text-sm text-muted-foreground">{plan.period}</span>
                 </div>
               </div>
+
               <ul className="space-y-2">
                 {plan.features.map((f, j) => (
                   <li key={j} className="flex items-center gap-2 text-sm">
@@ -96,18 +130,28 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
+
               <Button
                 className="w-full"
                 variant={plan.current ? "secondary" : plan.popular ? "default" : "outline"}
-                disabled={plan.current}
-                data-testid={`button-plan-${plan.name.toLowerCase()}`}
+                disabled={plan.current || loadingPlan === plan.key}
+                onClick={() => plan.key && handleUpgrade(plan.key)}
+                data-testid={`button-plan-${plan.key ?? "free"}`}
               >
+                {loadingPlan === plan.key ? (
+                  <Loader2 className="w-4 h-4 animate-spin me-2" />
+                ) : null}
                 {plan.cta}
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <p className="text-xs text-muted-foreground max-w-xl">
+        جميع المدفوعات تتم عبر بوابة Moyasar الآمنة. تدعم مدى، فيزا، وماستركارد.
+        الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة.
+      </p>
     </div>
   );
 }

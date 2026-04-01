@@ -535,5 +535,125 @@ export async function registerRoutes(
     res.json(getTikTokStatus());
   });
 
+  const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
+
+  const PLANS: Record<string, { nameAr: string; amountHalalas: number }> = {
+    pro: { nameAr: "باقة احترافية - نخلة", amountHalalas: 10900 * 100 },
+    enterprise: { nameAr: "باقة مؤسسات - نخلة", amountHalalas: 37100 * 100 },
+  };
+
+  const createPaymentSchema = z.object({
+    plan: z.enum(["pro", "enterprise"]),
+  });
+
+  app.post("/api/payments/create", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      if (!MOYASAR_SECRET_KEY) {
+        return res.status(503).json({ message: "Payment service not configured" });
+      }
+
+      const parsed = createPaymentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid plan" });
+      }
+
+      const { plan } = parsed.data;
+      const planConfig = PLANS[plan];
+
+      const host = isProdEnv
+        ? "https://nakhlah.io"
+        : `http://localhost:${process.env.PORT || 5000}`;
+
+      const callbackUrl = `${host}/payment/callback?plan=${plan}&userId=${userId}`;
+
+      const credentials = Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString("base64");
+
+      const moyasarRes = await fetch("https://api.moyasar.com/v1/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${credentials}`,
+        },
+        body: JSON.stringify({
+          amount: planConfig.amountHalalas,
+          currency: "SAR",
+          description: planConfig.nameAr,
+          callback_url: callbackUrl,
+          source: { type: "creditcard" },
+          metadata: { userId, plan },
+        }),
+      });
+
+      if (!moyasarRes.ok) {
+        const errBody = await moyasarRes.json().catch(() => ({}));
+        console.error("[moyasar] Create payment error:", errBody);
+        return res.status(502).json({ message: safeErrorMessage(errBody, "Payment creation failed") });
+      }
+
+      const payment = await moyasarRes.json();
+
+      const redirectUrl =
+        payment?.source?.transaction_url ||
+        payment?.url ||
+        null;
+
+      if (!redirectUrl) {
+        console.error("[moyasar] No redirect URL in response:", payment);
+        return res.status(502).json({ message: "Payment gateway did not return a redirect URL" });
+      }
+
+      res.json({ paymentId: payment.id, redirectUrl });
+    } catch (err: any) {
+      console.error("[moyasar] Unexpected error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "Payment request failed") });
+    }
+  });
+
+  app.get("/api/payments/verify/:id", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      if (!MOYASAR_SECRET_KEY) {
+        return res.status(503).json({ message: "Payment service not configured" });
+      }
+
+      const { id } = req.params;
+      if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+        return res.status(400).json({ message: "Invalid payment ID" });
+      }
+
+      const credentials = Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString("base64");
+
+      const moyasarRes = await fetch(`https://api.moyasar.com/v1/payments/${id}`, {
+        headers: { Authorization: `Basic ${credentials}` },
+      });
+
+      if (!moyasarRes.ok) {
+        return res.status(502).json({ message: "Could not verify payment" });
+      }
+
+      const payment = await moyasarRes.json();
+
+      res.json({
+        id: payment.id,
+        status: payment.status,
+        amount: payment.amount,
+        currency: payment.currency,
+        description: payment.description,
+        createdAt: payment.created_at,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Payment verification failed") });
+    }
+  });
+
   return httpServer;
 }
