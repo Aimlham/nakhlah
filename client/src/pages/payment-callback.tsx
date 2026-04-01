@@ -3,8 +3,19 @@ import { useLocation } from "wouter";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
+import { getAccessToken } from "@/lib/supabase";
 
 type Status = "loading" | "paid" | "failed" | "unknown";
+
+const PENDING_INVOICE_KEY = "nakhlah_pending_invoice";
+
+async function authFetch(url: string): Promise<Response> {
+  const token = await getAccessToken();
+  return fetch(url, {
+    credentials: "include",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+}
 
 export default function PaymentCallbackPage() {
   const [, navigate] = useLocation();
@@ -12,57 +23,96 @@ export default function PaymentCallbackPage() {
   const [plan, setPlan] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
+  function onSuccess(planName?: string) {
+    if (planName) setPlan(planName);
+    sessionStorage.removeItem(PENDING_INVOICE_KEY);
+    queryClient.invalidateQueries({ queryKey: ["/api/payments/subscription"] });
+    setStatus("paid");
+    setTimeout(() => navigate("/products"), 2000);
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
 
-    // Moyasar appends ?id=<invoiceId>&status=paid|failed to back_url
-    const invoiceId  = params.get("id");
-    const moyasarStatus = params.get("status"); // "paid" | "failed" | "expired"
-    const planParam  = params.get("plan") ?? "";
+    // Moyasar appends ?id=<invoiceId>&status=paid|failed when auto-redirecting after payment.
+    // When the user clicks "Back to my page" manually, these params may be absent.
+    const urlInvoiceId = params.get("id");
+    const moyasarStatus = params.get("status");
+    const planParam = params.get("plan") ?? "";
     setPlan(planParam);
 
-    // If Moyasar itself says failed/expired, no need to verify
+    // Explicit failure from Moyasar — no need to verify
     if (moyasarStatus === "failed" || moyasarStatus === "expired") {
       setStatus("failed");
       setErrorMsg("لم يتم إتمام عملية الدفع");
       return;
     }
 
-    if (!invoiceId) {
-      setStatus("unknown");
-      setErrorMsg("لم يتم العثور على معرّف الدفع");
-      return;
-    }
+    // Use invoiceId from URL if present, otherwise fall back to sessionStorage
+    const invoiceId = urlInvoiceId || sessionStorage.getItem(PENDING_INVOICE_KEY);
 
-    // Always do server-side verification — never trust status query param alone
-    fetch(`/api/payments/verify/${invoiceId}`, { credentials: "include" })
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data: { status: string; plan?: string }) => {
-        if (data.status === "paid") {
-          if (data.plan) setPlan(data.plan);
-          // Invalidate subscription cache so SubscribedRoute picks up new status
-          queryClient.invalidateQueries({ queryKey: ["/api/payments/subscription"] });
-          setStatus("paid");
-          // Auto-redirect to products after 2 seconds
-          setTimeout(() => navigate("/products"), 2000);
-        } else if (data.status === "pending") {
-          // Webhook may still be in flight — show pending state
-          setStatus("loading");
-          setErrorMsg("جاري تأكيد الدفع من البوابة...");
-        } else {
+    if (invoiceId) {
+      // Verify with the server — this also activates the subscription if paid
+      authFetch(`/api/payments/verify/${invoiceId}`)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((data: { status: string; plan?: string }) => {
+          if (data.status === "paid") {
+            onSuccess(data.plan);
+          } else if (data.status === "pending") {
+            // Webhook may still be in flight — also try subscription endpoint
+            return authFetch("/api/payments/subscription")
+              .then((r) => r.json())
+              .then((sub: { status: string; plan?: string }) => {
+                if (sub.status === "active") {
+                  onSuccess(sub.plan);
+                } else {
+                  setStatus("loading");
+                  setErrorMsg("جاري تأكيد الدفع من البوابة...");
+                }
+              });
+          } else {
+            setStatus("failed");
+            setErrorMsg("لم يتم تأكيد الدفع من البوابة");
+          }
+        })
+        .catch((err) => {
+          console.error("[payment-callback] verify error:", err);
+          // If verify fails, check subscription directly as a last resort
+          authFetch("/api/payments/subscription")
+            .then((r) => r.json())
+            .then((sub: { status: string; plan?: string }) => {
+              if (sub.status === "active") {
+                onSuccess(sub.plan);
+              } else {
+                setStatus("failed");
+                setErrorMsg("تعذّر التحقق من حالة الدفع، يرجى التواصل مع الدعم");
+              }
+            })
+            .catch(() => {
+              setStatus("failed");
+              setErrorMsg("تعذّر التحقق من حالة الدفع، يرجى التواصل مع الدعم");
+            });
+        });
+    } else {
+      // No invoiceId at all — check subscription status directly
+      authFetch("/api/payments/subscription")
+        .then((r) => r.json())
+        .then((sub: { status: string; plan?: string }) => {
+          if (sub.status === "active") {
+            onSuccess(sub.plan);
+          } else {
+            setStatus("failed");
+            setErrorMsg("لم يتم العثور على معرّف الدفع");
+          }
+        })
+        .catch(() => {
           setStatus("failed");
-          setErrorMsg("لم يتم تأكيد الدفع من البوابة");
-        }
-      })
-      .catch((err) => {
-        // Verification call failed (network, auth) — show failure, do NOT fake success
-        console.error("[payment-callback] verify error:", err);
-        setStatus("failed");
-        setErrorMsg("تعذّر التحقق من حالة الدفع، يرجى التواصل مع الدعم");
-      });
+          setErrorMsg("تعذّر التحقق من حالة الدفع");
+        });
+    }
   }, []);
 
   const planLabel = plan === "pro" ? "نخلة برو" : "";

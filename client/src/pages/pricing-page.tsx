@@ -27,7 +27,11 @@ export default function PricingPage() {
       const res = await apiRequest("POST", "/api/payments/create", { plan: "pro" });
       const data = await res.json();
       const url = data.invoiceUrl || data.redirectUrl;
-      if (url) {
+      if (url && data.invoiceId) {
+        // Save invoiceId so callback page can verify even if Moyasar omits ?id= from redirect
+        sessionStorage.setItem("nakhlah_pending_invoice", data.invoiceId);
+        window.location.href = url;
+      } else if (url) {
         window.location.href = url;
       } else {
         toast({ title: "خطأ", description: "تعذر إنشاء جلسة الدفع", variant: "destructive" });
