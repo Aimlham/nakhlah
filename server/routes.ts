@@ -576,9 +576,16 @@ export async function registerRoutes(
       const { plan } = parsed.data;
       const planConfig = PLANS[plan];
 
-      const host = isProdEnv
-        ? "https://nakhlah.io"
-        : `http://localhost:${process.env.PORT || 5000}`;
+      // Build the host from the actual request so it works in dev (Replit),
+      // staging, and production without hardcoding localhost.
+      let host: string;
+      if (isProdEnv) {
+        host = "https://nakhlah.io";
+      } else {
+        const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol || "https";
+        const reqHost = req.headers["x-forwarded-host"] as string || req.get("host") || "localhost:5000";
+        host = `${proto}://${reqHost}`;
+      }
 
       // back_url is where Moyasar redirects the browser after payment
       // id= will be the invoice ID, status= will be paid/failed
