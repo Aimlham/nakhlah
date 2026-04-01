@@ -638,6 +638,34 @@ export async function registerRoutes(
     try {
       if (!MOYASAR_SECRET_KEY) return res.status(503).end();
 
+      // ── Token verification ────────────────────────────────────────────────
+      // Moyasar sends the verification token in the Secret-Token header.
+      // We use timingSafeEqual to prevent timing-based side-channel attacks.
+      const WEBHOOK_TOKEN = process.env.MOYASAR_WEBHOOK_TOKEN;
+      if (!WEBHOOK_TOKEN) {
+        console.error("[moyasar webhook] MOYASAR_WEBHOOK_TOKEN not configured");
+        return res.status(503).end();
+      }
+
+      const receivedToken = req.headers["secret-token"];
+      if (typeof receivedToken !== "string") {
+        return res.status(401).json({ message: "Missing webhook token" });
+      }
+
+      // Constant-time comparison — prevents timing attacks
+      const { timingSafeEqual } = await import("crypto");
+      const expected = Buffer.from(WEBHOOK_TOKEN,  "utf8");
+      const received = Buffer.from(receivedToken,  "utf8");
+      const tokensMatch =
+        expected.length === received.length &&
+        timingSafeEqual(expected, received);
+
+      if (!tokensMatch) {
+        console.warn("[moyasar webhook] Invalid token — request rejected");
+        return res.status(401).json({ message: "Invalid webhook token" });
+      }
+      // ── End token verification ─────────────────────────────────────────────
+
       // Moyasar sends the payment/invoice object in the body
       const event = req.body;
       const invoiceId: string | undefined = event?.id ?? event?.invoice_id;
