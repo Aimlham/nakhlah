@@ -158,6 +158,14 @@ shared/
 - **Amazon**: `supplierPrice` = estimated AliExpress cost (Amazon price × 0.6). `suggestedSellPrice` = Amazon price × markup. `actualSellPrice` = Amazon retail price in SAR.
 - Rule: `supplierPrice` must ALWAYS be lower than `suggestedSellPrice` / `actualSellPrice`
 
+## Security Audit Results (April 2026)
+- **Passwords (MemStorage)**: Hashed with bcrypt (12 rounds) — fixed. Production uses Supabase which handles its own hashing.
+- **Supabase admin key**: Confirmed server-side only. Client uses anon key only. Not an issue.
+- **localStorage**: Stores `{id, email, fullName}` only — no tokens or passwords. Acceptable.
+- **CSRF**: Not a real risk — primary auth uses Bearer token (not cookies). Not an issue.
+- **MemStorage data loss**: Architectural limitation only, not a security issue.
+- **Prompt injection (OpenAI)**: Low risk — structured data from own DB. Acceptable.
+
 ## Production Security
 - **Helmet**: Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) — CSP disabled for SPA compatibility
 - **CORS**: Production-only restriction to `nakhlah.io` / `www.nakhlah.io`; dev mode allows all origins

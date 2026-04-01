@@ -1,0 +1,80 @@
+You are a senior security-focused full-stack engineer reviewing my existing SaaS project.
+
+Project:
+- Name: nakhlah
+- Stack: Node.js, Express, React, Vite
+- Hosted on Railway
+- Developed in Replit
+- Domain: https://nakhlah.io
+
+I previously received a security/code review that flagged several possible issues in my project. Your task is NOT to blindly trust that report. Your job is to inspect the actual codebase and verify each issue carefully before making changes.
+
+Important rules:
+1. First inspect the codebase and confirm which issues are real, partially real, or false alarms.
+2. Do NOT refactor unrelated parts of the app.
+3. Do NOT break existing routes, dashboard, auth, deployment, or styling.
+4. Keep all fixes minimal, clean, and production-safe.
+5. After reviewing, prioritize the issues by actual severity.
+6. Fix the most critical confirmed issues first.
+7. Only after that, prepare the project for Moyasar payment integration.
+8. Explain all confirmed issues and all changes clearly by file.
+
+Security issues to verify in the codebase:
+- passwords stored in plain text
+- weak fallback SESSION_SECRET
+- possible Supabase admin/service role key exposure
+- permissive CORS configuration
+- verbose error leakage
+- missing input validation
+- in-memory fallback storage
+- auth or user data stored in localStorage
+- missing CSRF protection
+- incomplete rate limiting coverage
+- unsafe external imported data sanitization
+- sensitive logging
+- disabled Content Security Policy
+- path traversal risks in static file serving
+- prompt injection risk in OpenAI integration
+
+Your work must happen in this order:
+
+PHASE 1: Audit and verification
+- Scan the whole project structure
+- Identify the exact files involved
+- For each reported issue, mark it as:
+  - confirmed
+  - partially confirmed
+  - not confirmed
+- Show a short security report before coding
+
+PHASE 2: Fix only the critical/high confirmed issues first
+Priority fixes to implement if confirmed:
+1. Hash passwords securely using bcrypt or argon2
+2. Remove any hardcoded/fallback session secret in production
+3. Ensure Supabase service role/admin key is server-only and never exposed to frontend
+4. Move sensitive auth/token storage away from localStorage if applicable
+5. Add input validation using Zod for the most important API endpoints first
+6. Tighten CORS safely
+7. Improve rate limiting for sensitive endpoints
+8. Reduce sensitive error/message leakage in production
+
+PHASE 3: Prepare for payments
+- Once the critical security issues are fixed, tell me whether the app is safe enough to proceed with Moyasar integration
+- Do not integrate Moyasar yet unless the critical issues are fixed first
+
+Constraints:
+- Minimal invasive changes only
+- No unnecessary refactor
+- No deleting working app logic unless required for security
+- Keep production compatibility with Railway
+- Keep frontend and backend structure consistent with the existing project
+
+Final output required:
+1. Security audit summary with confirmed vs unconfirmed issues
+2. Exact files changed
+3. Exact code changes made
+4. Any required env vars
+5. Remaining issues that still need later work
+6. Clear statement whether the app is now ready for Moyasar integration
+
+Start now by scanning the project structure and verifying the reported issues against the real code.

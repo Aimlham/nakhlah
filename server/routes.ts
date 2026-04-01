@@ -170,7 +170,12 @@ export async function registerRoutes(
       }
 
       const user = await storage.getUserByUsername(email);
-      if (!user || user.password !== password) {
+      const passwordValid = user && (
+        storage.verifyPassword
+          ? await storage.verifyPassword(password, user.password)
+          : user.password === password
+      );
+      if (!passwordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       (req.session as any).userId = user.id;
@@ -338,13 +343,25 @@ export async function registerRoutes(
     }
   });
 
+  const adsQuerySchema = z.object({
+    search: z.string().max(200).optional(),
+    platform: z.string().max(50).optional(),
+    niche: z.string().max(100).optional(),
+    minViews: z.string().regex(/^\d+$/).optional(),
+  });
+
   app.get("/api/ads", async (req: Request, res: Response) => {
     try {
+      const parsed = adsQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid query parameters" });
+      }
+
       let ads = await storage.getAllAds();
       const products = await storage.getAllProducts();
       const productMap = new Map(products.map(p => [p.id, p]));
 
-      const { search, platform, niche, minViews } = req.query;
+      const { search, platform, niche, minViews } = parsed.data;
 
       if (platform && platform !== "all") {
         ads = ads.filter(a => a.platform === platform);

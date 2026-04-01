@@ -62,11 +62,20 @@ const authLimiter = rateLimit({
   message: { message: "Too many authentication attempts, please try again later." },
 });
 
+const importLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Import limit reached. Please wait before importing again." },
+});
+
 app.use("/api/", apiLimiter);
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/signup", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
 app.use("/api/auth/reset-password", authLimiter);
+app.use("/api/import/", importLimiter);
 
 if (isProd) {
   app.use((req: Request, res: Response, next: NextFunction) => {

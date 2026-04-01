@@ -1,0 +1,81 @@
+بناءً على فحصي الدقيق للكود، إليك المشاكل والأخطاء الأمنية والوظيفية التي وجدتها في التطبيق:
+🔴 مشاكل حرجة (Critical)
+1. تخزين كلمات المرور كنص عادي ⚠️
+الموقع: shared/schema.ts (سطر 9)، server/storage.ts (سطر 65، 173)
+المشكلة: كلمات المرور تُخزن كما هي بدون تشفير (Hashing)
+الخطر: أي شخص يصل لقاعدة البيانات يرى كلمات مرور جميع المستخدمين
+الكود المشكلة:
+typescript
+1234
+2. سرّ جلسة ضعيف (Session Secret)
+الموقع: server/routes.ts (سطر 66)
+المشكلة: إذا لم يتم تعيين SESSION_SECRET في البيئة، يستخدم قيمة ثابتة ومعروفة
+الكود:
+typescript
+1
+3. مفتاح Supabase Admin
+الموقع: server/supabase.ts
+الخطر: إذا تم تسريب هذا المفتاح للعميل (Client-side)، يمكن للمهاجمين التحكم الكامل بقاعدة البيانات
+🟡 مشاكل عالية الخطورة (High Severity)
+4. سياسة CORS المتساهلة
+الموقع: server/index.ts (سطر 32-41)
+المشكلة: في بيئة التطوير، يسمح لأي Origin بالوصول مع Credentials
+الكود:
+typescript
+1234
+5. كشف معلومات الأخطاء
+الموقع: server/routes.ts (سطر 18-21)، server/index.ts (سطر 156)
+المشكلة: في بيئة التطوير، يُرجع رسائل الخطأ الكاملة التي قد تكشف معلومات حساسة
+الكود:
+typescript
+1234
+6. عدم التحقق من صحة المدخلات (Input Validation)
+الموقع: server/routes.ts (سطر 347-377) - Endpoint /api/ads
+المشكلة: معاملات البحث (search, platform, niche, minViews) لا يتم التحقق منها بشكل كافٍ
+الخطر: هجمات XSS أو Injection محتملة
+7. التخزين في الذاكرة فقط
+الموقع: server/storage.ts (سطر 208-209)
+المشكلة: إذا لم يكن Supabase مُفعّل، كل البيانات تضيع عند إعادة التشغيل
+الكود:
+typescript
+12
+🟠 مشاكل متوسطة الخطورة (Medium Severity)
+8. استخدام localStorage للبيانات الحساسة
+الموقع: client/src/lib/auth.tsx (سطر 23، 31)
+المشكلة: بيانات المستخدم تُخزن في localStorage المعرض لهجمات XSS
+الكود:
+typescript
+12
+9. عدم وجود حماية CSRF
+المشكلة: لا توجد Tokens للحماية من هجمات Cross-Site Request Forgery
+الخطر: مهاجم يمكنه تنفيذ إجراءات نيابة عن المستخدم المصادق عليه
+10. محدودية Rate Limiting
+الموقع: server/index.ts (سطر 57-69)
+المشكلة: Rate Limiting غير مُطبق على جميع endpoints الحساسة مثل /api/import/*
+11. بيانات خارجية غير مُتحقق منها
+الموقع: aliexpress-importer.ts, amazon-importer.ts, tiktok-importer.ts
+المشكلة: البيانات القادمة من Apify/AliExpress/Amazon لا يتم تنظيفها بشكل كافٍ قبل التخزين
+🟢 مشاكل منخفضة الخطورة (Low Severity)
+12. تسجيل بيانات حساسة في Console
+الموقع: server/index.ts (سطر 124)
+المشكلة: بعض الردود JSON قد تحتوي على بيانات حساسة تُطبع في اللوج
+13. سياسة أمان المحتوى (CSP) معطلة
+الموقع: server/index.ts (سطر 21)
+الكود:
+typescript
+1234
+14. عدم وجود تحقق من Path Traversal
+الموقع: server/static.ts
+الملاحظة: حالياً آمن لكن يحتاج مراقبة عند التوسع
+15. خطر Prompt Injection في OpenAI
+الموقع: server/openai.ts
+المشكلة: بيانات المنتج تُرسل لـ OpenAI بدون تنظيف قد يسمح بحقن أوامر خبيثة
+✅ الإجراءات الموصى بها فوراً
+تشفير كلمات المرور باستخدام bcrypt أو argon2
+تعيين SESSION_SECRET قوي في متغيرات البيئة
+إضافة Zod validation لجميع المدخلات
+تفعيل CSRF Protection middleware
+تفعيل Content Security Policy
+نقلTokens المصادقة إلى httpOnly cookies بدلاً من localStorage
+تطبيق Rate Limiting على جميع endpoints الحساسة
+أخطر مشكلة حالياً هي تخزين كلمات المرور بدون تشفير ويجب معالجتها فوراً قبل أي نشر إنتاجي! 🚨

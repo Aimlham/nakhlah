@@ -1,13 +1,17 @@
 import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd } from "@shared/schema";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 import { supabaseConfigured } from "./supabase";
 import { SupabaseStorage } from "./supabase-storage";
 import { checkHalalSafeText } from "@shared/halal";
+
+const BCRYPT_ROUNDS = 12;
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  verifyPassword?(plaintext: string, hashed: string): Promise<boolean>;
   getAllProducts(): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
   getSavedProductIds(userId: string): Promise<string[]>;
@@ -59,15 +63,20 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
+    const hashedPassword = await bcrypt.hash(insertUser.password, BCRYPT_ROUNDS);
     const user: User = {
       id,
       username: insertUser.username,
-      password: insertUser.password,
+      password: hashedPassword,
       fullName: insertUser.fullName ?? null,
       email: insertUser.email ?? null,
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async verifyPassword(plaintext: string, hashed: string): Promise<boolean> {
+    return bcrypt.compare(plaintext, hashed);
   }
 
   async getAllProducts(): Promise<Product[]> {
