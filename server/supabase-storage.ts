@@ -5,6 +5,7 @@ import type {
   InsertProduct,
   SavedProduct,
   ProductAd,
+  Subscription,
 } from "@shared/schema";
 import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
@@ -383,6 +384,87 @@ export class SupabaseStorage implements IStorage {
     if (!data || data.length === 0) return undefined;
     return mapProduct(data[0]);
   }
+
+  async upsertSubscription(sub: {
+    userId: string;
+    plan: string;
+    status: string;
+    moyasarInvoiceId?: string;
+    moyasarPaymentId?: string;
+    amountHalalas?: number;
+    activatedAt?: Date | null;
+  }): Promise<Subscription> {
+    if (!supabaseAdmin) throw new Error("Supabase not configured");
+
+    const existing = await this.getSubscriptionByUserId(sub.userId);
+
+    const record = {
+      user_id: sub.userId,
+      plan: sub.plan,
+      status: sub.status,
+      moyasar_invoice_id: sub.moyasarInvoiceId ?? existing?.moyasarInvoiceId ?? null,
+      moyasar_payment_id: sub.moyasarPaymentId ?? existing?.moyasarPaymentId ?? null,
+      amount_halalas: sub.amountHalalas ?? existing?.amountHalalas ?? null,
+      activated_at: sub.activatedAt !== undefined
+        ? (sub.activatedAt ? sub.activatedAt.toISOString() : null)
+        : (existing?.activatedAt ? existing.activatedAt.toISOString() : null),
+    };
+
+    if (existing) {
+      const { data, error } = await supabaseAdmin
+        .from("subscriptions")
+        .update(record)
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return mapSubscription(data);
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from("subscriptions")
+        .insert(record)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return mapSubscription(data);
+    }
+  }
+
+  async getSubscriptionByUserId(userId: string): Promise<Subscription | undefined> {
+    if (!supabaseAdmin) return undefined;
+    const { data, error } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error || !data) return undefined;
+    return mapSubscription(data);
+  }
+
+  async getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined> {
+    if (!supabaseAdmin) return undefined;
+    const { data, error } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .eq("moyasar_invoice_id", invoiceId)
+      .maybeSingle();
+    if (error || !data) return undefined;
+    return mapSubscription(data);
+  }
+}
+
+function mapSubscription(row: Record<string, unknown>): Subscription {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    plan: row.plan as string,
+    status: row.status as string,
+    moyasarInvoiceId: (row.moyasar_invoice_id as string) ?? null,
+    moyasarPaymentId: (row.moyasar_payment_id as string) ?? null,
+    amountHalalas: (row.amount_halalas as number) ?? null,
+    activatedAt: row.activated_at ? new Date(row.activated_at as string) : null,
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
 }
 
 function mapProductAd(row: Record<string, unknown>): ProductAd {

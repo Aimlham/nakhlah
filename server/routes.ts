@@ -535,32 +535,44 @@ export async function registerRoutes(
     res.json(getTikTokStatus());
   });
 
+  // ─── Moyasar Payment Integration ──────────────────────────────────────────
+  //
+  // Uses the Moyasar INVOICES API (/v1/invoices) which returns a hosted
+  // payment URL the user is redirected to — correct for a SaaS upgrade flow.
+  //
+  // Flow:
+  //   1. POST /api/payments/create  → creates invoice, saves pending sub, returns invoiceUrl
+  //   2. User pays on Moyasar-hosted page
+  //   3. POST /api/moyasar/webhook  → Moyasar calls this; we verify server-side, activate sub
+  //   4. GET  /api/payments/verify/:invoiceId → callback page polls this to show result
+
   const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
 
   const PLANS: Record<string, { nameAr: string; amountHalalas: number }> = {
-    pro: { nameAr: "باقة احترافية - نخلة", amountHalalas: 10900 * 100 },
-    enterprise: { nameAr: "باقة مؤسسات - نخلة", amountHalalas: 37100 * 100 },
+    pro:        { nameAr: "باقة احترافية - نخلة", amountHalalas: 10900 },
+    enterprise: { nameAr: "باقة مؤسسات - نخلة",  amountHalalas: 37100 },
   };
+
+  function moyasarAuth(): string {
+    return `Basic ${Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString("base64")}`;
+  }
 
   const createPaymentSchema = z.object({
     plan: z.enum(["pro", "enterprise"]),
   });
 
+  // ── 1. Create Invoice ──────────────────────────────────────────────────────
   app.post("/api/payments/create", async (req: Request, res: Response) => {
     try {
       const userId = await getAuthUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
       if (!MOYASAR_SECRET_KEY) {
         return res.status(503).json({ message: "Payment service not configured" });
       }
 
       const parsed = createPaymentSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid plan" });
-      }
+      if (!parsed.success) return res.status(400).json({ message: "Invalid plan" });
 
       const { plan } = parsed.data;
       const planConfig = PLANS[plan];
@@ -569,89 +581,222 @@ export async function registerRoutes(
         ? "https://nakhlah.io"
         : `http://localhost:${process.env.PORT || 5000}`;
 
-      const callbackUrl = `${host}/payment/callback?plan=${plan}&userId=${userId}`;
+      // back_url is where Moyasar redirects the browser after payment
+      // id= will be the invoice ID, status= will be paid/failed
+      const backUrl = `${host}/payment/callback?plan=${encodeURIComponent(plan)}&userId=${encodeURIComponent(userId)}`;
 
-      const credentials = Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString("base64");
-
-      const moyasarRes = await fetch("https://api.moyasar.com/v1/payments", {
+      const moyasarRes = await fetch("https://api.moyasar.com/v1/invoices", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${credentials}`,
+          Authorization: moyasarAuth(),
         },
         body: JSON.stringify({
-          amount: planConfig.amountHalalas,
-          currency: "SAR",
+          amount:      planConfig.amountHalalas,
+          currency:    "SAR",
           description: planConfig.nameAr,
-          callback_url: callbackUrl,
-          source: { type: "creditcard" },
-          metadata: { userId, plan },
+          back_url:    backUrl,
+          metadata:    { userId, plan },
         }),
       });
 
       if (!moyasarRes.ok) {
         const errBody = await moyasarRes.json().catch(() => ({}));
-        console.error("[moyasar] Create payment error:", errBody);
+        console.error("[moyasar] Create invoice error:", errBody);
         return res.status(502).json({ message: safeErrorMessage(errBody, "Payment creation failed") });
       }
 
-      const payment = await moyasarRes.json();
+      const invoice = await moyasarRes.json();
 
-      const redirectUrl =
-        payment?.source?.transaction_url ||
-        payment?.url ||
-        null;
-
-      if (!redirectUrl) {
-        console.error("[moyasar] No redirect URL in response:", payment);
-        return res.status(502).json({ message: "Payment gateway did not return a redirect URL" });
+      // invoice.url  is the hosted payment page URL
+      if (!invoice?.url) {
+        console.error("[moyasar] No url in invoice response:", invoice);
+        return res.status(502).json({ message: "Payment gateway did not return a payment URL" });
       }
 
-      res.json({ paymentId: payment.id, redirectUrl });
+      // Save a pending subscription record so we can look it up on callback
+      await storage.upsertSubscription({
+        userId,
+        plan,
+        status:          "pending",
+        moyasarInvoiceId: invoice.id,
+        amountHalalas:   planConfig.amountHalalas,
+      });
+
+      res.json({ invoiceId: invoice.id, invoiceUrl: invoice.url });
     } catch (err: any) {
       console.error("[moyasar] Unexpected error:", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "Payment request failed") });
     }
   });
 
-  app.get("/api/payments/verify/:id", async (req: Request, res: Response) => {
+  // ── 2. Webhook ─────────────────────────────────────────────────────────────
+  // Moyasar POSTs here when an invoice status changes.
+  // We always re-fetch from Moyasar to confirm the status (never trust the webhook body alone).
+  // Idempotent: if subscription is already active for this invoice, we skip.
+  app.post("/api/moyasar/webhook", async (req: Request, res: Response) => {
+    try {
+      if (!MOYASAR_SECRET_KEY) return res.status(503).end();
+
+      // Moyasar sends the payment/invoice object in the body
+      const event = req.body;
+      const invoiceId: string | undefined = event?.id ?? event?.invoice_id;
+
+      if (!invoiceId || typeof invoiceId !== "string") {
+        return res.status(400).json({ message: "Missing invoice id" });
+      }
+
+      // Always verify server-side — never trust the webhook body status alone
+      const moyasarRes = await fetch(`https://api.moyasar.com/v1/invoices/${invoiceId}`, {
+        headers: { Authorization: moyasarAuth() },
+      });
+
+      if (!moyasarRes.ok) {
+        console.error("[moyasar webhook] Could not fetch invoice", invoiceId);
+        return res.status(502).end();
+      }
+
+      const invoice = await moyasarRes.json();
+      const invoiceStatus: string = invoice?.status ?? "";
+
+      // Find the pending subscription for this invoice
+      const existing = await storage.getSubscriptionByInvoiceId(invoiceId);
+      if (!existing) {
+        // Invoice not created by us — ignore silently
+        return res.status(200).json({ ignored: true });
+      }
+
+      // Idempotency: already activated — do not double-process
+      if (existing.status === "active" && invoiceStatus === "paid") {
+        return res.status(200).json({ already: "active" });
+      }
+
+      if (invoiceStatus === "paid") {
+        // Extract the payment ID from the invoice (Moyasar nests it under payments[])
+        const paymentId: string | undefined =
+          invoice?.payments?.[0]?.id ?? invoice?.payment_id ?? undefined;
+
+        await storage.upsertSubscription({
+          userId:           existing.userId,
+          plan:             existing.plan,
+          status:           "active",
+          moyasarInvoiceId: invoiceId,
+          moyasarPaymentId: paymentId,
+          amountHalalas:    existing.amountHalalas ?? undefined,
+          activatedAt:      new Date(),
+        });
+
+        console.log(`[moyasar webhook] Subscription activated for user ${existing.userId}, plan ${existing.plan}`);
+      } else if (invoiceStatus === "failed" || invoiceStatus === "expired") {
+        await storage.upsertSubscription({
+          userId:           existing.userId,
+          plan:             existing.plan,
+          status:           invoiceStatus,
+          moyasarInvoiceId: invoiceId,
+        });
+      }
+      // Any other status (initiated, pending) — ignore, webhook may fire again
+
+      res.status(200).json({ received: true });
+    } catch (err: any) {
+      console.error("[moyasar webhook] Error:", err.message);
+      res.status(500).end();
+    }
+  });
+
+  // ── 3. Verify (called by callback page to show paid/failed UI) ──────────────
+  // Looks up subscription in our DB first. If not yet active (webhook may lag),
+  // also checks Moyasar directly so the UI is not stuck on "pending".
+  app.get("/api/payments/verify/:invoiceId", async (req: Request, res: Response) => {
     try {
       const userId = await getAuthUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
 
       if (!MOYASAR_SECRET_KEY) {
         return res.status(503).json({ message: "Payment service not configured" });
       }
 
-      const { id } = req.params;
-      if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
-        return res.status(400).json({ message: "Invalid payment ID" });
+      const { invoiceId } = req.params;
+      if (!invoiceId || !/^[a-zA-Z0-9_-]+$/.test(invoiceId)) {
+        return res.status(400).json({ message: "Invalid invoice ID" });
       }
 
-      const credentials = Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString("base64");
+      // Check our DB first
+      const sub = await storage.getSubscriptionByInvoiceId(invoiceId);
 
-      const moyasarRes = await fetch(`https://api.moyasar.com/v1/payments/${id}`, {
-        headers: { Authorization: `Basic ${credentials}` },
+      // If subscription is already active in DB, return immediately
+      if (sub && sub.status === "active" && sub.userId === userId) {
+        return res.json({ status: "paid", plan: sub.plan, activatedAt: sub.activatedAt });
+      }
+
+      // Otherwise fetch from Moyasar directly to handle webhook lag
+      const moyasarRes = await fetch(`https://api.moyasar.com/v1/invoices/${invoiceId}`, {
+        headers: { Authorization: moyasarAuth() },
       });
 
       if (!moyasarRes.ok) {
         return res.status(502).json({ message: "Could not verify payment" });
       }
 
-      const payment = await moyasarRes.json();
+      const invoice = await moyasarRes.json();
 
-      res.json({
-        id: payment.id,
-        status: payment.status,
-        amount: payment.amount,
-        currency: payment.currency,
-        description: payment.description,
-        createdAt: payment.created_at,
-      });
+      // Security: confirm this invoice belongs to the requesting user
+      const metaUserId: string | undefined = invoice?.metadata?.userId;
+      if (metaUserId && metaUserId !== userId) {
+        return res.status(403).json({ message: "Payment does not belong to this account" });
+      }
+
+      const invoiceStatus: string = invoice?.status ?? "unknown";
+
+      // If Moyasar says paid but webhook hasn't fired yet, activate now
+      if (invoiceStatus === "paid" && sub && sub.userId === userId) {
+        const paymentId: string | undefined =
+          invoice?.payments?.[0]?.id ?? invoice?.payment_id ?? undefined;
+
+        await storage.upsertSubscription({
+          userId:           userId,
+          plan:             sub.plan,
+          status:           "active",
+          moyasarInvoiceId: invoiceId,
+          moyasarPaymentId: paymentId,
+          amountHalalas:    sub.amountHalalas ?? undefined,
+          activatedAt:      new Date(),
+        });
+
+        return res.json({ status: "paid", plan: sub.plan, activatedAt: new Date() });
+      }
+
+      // Map Moyasar statuses to a simple paid/failed/pending
+      const statusMap: Record<string, string> = {
+        paid:      "paid",
+        failed:    "failed",
+        expired:   "failed",
+        initiated: "pending",
+        pending:   "pending",
+      };
+
+      res.json({ status: statusMap[invoiceStatus] ?? "unknown" });
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Payment verification failed") });
+    }
+  });
+
+  // ── 4. Get current user subscription ───────────────────────────────────────
+  app.get("/api/payments/subscription", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+
+      const sub = await storage.getSubscriptionByUserId(userId);
+      if (!sub) return res.json({ plan: "free", status: "none" });
+
+      res.json({
+        plan:        sub.plan,
+        status:      sub.status,
+        activatedAt: sub.activatedAt,
+      });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Could not load subscription") });
     }
   });
 

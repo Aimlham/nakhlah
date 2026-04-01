@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd } from "@shared/schema";
+import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd, type Subscription } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { supabaseConfigured } from "./supabase";
@@ -25,6 +25,17 @@ export interface IStorage {
   updateProductAiSummary(productId: string, aiSummary: string): Promise<void>;
   updateProductPrices(productId: string, supplierPrice: string, suggestedSellPrice: string, actualSellPrice: string, estimatedMargin: string): Promise<void>;
   findProductByTitle(title: string, source: string): Promise<Product | undefined>;
+  upsertSubscription(sub: {
+    userId: string;
+    plan: string;
+    status: string;
+    moyasarInvoiceId?: string;
+    moyasarPaymentId?: string;
+    amountHalalas?: number;
+    activatedAt?: Date | null;
+  }): Promise<Subscription>;
+  getSubscriptionByUserId(userId: string): Promise<Subscription | undefined>;
+  getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined>;
   init?(): Promise<void>;
 }
 
@@ -45,12 +56,14 @@ export class MemStorage implements IStorage {
   private products: Map<string, Product>;
   private savedProducts: Map<string, SavedProduct>;
   private ads: Map<string, ProductAd>;
+  private subscriptions: Map<string, Subscription>;
 
   constructor() {
     this.users = new Map();
     this.products = new Map();
     this.savedProducts = new Map();
     this.ads = new Map();
+    this.subscriptions = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -206,6 +219,39 @@ export class MemStorage implements IStorage {
       }
     }
     return undefined;
+  }
+
+  async upsertSubscription(sub: {
+    userId: string;
+    plan: string;
+    status: string;
+    moyasarInvoiceId?: string;
+    moyasarPaymentId?: string;
+    amountHalalas?: number;
+    activatedAt?: Date | null;
+  }): Promise<Subscription> {
+    const existing = Array.from(this.subscriptions.values()).find(s => s.userId === sub.userId);
+    const record: Subscription = {
+      id: existing?.id ?? randomUUID(),
+      userId: sub.userId,
+      plan: sub.plan,
+      status: sub.status,
+      moyasarInvoiceId: sub.moyasarInvoiceId ?? existing?.moyasarInvoiceId ?? null,
+      moyasarPaymentId: sub.moyasarPaymentId ?? existing?.moyasarPaymentId ?? null,
+      amountHalalas: sub.amountHalalas ?? existing?.amountHalalas ?? null,
+      activatedAt: sub.activatedAt !== undefined ? sub.activatedAt : (existing?.activatedAt ?? null),
+      createdAt: existing?.createdAt ?? new Date(),
+    };
+    this.subscriptions.set(record.id, record);
+    return record;
+  }
+
+  async getSubscriptionByUserId(userId: string): Promise<Subscription | undefined> {
+    return Array.from(this.subscriptions.values()).find(s => s.userId === userId);
+  }
+
+  async getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined> {
+    return Array.from(this.subscriptions.values()).find(s => s.moyasarInvoiceId === invoiceId);
   }
 }
 

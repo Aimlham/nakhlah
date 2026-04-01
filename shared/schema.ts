@@ -62,6 +62,26 @@ export const productAds = pgTable("product_ads", {
   externalAdId: text("external_ad_id"),
 });
 
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  plan: text("plan").notNull(),
+  status: text("status").notNull().default("pending"),
+  moyasarInvoiceId: text("moyasar_invoice_id"),
+  moyasarPaymentId: text("moyasar_payment_id"),
+  amountHalalas: integer("amount_halalas"),
+  activatedAt: timestamp("activated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
