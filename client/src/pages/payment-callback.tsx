@@ -50,9 +50,11 @@ export default function PaymentCallbackPage() {
 
     // Use invoiceId from URL if present, otherwise fall back to sessionStorage
     const invoiceId = urlInvoiceId || sessionStorage.getItem(PENDING_INVOICE_KEY);
+    // If Moyasar provided the id in the URL, the user was auto-redirected after payment.
+    // If we only have it from sessionStorage, the user likely pressed back without paying.
+    const cameFromMoyasar = !!urlInvoiceId;
 
     if (invoiceId) {
-      // Verify with the server — this also activates the subscription if paid
       authFetch(`/api/payments/verify/${invoiceId}`)
         .then((r) => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -61,26 +63,27 @@ export default function PaymentCallbackPage() {
         .then((data: { status: string; plan?: string }) => {
           if (data.status === "paid") {
             onSuccess(data.plan);
-          } else if (data.status === "pending") {
-            // Webhook may still be in flight — also try subscription endpoint
+          } else if (data.status === "pending" && cameFromMoyasar) {
+            // Moyasar redirected with id= but webhook hasn't fired yet — check subscription
             return authFetch("/api/payments/subscription")
               .then((r) => r.json())
               .then((sub: { status: string; plan?: string }) => {
                 if (sub.status === "active") {
                   onSuccess(sub.plan);
                 } else {
-                  setStatus("loading");
-                  setErrorMsg("جاري تأكيد الدفع من البوابة...");
+                  setStatus("failed");
+                  setErrorMsg("لم يكتمل الدفع بعد. إذا تم الخصم من حسابك، يرجى الانتظار دقيقة ثم المحاولة مرة أخرى.");
                 }
               });
           } else {
+            // Invoice is pending/failed and user navigated back without paying
+            sessionStorage.removeItem(PENDING_INVOICE_KEY);
             setStatus("failed");
-            setErrorMsg("لم يتم تأكيد الدفع من البوابة");
+            setErrorMsg("لم يتم إتمام عملية الدفع");
           }
         })
         .catch((err) => {
           console.error("[payment-callback] verify error:", err);
-          // If verify fails, check subscription directly as a last resort
           authFetch("/api/payments/subscription")
             .then((r) => r.json())
             .then((sub: { status: string; plan?: string }) => {
@@ -88,7 +91,7 @@ export default function PaymentCallbackPage() {
                 onSuccess(sub.plan);
               } else {
                 setStatus("failed");
-                setErrorMsg("تعذّر التحقق من حالة الدفع، يرجى التواصل مع الدعم");
+                setErrorMsg("لم يتم إتمام عملية الدفع");
               }
             })
             .catch(() => {
@@ -105,7 +108,7 @@ export default function PaymentCallbackPage() {
             onSuccess(sub.plan);
           } else {
             setStatus("failed");
-            setErrorMsg("لم يتم العثور على معرّف الدفع");
+            setErrorMsg("لم يتم إتمام عملية الدفع");
           }
         })
         .catch(() => {
