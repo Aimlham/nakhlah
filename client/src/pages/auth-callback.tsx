@@ -20,8 +20,8 @@ export default function AuthCallbackPage() {
       (event, session) => {
         if (event === "SIGNED_IN" && session) {
           clearTimeout(timeout);
-          window.history.replaceState({}, "", "/dashboard");
-          navigate("/dashboard", { replace: true });
+          window.history.replaceState({}, "", "/products");
+          navigate("/products", { replace: true });
         }
       }
     );
@@ -32,8 +32,8 @@ export default function AuthCallbackPage() {
         return;
       }
       if (session) {
-        window.history.replaceState({}, "", "/dashboard");
-        navigate("/dashboard", { replace: true });
+        window.history.replaceState({}, "", "/products");
+        navigate("/products", { replace: true });
       }
     });
 

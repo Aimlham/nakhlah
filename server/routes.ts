@@ -31,6 +31,8 @@ function stripListingSupplierFields<T extends Record<string, any>>(listing: T): 
 async function isUserSubscribed(req: Request): Promise<boolean> {
   const userId = await getAuthUserId(req);
   if (!userId) return false;
+  const profile = await storage.getProfile(userId);
+  if (profile?.plan === "admin") return true;
   const sub = await storage.getSubscriptionByUserId(userId);
   return sub?.status === "active";
 }
@@ -227,6 +229,167 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.get("/api/categories", async (_req: Request, res: Response) => {
+    try {
+      const cats = await storage.getAllCategories();
+      res.json(cats);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch categories") });
+    }
+  });
+
+  app.post("/api/admin/categories", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ message: "Category name is required" });
+      }
+      const cat = await storage.createCategory({ name: name.trim() });
+      res.json(cat);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to create category") });
+    }
+  });
+
+  app.delete("/api/admin/categories/:id", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      await storage.deleteCategory(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to delete category") });
+    }
+  });
+
+  app.get("/api/supplier-products", async (req: Request, res: Response) => {
+    try {
+      const products = await storage.getPublishedSupplierProducts();
+      const supplierIds = [...new Set(products.map(p => p.supplierId).filter(Boolean))] as string[];
+      const supplierResults = await Promise.all(supplierIds.map(sid => storage.getListing(sid)));
+      const suppliers: Record<string, any> = {};
+      for (const supplier of supplierResults) {
+        if (supplier && supplier.status === "published") {
+          suppliers[supplier.id] = {
+            id: supplier.id,
+            title: supplier.title,
+            supplierCity: supplier.supplierCity,
+            supplierType: supplier.supplierType,
+            imageUrl: supplier.imageUrl,
+          };
+        }
+      }
+      const result = products.map(p => ({
+        ...p,
+        supplier: p.supplierId ? suppliers[p.supplierId] || null : null,
+      }));
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch products") });
+    }
+  });
+
+  app.get("/api/supplier-products/:id", async (req: Request, res: Response) => {
+    try {
+      const product = await storage.getSupplierProduct(req.params.id);
+      if (!product || product.status !== "published") {
+        return res.status(404).json({ message: "Product not found" });
+      }
+      let supplier = null;
+      if (product.supplierId) {
+        const s = await storage.getListing(product.supplierId);
+        if (s) {
+          const subscribed = await isUserSubscribed(req);
+          supplier = subscribed ? s : stripListingSupplierFields(s);
+        }
+      }
+      res.json({ ...product, supplier });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch product") });
+    }
+  });
+
+  app.get("/api/admin/supplier-products", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const products = await storage.getAllSupplierProducts();
+      res.json(products);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch products") });
+    }
+  });
+
+  app.get("/api/admin/supplier-products/:id", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const product = await storage.getSupplierProduct(req.params.id);
+      if (!product) return res.status(404).json({ message: "Product not found" });
+      res.json(product);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch product") });
+    }
+  });
+
+  const supplierProductSchema = z.object({
+    title: z.string().min(1).max(500),
+    imageUrl: z.string().max(2000).optional().nullable(),
+    description: z.string().max(5000).optional().nullable(),
+    category: z.string().max(200).optional().nullable(),
+    supplierId: z.string().max(200).optional().nullable(),
+    status: z.enum(["draft", "published"]).optional(),
+  });
+
+  app.post("/api/admin/supplier-products", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const parsed = supplierProductSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.flatten().fieldErrors });
+      if (parsed.data.supplierId) {
+        const supplier = await storage.getListing(parsed.data.supplierId);
+        if (!supplier) return res.status(400).json({ message: "Supplier not found" });
+      }
+      const product = await storage.createSupplierProduct(parsed.data);
+      res.json(product);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to create product") });
+    }
+  });
+
+  app.patch("/api/admin/supplier-products/:id", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const existing = await storage.getSupplierProduct(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Product not found" });
+      const parsed = supplierProductSchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.flatten().fieldErrors });
+      if (parsed.data.supplierId) {
+        const supplier = await storage.getListing(parsed.data.supplierId);
+        if (!supplier) return res.status(400).json({ message: "Supplier not found" });
+      }
+      const updated = await storage.updateSupplierProduct(req.params.id, parsed.data);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to update product") });
+    }
+  });
+
+  app.delete("/api/admin/supplier-products/:id", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      await storage.deleteSupplierProduct(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to delete product") });
+    }
+  });
+
   app.get("/api/listings", async (req: Request, res: Response) => {
     try {
       const subscribed = await isUserSubscribed(req);
@@ -244,7 +407,9 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Listing not found" });
       }
       const subscribed = await isUserSubscribed(req);
-      res.json(subscribed ? listing : stripListingSupplierFields(listing));
+      const products = await storage.getSupplierProductsBySupplier(listing.id);
+      const result = subscribed ? listing : stripListingSupplierFields(listing);
+      res.json({ ...result, products });
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch listing") });
     }
@@ -610,6 +775,10 @@ export async function registerRoutes(
       const userId = await getAuthUserId(req);
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
+      }
+      const profile = await storage.getProfile(userId);
+      if (profile?.plan === "admin") {
+        return res.json({ plan: "pro", status: "active" });
       }
       const sub = await storage.getSubscriptionByUserId(userId);
       if (!sub) {

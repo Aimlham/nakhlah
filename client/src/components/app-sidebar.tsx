@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bookmark, Settings, FolderOpen, Shield } from "lucide-react";
+import { Bookmark, Settings, Package, Store, Factory, Shield, Tag } from "lucide-react";
 import nakhlahLogo from "@assets/nakhlah-logo.png";
 import {
   Sidebar,
@@ -18,9 +18,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { title: "الموردين المحليين", url: "/projects", icon: FolderOpen, key: "projects" },
+  { title: "المنتجات", url: "/products", icon: Package, key: "products" },
+  { title: "الموردين", url: "/suppliers", icon: Store, key: "suppliers" },
+  { title: "المصانع", url: "/factories", icon: Factory, key: "factories" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
   { title: "الإعدادات", url: "/settings", icon: Settings, key: "settings" },
+];
+
+const adminItems = [
+  { title: "إدارة الموردين", url: "/admin/listings", icon: Store, key: "admin-listings" },
+  { title: "إدارة المنتجات", url: "/admin/products", icon: Package, key: "admin-products" },
+  { title: "إدارة التصنيفات", url: "/admin/categories", icon: Tag, key: "admin-categories" },
 ];
 
 export function AppSidebar() {
@@ -40,7 +48,7 @@ export function AppSidebar() {
   return (
     <Sidebar side="right">
       <SidebarHeader className="p-4">
-        <Link href="/projects" className="flex items-center gap-2">
+        <Link href="/products" className="flex items-center gap-2">
           <img src={nakhlahLogo} alt="نخلة" className="w-8 h-8 rounded-md object-contain" />
           <span className="text-lg font-semibold tracking-tight" data-testid="text-brand-name">
             نخلة
@@ -74,17 +82,19 @@ export function AppSidebar() {
             <SidebarGroupLabel>الإدارة</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    data-active={location.startsWith("/admin/listings")}
-                  >
-                    <Link href="/admin/listings" data-testid="link-nav-admin-listings">
-                      <Shield className="w-4 h-4" />
-                      <span>إدارة البوستات</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {adminItems.map((item) => {
+                  const isActive = location === item.url || location.startsWith(item.url + "/");
+                  return (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton asChild data-active={isActive}>
+                        <Link href={item.url} data-testid={`link-nav-${item.key}`}>
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

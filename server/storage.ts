@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd, type Subscription, type Listing, type InsertListing, type Profile } from "@shared/schema";
+import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd, type Subscription, type Listing, type InsertListing, type Profile, type Category, type InsertCategory, type SupplierProduct, type InsertSupplierProduct, type SupplierProductWithSupplier } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { supabaseConfigured } from "./supabase";
@@ -46,6 +46,18 @@ export interface IStorage {
   updateListing(id: string, listing: Partial<InsertListing>): Promise<Listing>;
   deleteListing(id: string): Promise<void>;
 
+  getAllCategories(): Promise<Category[]>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  deleteCategory(id: string): Promise<void>;
+
+  getAllSupplierProducts(): Promise<SupplierProduct[]>;
+  getPublishedSupplierProducts(): Promise<SupplierProduct[]>;
+  getSupplierProduct(id: string): Promise<SupplierProduct | undefined>;
+  getSupplierProductsBySupplier(supplierId: string): Promise<SupplierProduct[]>;
+  createSupplierProduct(product: InsertSupplierProduct): Promise<SupplierProduct>;
+  updateSupplierProduct(id: string, product: Partial<InsertSupplierProduct>): Promise<SupplierProduct>;
+  deleteSupplierProduct(id: string): Promise<void>;
+
   init?(): Promise<void>;
 }
 
@@ -69,6 +81,8 @@ export class MemStorage implements IStorage {
   private subscriptions: Map<string, Subscription>;
   private profiles: Map<string, Profile>;
   private listings: Map<string, Listing>;
+  private categoriesMap: Map<string, Category>;
+  private supplierProductsMap: Map<string, SupplierProduct>;
 
   constructor() {
     this.users = new Map();
@@ -78,6 +92,8 @@ export class MemStorage implements IStorage {
     this.subscriptions = new Map();
     this.profiles = new Map();
     this.listings = new Map();
+    this.categoriesMap = new Map();
+    this.supplierProductsMap = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -317,6 +333,67 @@ export class MemStorage implements IStorage {
 
   async deleteListing(id: string): Promise<void> {
     this.listings.delete(id);
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    return Array.from(this.categoriesMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const id = randomUUID();
+    const newCat: Category = { id, name: category.name, createdAt: new Date() };
+    this.categoriesMap.set(id, newCat);
+    return newCat;
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    this.categoriesMap.delete(id);
+  }
+
+  async getAllSupplierProducts(): Promise<SupplierProduct[]> {
+    return Array.from(this.supplierProductsMap.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }
+
+  async getPublishedSupplierProducts(): Promise<SupplierProduct[]> {
+    return (await this.getAllSupplierProducts()).filter(p => p.status === "published");
+  }
+
+  async getSupplierProduct(id: string): Promise<SupplierProduct | undefined> {
+    return this.supplierProductsMap.get(id);
+  }
+
+  async getSupplierProductsBySupplier(supplierId: string): Promise<SupplierProduct[]> {
+    return Array.from(this.supplierProductsMap.values()).filter(p => p.supplierId === supplierId && p.status === "published");
+  }
+
+  async createSupplierProduct(product: InsertSupplierProduct): Promise<SupplierProduct> {
+    const id = randomUUID();
+    const newProd: SupplierProduct = {
+      id,
+      title: product.title,
+      imageUrl: product.imageUrl ?? null,
+      description: product.description ?? null,
+      category: product.category ?? null,
+      supplierId: product.supplierId ?? null,
+      status: product.status ?? "draft",
+      createdAt: new Date(),
+    };
+    this.supplierProductsMap.set(id, newProd);
+    return newProd;
+  }
+
+  async updateSupplierProduct(id: string, product: Partial<InsertSupplierProduct>): Promise<SupplierProduct> {
+    const existing = this.supplierProductsMap.get(id);
+    if (!existing) throw new Error("Product not found");
+    const updated: SupplierProduct = { ...existing, ...product };
+    this.supplierProductsMap.set(id, updated);
+    return updated;
+  }
+
+  async deleteSupplierProduct(id: string): Promise<void> {
+    this.supplierProductsMap.delete(id);
   }
 }
 

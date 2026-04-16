@@ -182,7 +182,7 @@ export default function PaymentCallbackPage() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/products")}
                 data-testid="button-back-dashboard"
               >
                 العودة للوحة التحكم

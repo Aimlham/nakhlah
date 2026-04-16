@@ -1,7 +1,7 @@
-# Nakhlah (نخلة) - Local Listings Platform (MVP)
+# Nakhlah (نخلة) - Local Supplier Marketplace
 
 ## Overview
-Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for local supplier discovery. Admin adds listings manually. Users browse clean summary cards on /projects ("الموردين المحليين"), click "عرض التفاصيل" to see full listing at /listings/:id, where supplier contact info (name, phone, WhatsApp, location) is gated behind "نخلة برو" subscription at 99 SAR/month. Domain: nakhlah.io
+Nakhlah (نخلة) is an Arabic-first RTL SaaS platform at nakhlah.io for dropshipping sellers. It's a local supplier marketplace: admin manually creates supplier listings and their products; users browse products on `/products` (main page), view product details, browse suppliers on `/suppliers`, view supplier detail pages, and discover factories on `/factories`. Supplier contact info is gated behind "نخلة برو" subscription at 99 SAR/month.
 
 ## Branding
 - Site name: نخلة (Nakhlah)
@@ -18,38 +18,44 @@ Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for local supplier disco
 ## System Architecture
 Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + TanStack Query. Backend: Express 5 (Node.js). Database: Supabase (PostgreSQL) with in-memory fallback. Auth: Supabase Auth with session-based fallback. Build: Vite. Payments: Moyasar (SAR).
 
-## MVP App Flow
-1. `/` → redirects to `/projects`
-2. `/projects` — Browse published listings as clean summary cards (image, title, short desc, category, city, type, "عرض التفاصيل" button)
-3. `/listings/:id` — Listing detail page with full info + gated supplier contact section
-4. `/saved` — Bookmarked products (requires subscription)
-5. `/pricing` — Hidden from nav. Accessible only via "اشترك لعرض بيانات المورد" buttons.
-6. `/settings` — Account settings
-7. `/admin/listings` — Admin-only: manage all listings (add, edit, delete, publish/hide)
-8. `/admin/listings/new` — Admin: add new listing
-9. `/admin/listings/:id/edit` — Admin: edit listing
+## Data Model
+- **Suppliers** = `listings` table (supplier entities with contact info)
+- **Products** = `supplier_products` table (products linked to suppliers via `supplier_id`)
+- **Categories** = `categories` table (dynamic categories managed by admin)
+- `supplier_id` in `supplier_products` is `text` referencing `listings.id`
+
+## App Flow
+1. `/` → redirects to `/products`
+2. `/products` — Browse published supplier products (search + category filter)
+3. `/products/:id` — Product detail with supplier info + gated contact section
+4. `/suppliers` — Browse all published suppliers (search + city filter)
+5. `/suppliers/:id` — Supplier detail with their products + gated contact section
+6. `/factories` — Filtered suppliers (manufacturing types: مصنع, تصنيع)
+7. `/saved` — Bookmarked products
+8. `/pricing` — Hidden from nav. Accessible via subscribe buttons.
+9. `/settings` — Account settings
+10. `/admin/listings` — Admin: manage suppliers
+11. `/admin/products` — Admin: manage supplier products
+12. `/admin/categories` — Admin: manage categories
 
 ## Subscription Model
 - **Single plan**: "نخلة برو" = 99 SAR/month (9900 halalas)
-- **No free tier**: Subscription required for supplier contact info
-- **Server-side protection**: `/api/listings` and `/api/listings/:id` strip `supplierName`, `supplierPhone`, `supplierWhatsapp`, `supplierLocation` for non-subscribers
-- **Client-side**: Non-subscribers see blurred/locked supplier section in detail page with "اشترك لعرض بيانات المورد" button
+- **Server-side protection**: Strips `supplierName`, `supplierPhone`, `supplierWhatsapp`, `supplierLocation` for non-subscribers
+- **Client-side**: Non-subscribers see blurred/locked supplier section with subscribe CTA
+- **Admin auto-subscription**: `isUserSubscribed()` returns true if `profile.plan === "admin"`
 
 ## Admin System
-- Admin role is determined by `profiles.plan = 'admin'` in Supabase
-- Admin user: momdfasail@gmail.com (Supabase auth ID: 660fe18d-0673-40b5-b39e-fc8718886d89)
-- Admin pages are protected by `AdminRoute` which checks `/api/auth/role`
-- Admin sidebar section "إدارة البوستات" appears only for admin users
+- Admin role: `profiles.plan = 'admin'` in Supabase
+- Admin user: momdfasail@gmail.com
+- Admin sidebar: إدارة الموردين, إدارة المنتجات, إدارة التصنيفات
+- All admin pages protected by `AdminRoute`
 
 ## Route Guards
-- **PublicRoute**: Login/signup only — redirects logged-in users to `/projects`
-- **ProtectedRoute**: Requires login (pricing, settings)
-- **SubscribedRoute**: Requires login + active subscription (saved products)
-- **ProjectsRoute**: Requires login, passes `isSubscribed` prop to page
-- **AdminRoute**: Requires login + admin role (admin pages)
-
-## Data Policy
-Admin manually adds listings via `/admin/listings/new`. `/projects` page shows only published listings from the `listings` table. No imported products shown in the main interface.
+- **PublicRoute**: Login/signup — redirects logged-in users to `/products`
+- **ProtectedRoute**: Requires login
+- **SubscriptionAwareRoute**: Requires login, passes `isSubscribed` prop
+- **AdminRoute**: Requires login + admin role
+- Legacy `/projects` → redirects to `/suppliers`, `/listings/:id` → redirects to `/suppliers/:id`
 
 ## External Dependencies
 - **Supabase**: Database (PostgreSQL) and authentication
@@ -64,15 +70,13 @@ Admin manually adds listings via `/admin/listings/new`. `/projects` page shows o
 - `MOYASAR_SECRET_KEY` — Moyasar secret key (server-only)
 - `MOYASAR_PUBLISHABLE_KEY` — Moyasar publishable key
 - `MOYASAR_WEBHOOK_TOKEN` — Webhook verification token
-- `OPENAI_API_KEY` — OpenAI API key (legacy, optional)
-- `APIFY_API_TOKEN` — Apify API token (legacy, optional)
 
 ## File Structure
 ```
 client/src/
   App.tsx              - Root router with all route guards
   components/
-    app-sidebar.tsx    - Navigation sidebar (Projects, Saved, Settings, + Admin section for admins)
+    app-sidebar.tsx    - Navigation sidebar (Products, Suppliers, Factories, Saved, Settings + Admin)
     app-layout.tsx     - Authenticated page layout wrapper
     topbar.tsx         - Top bar with theme toggle and logout
     empty-state.tsx    - Empty state placeholder
@@ -83,21 +87,25 @@ client/src/
     queryClient.ts     - TanStack Query config
     utils.ts           - Formatting helpers
   pages/
-    projects.tsx       - Main listings page with clean summary cards
-    listing-detail.tsx - Single listing detail page with gated supplier section
+    products-page.tsx  - Main products listing with search/filter
+    product-detail.tsx - Product detail with supplier info + gated contact
+    suppliers-page.tsx - Suppliers listing (also used for /factories with filterTypes)
+    supplier-detail.tsx - Supplier detail with products + gated contact
     admin/
-      listings.tsx     - Admin listings management page
-      listing-form.tsx - Add/edit listing form
-    landing.tsx        - Public landing page
+      listings.tsx     - Admin supplier management
+      listing-form.tsx - Add/edit supplier form
+      supplier-products.tsx - Admin products management
+      supplier-product-form.tsx - Add/edit product form
+      categories.tsx   - Admin categories management
     login.tsx / signup.tsx - Auth pages
     saved-products.tsx - User's saved products
-    pricing-page.tsx   - Subscription page (hidden from nav)
+    pricing-page.tsx   - Subscription page
     settings.tsx       - Account settings
     payment-callback.tsx - Payment result handler
 
 server/
   index.ts             - Express server entry
-  routes.ts            - API endpoints (listings, admin, auth, payments)
+  routes.ts            - API endpoints
   storage.ts           - IStorage interface + MemStorage fallback
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation
@@ -107,51 +115,46 @@ shared/
 ```
 
 ## Key API Routes
-- `GET /api/listings` - Published listings (supplier info stripped for non-subscribers)
-- `GET /api/listings/:id` - Single published listing (supplier info stripped for non-subscribers)
-- `GET /api/admin/listings` - All listings (admin only)
-- `GET /api/admin/listings/:id` - Single listing (admin only)
-- `POST /api/admin/listings` - Create listing (admin only)
-- `PATCH /api/admin/listings/:id` - Update listing (admin only)
-- `DELETE /api/admin/listings/:id` - Delete listing (admin only)
-- `GET /api/auth/role` - Get user role (admin/user)
-- `GET /api/auth/me` - Get authenticated user + role
-- `GET /api/saved/ids` - Saved product IDs
-- `GET /api/saved/products` - Saved products
-- `POST /api/saved/:productId` - Save product
-- `DELETE /api/saved/:productId` - Unsave product
+### Public (auth required)
+- `GET /api/supplier-products` - Published products with supplier preview info
+- `GET /api/supplier-products/:id` - Product detail (supplier contact gated)
+- `GET /api/listings` - Published suppliers (contact info stripped for non-subscribers)
+- `GET /api/listings/:id` - Supplier detail + products (contact gated)
+- `GET /api/categories` - All categories
+
+### Admin only
+- `GET/POST /api/admin/supplier-products` - CRUD products
+- `PATCH/DELETE /api/admin/supplier-products/:id`
+- `GET/POST /api/admin/listings` - CRUD suppliers
+- `PATCH/DELETE /api/admin/listings/:id`
+- `POST/DELETE /api/admin/categories` - CRUD categories
+- `POST /api/admin/upload-image` - Image upload to Supabase Storage
+
+### Auth & Payments
+- `POST /api/auth/signup`, `POST /api/auth/login`, `GET /api/auth/me`
+- `GET /api/auth/role` - User role
 - `POST /api/payments/create` - Create Moyasar invoice
 - `GET /api/payments/verify/:id` - Verify payment
-- `GET /api/payments/subscription` - Get subscription status
+- `GET /api/payments/subscription` - Subscription status
 - `POST /api/moyasar/webhook` - Moyasar webhook
 
 ## Database Tables (Supabase)
 - `profiles`: id, email, full_name, avatar_url, plan (admin|free), created_at
-- `listings`: id, title, image_url, description, category, supplier_name, supplier_phone, supplier_whatsapp, supplier_city, supplier_type, supplier_link, status (draft|published), created_at
+- `listings`: id, title, image_url, description, category, supplier_name, supplier_phone, supplier_whatsapp, supplier_city, supplier_type, supplier_link, status, created_at
+- `categories`: id, name, created_at
+- `supplier_products`: id, title, image_url, description, category, supplier_id, status, created_at
 - `subscriptions`: id, user_id, plan, status, moyasar_invoice_id, moyasar_payment_id, amount_halalas, activated_at, created_at
 - `products`: (legacy) id, title, image_url, category, supplier_price, etc.
 - `saved_products`: id, user_id, product_id, created_at
-- `users`: (legacy, used for session-based auth fallback)
 
 ## Supplier Data Gating
 Hidden fields for non-subscribers (both server & client):
 - `supplierName` — اسم المورد
 - `supplierPhone` — رقم الهاتف
 - `supplierWhatsapp` — واتساب
-- `supplierLocation` — موقع المورد (رابط خرائط Google)
+- `supplierLocation` — موقع المورد
 
-Visible to all (shown on cards + detail page):
-- `title`, `imageUrl`, `description`, `category`, `supplierCity`, `supplierType`
-
-Cards on /projects show only public info + "عرض التفاصيل" button.
-Detail page at /listings/:id shows full description + gated supplier contact section.
-
-## Moyasar Payment Integration
-- **Flow**: User clicks subscribe → POST `/api/payments/create` → Moyasar hosted page → redirect to `/payment/callback` → verify
-- **Plan**: Pro = 99 SAR/month (9900 halalas)
-- **back_url**: Uses `x-forwarded-proto`/`x-forwarded-host` headers; production override to `https://nakhlah.io`
-- **Invoice ID fallback**: Saved in sessionStorage (`nakhlah_pending_invoice`)
-- **Auth**: Callback page uses `getAccessToken()` for Bearer token
+Visible to all: `title`, `imageUrl`, `description`, `category`, `supplierCity`, `supplierType`
 
 ## RTL / Arabic
 - HTML `dir="rtl"` and `lang="ar"`

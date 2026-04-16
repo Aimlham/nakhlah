@@ -36,6 +36,23 @@ export const listings = pgTable("listings", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const categories = pgTable("categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const supplierProducts = pgTable("supplier_products", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  imageUrl: text("image_url"),
+  description: text("description"),
+  category: text("category"),
+  supplierId: text("supplier_id"),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -134,6 +151,16 @@ export const insertListingSchema = createInsertSchema(listings).omit({
   createdAt: true,
 });
 
+export const insertCategorySchema = createInsertSchema(categories).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSupplierProductSchema = createInsertSchema(supplierProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Product = typeof products.$inferSelect;
@@ -145,8 +172,22 @@ export type InsertProductAd = z.infer<typeof insertProductAdSchema>;
 export type Listing = typeof listings.$inferSelect;
 export type InsertListing = z.infer<typeof insertListingSchema>;
 export type Profile = typeof profiles.$inferSelect;
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
+export type SupplierProduct = typeof supplierProducts.$inferSelect;
+export type InsertSupplierProduct = z.infer<typeof insertSupplierProductSchema>;
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({
   createdAt: true,
 });
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
+
+export interface SupplierProductWithSupplier extends SupplierProduct {
+  supplier?: {
+    id: string;
+    title: string;
+    supplierCity?: string | null;
+    supplierType?: string | null;
+    imageUrl?: string | null;
+  } | null;
+}

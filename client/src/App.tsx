@@ -7,10 +7,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { AppLayout } from "@/components/app-layout";
 import NotFound from "@/pages/not-found";
-import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import SignupPage from "@/pages/signup";
-import ProjectsPage from "@/pages/projects";
+import ProductsPage from "@/pages/products-page";
+import ProductDetailPage from "@/pages/product-detail";
+import SuppliersPage from "@/pages/suppliers-page";
+import SupplierDetailPage from "@/pages/supplier-detail";
 import SavedProductsPage from "@/pages/saved-products";
 import PricingPage from "@/pages/pricing-page";
 import SettingsPage from "@/pages/settings";
@@ -18,9 +20,11 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallbackPage from "@/pages/auth-callback";
 import PaymentCallbackPage from "@/pages/payment-callback";
-import ListingDetailPage from "@/pages/listing-detail";
 import AdminListingsPage from "@/pages/admin/listings";
 import ListingFormPage from "@/pages/admin/listing-form";
+import AdminSupplierProductsPage from "@/pages/admin/supplier-products";
+import SupplierProductFormPage from "@/pages/admin/supplier-product-form";
+import AdminCategoriesPage from "@/pages/admin/categories";
 import { Loader2 } from "lucide-react";
 
 function LoadingScreen() {
@@ -44,29 +48,7 @@ function ProtectedRoute({ component: Component }: { component: () => JSX.Element
   );
 }
 
-function SubscribedRoute({ component: Component }: { component: () => JSX.Element }) {
-  const { user, isLoading: authLoading } = useAuth();
-
-  const { data: sub, isLoading: subLoading } = useQuery<{ plan: string; status: string }>({
-    queryKey: ["/api/payments/subscription"],
-    enabled: !!user,
-    retry: false,
-  });
-
-  if (authLoading || (user && subLoading)) return <LoadingScreen />;
-  if (!user) return <Redirect to="/login" />;
-
-  const isActive = sub?.status === "active";
-  if (!isActive) return <Redirect to="/pricing" />;
-
-  return (
-    <AppLayout>
-      <Component />
-    </AppLayout>
-  );
-}
-
-function ProjectsRoute() {
+function SubscriptionAwareRoute({ component: Component }: { component: (props: { isSubscribed: boolean }) => JSX.Element }) {
   const { user, isLoading: authLoading } = useAuth();
 
   const { data: sub, isLoading: subLoading } = useQuery<{ plan: string; status: string }>({
@@ -82,28 +64,7 @@ function ProjectsRoute() {
 
   return (
     <AppLayout>
-      <ProjectsPage isSubscribed={isSubscribed} />
-    </AppLayout>
-  );
-}
-
-function ListingDetailRoute() {
-  const { user, isLoading: authLoading } = useAuth();
-
-  const { data: sub, isLoading: subLoading } = useQuery<{ plan: string; status: string }>({
-    queryKey: ["/api/payments/subscription"],
-    enabled: !!user,
-    retry: false,
-  });
-
-  if (authLoading || (user && subLoading)) return <LoadingScreen />;
-  if (!user) return <Redirect to="/login" />;
-
-  const isSubscribed = sub?.status === "active";
-
-  return (
-    <AppLayout>
-      <ListingDetailPage isSubscribed={isSubscribed} />
+      <Component isSubscribed={isSubscribed} />
     </AppLayout>
   );
 }
@@ -119,7 +80,7 @@ function AdminRoute({ component: Component }: { component: () => JSX.Element }) 
 
   if (authLoading || (user && roleLoading)) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
-  if (roleData?.role !== "admin") return <Redirect to="/projects" />;
+  if (roleData?.role !== "admin") return <Redirect to="/products" />;
 
   return (
     <AppLayout>
@@ -132,15 +93,31 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
   const { user, isLoading } = useAuth();
 
   if (isLoading) return <LoadingScreen />;
-  if (user) return <Redirect to="/projects" />;
+  if (user) return <Redirect to="/products" />;
 
   return <Component />;
+}
+
+function FactoriesRoute() {
+  return (
+    <SubscriptionAwareRoute
+      component={() => (
+        <SuppliersPage
+          filterTypes={["مصنع", "تصنيع"]}
+          title="المصانع"
+          subtitle="تصفح المصانع المحلية المتخصصة في التصنيع"
+          emptyTitle="لا يوجد مصانع حالياً"
+          emptyDescription="سيتم إضافة مصانع جديدة قريباً"
+        />
+      )}
+    />
+  );
 }
 
 function Router() {
   return (
     <Switch>
-      <Route path="/">{() => <Redirect to="/projects" />}</Route>
+      <Route path="/">{() => <Redirect to="/products" />}</Route>
       <Route path="/login">{() => <PublicRoute component={LoginPage} />}</Route>
       <Route path="/signup">{() => <PublicRoute component={SignupPage} />}</Route>
       <Route path="/forgot-password" component={ForgotPasswordPage} />
@@ -151,13 +128,28 @@ function Router() {
       <Route path="/pricing">{() => <ProtectedRoute component={PricingPage} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
 
-      <Route path="/projects">{() => <ProjectsRoute />}</Route>
-      <Route path="/listings/:id">{() => <ListingDetailRoute />}</Route>
-      <Route path="/saved">{() => <SubscribedRoute component={SavedProductsPage} />}</Route>
+      <Route path="/products">{() => <ProtectedRoute component={ProductsPage} />}</Route>
+      <Route path="/products/:id">{() => <SubscriptionAwareRoute component={ProductDetailPage} />}</Route>
+
+      <Route path="/suppliers">{() => <ProtectedRoute component={() => <SuppliersPage />} />}</Route>
+      <Route path="/suppliers/:id">{() => <SubscriptionAwareRoute component={SupplierDetailPage} />}</Route>
+
+      <Route path="/factories">{() => <FactoriesRoute />}</Route>
+
+      <Route path="/projects">{() => <Redirect to="/suppliers" />}</Route>
+      <Route path="/listings/:id">{(params) => <Redirect to={`/suppliers/${params.id}`} />}</Route>
+
+      <Route path="/saved">{() => <ProtectedRoute component={SavedProductsPage} />}</Route>
 
       <Route path="/admin/listings/new">{() => <AdminRoute component={ListingFormPage} />}</Route>
       <Route path="/admin/listings/:id/edit">{() => <AdminRoute component={ListingFormPage} />}</Route>
       <Route path="/admin/listings">{() => <AdminRoute component={AdminListingsPage} />}</Route>
+
+      <Route path="/admin/products/new">{() => <AdminRoute component={SupplierProductFormPage} />}</Route>
+      <Route path="/admin/products/:id/edit">{() => <AdminRoute component={SupplierProductFormPage} />}</Route>
+      <Route path="/admin/products">{() => <AdminRoute component={AdminSupplierProductsPage} />}</Route>
+
+      <Route path="/admin/categories">{() => <AdminRoute component={AdminCategoriesPage} />}</Route>
 
       <Route component={NotFound} />
     </Switch>

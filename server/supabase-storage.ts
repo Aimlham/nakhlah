@@ -9,6 +9,10 @@ import type {
   Listing,
   InsertListing,
   Profile,
+  Category,
+  InsertCategory,
+  SupplierProduct,
+  InsertSupplierProduct,
 } from "@shared/schema";
 import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
@@ -121,6 +125,27 @@ function mapListing(row: Record<string, unknown>): Listing {
     supplierCity: (row.supplier_city as string) ?? null,
     supplierType: (row.supplier_type as string) ?? null,
     supplierLocation: (row.supplier_link as string) ?? null,
+    status: (row.status as string) ?? "draft",
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
+}
+
+function mapCategory(row: Record<string, unknown>): Category {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
+}
+
+function mapSupplierProduct(row: Record<string, unknown>): SupplierProduct {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    imageUrl: (row.image_url as string) ?? null,
+    description: (row.description as string) ?? null,
+    category: (row.category as string) ?? null,
+    supplierId: (row.supplier_id as string) ?? null,
     status: (row.status as string) ?? "draft",
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
@@ -582,6 +607,117 @@ export class SupabaseStorage implements IStorage {
   async deleteListing(id: string): Promise<void> {
     const { error } = await this.db
       .from("listings")
+      .delete()
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  async getAllCategories(): Promise<Category[]> {
+    const { data, error } = await this.db
+      .from("categories")
+      .select("*")
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapCategory);
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const { data, error } = await this.db
+      .from("categories")
+      .insert({ name: category.name })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return mapCategory(data);
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    const { error } = await this.db
+      .from("categories")
+      .delete()
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
+
+  async getAllSupplierProducts(): Promise<SupplierProduct[]> {
+    const { data, error } = await this.db
+      .from("supplier_products")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapSupplierProduct);
+  }
+
+  async getPublishedSupplierProducts(): Promise<SupplierProduct[]> {
+    const { data, error } = await this.db
+      .from("supplier_products")
+      .select("*")
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapSupplierProduct);
+  }
+
+  async getSupplierProduct(id: string): Promise<SupplierProduct | undefined> {
+    const { data, error } = await this.db
+      .from("supplier_products")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) return undefined;
+    return mapSupplierProduct(data);
+  }
+
+  async getSupplierProductsBySupplier(supplierId: string): Promise<SupplierProduct[]> {
+    const { data, error } = await this.db
+      .from("supplier_products")
+      .select("*")
+      .eq("supplier_id", supplierId)
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapSupplierProduct);
+  }
+
+  async createSupplierProduct(product: InsertSupplierProduct): Promise<SupplierProduct> {
+    const { data, error } = await this.db
+      .from("supplier_products")
+      .insert({
+        title: product.title,
+        image_url: product.imageUrl ?? null,
+        description: product.description ?? null,
+        category: product.category ?? null,
+        supplier_id: product.supplierId ?? null,
+        status: product.status ?? "draft",
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return mapSupplierProduct(data);
+  }
+
+  async updateSupplierProduct(id: string, product: Partial<InsertSupplierProduct>): Promise<SupplierProduct> {
+    const updateData: Record<string, unknown> = {};
+    if (product.title !== undefined) updateData.title = product.title;
+    if (product.imageUrl !== undefined) updateData.image_url = product.imageUrl;
+    if (product.description !== undefined) updateData.description = product.description;
+    if (product.category !== undefined) updateData.category = product.category;
+    if (product.supplierId !== undefined) updateData.supplier_id = product.supplierId;
+    if (product.status !== undefined) updateData.status = product.status;
+
+    const { data, error } = await this.db
+      .from("supplier_products")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return mapSupplierProduct(data);
+  }
+
+  async deleteSupplierProduct(id: string): Promise<void> {
+    const { error } = await this.db
+      .from("supplier_products")
       .delete()
       .eq("id", id);
     if (error) throw new Error(error.message);
