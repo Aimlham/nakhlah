@@ -11,6 +11,27 @@ export const users = pgTable("users", {
   email: text("email"),
 });
 
+export const profiles = pgTable("profiles", {
+  id: varchar("id").primaryKey(),
+  role: text("role").notNull().default("user"),
+});
+
+export const listings = pgTable("listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  imageUrl: text("image_url"),
+  description: text("description"),
+  category: text("category"),
+  supplierName: text("supplier_name"),
+  supplierPhone: text("supplier_phone"),
+  supplierWhatsapp: text("supplier_whatsapp"),
+  supplierCity: text("supplier_city"),
+  supplierType: text("supplier_type"),
+  supplierLink: text("supplier_link"),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const products = pgTable("products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -104,6 +125,11 @@ export const insertProductAdSchema = createInsertSchema(productAds).omit({
   createdAt: true,
 });
 
+export const insertListingSchema = createInsertSchema(listings).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type Product = typeof products.$inferSelect;
@@ -112,3 +138,6 @@ export type SavedProduct = typeof savedProducts.$inferSelect;
 export type InsertSavedProduct = z.infer<typeof insertSavedProductSchema>;
 export type ProductAd = typeof productAds.$inferSelect;
 export type InsertProductAd = z.infer<typeof insertProductAdSchema>;
+export type Listing = typeof listings.$inferSelect;
+export type InsertListing = z.infer<typeof insertListingSchema>;
+export type Profile = typeof profiles.$inferSelect;

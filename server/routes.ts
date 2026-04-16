@@ -4,12 +4,6 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
-import { scoreProduct } from "@shared/scoring";
-import { generateProductAnalysis } from "./openai";
-import { importAliExpressProducts, getAliExpressStatus } from "./aliexpress-importer";
-import { importAmazonProducts, getAmazonStatus } from "./amazon-importer";
-import { importTikTokAds, getTikTokStatus } from "./tiktok-importer";
-import { isProductPublishable } from "@shared/qualification";
 import { z } from "zod";
 
 const SessionStore = MemoryStore(session);
@@ -20,8 +14,14 @@ function safeErrorMessage(err: any, fallback: string): string {
   return err?.message || fallback;
 }
 
-function stripSupplierFields<T extends Record<string, any>>(product: T): T {
-  return { ...product, supplierLink: null, supplierSource: null, supplierName: null };
+function stripListingSupplierFields<T extends Record<string, any>>(listing: T): T {
+  return {
+    ...listing,
+    supplierName: null,
+    supplierPhone: null,
+    supplierWhatsapp: null,
+    supplierLink: null,
+  };
 }
 
 async function isUserSubscribed(req: Request): Promise<boolean> {
@@ -29,6 +29,13 @@ async function isUserSubscribed(req: Request): Promise<boolean> {
   if (!userId) return false;
   const sub = await storage.getSubscriptionByUserId(userId);
   return sub?.status === "active";
+}
+
+async function isUserAdmin(req: Request): Promise<boolean> {
+  const userId = await getAuthUserId(req);
+  if (!userId) return false;
+  const profile = await storage.getProfile(userId);
+  return profile?.role === "admin";
 }
 
 async function getAuthUserId(req: Request): Promise<string | null> {
@@ -202,7 +209,8 @@ export async function registerRoutes(
       if (!user) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      res.json({ user });
+      const profile = await storage.getProfile(user.id);
+      res.json({ user, role: profile?.role ?? "user" });
     } catch {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -215,59 +223,102 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  app.get("/api/projects", async (req: Request, res: Response) => {
+  app.get("/api/listings", async (req: Request, res: Response) => {
     try {
       const subscribed = await isUserSubscribed(req);
-
-      let products = await storage.getAllProducts();
-      products = products.map(scoreProduct);
-      const publishable = products
-        .filter(p => isProductPublishable(p))
-        .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
-
-      res.json(subscribed ? publishable : publishable.map(stripSupplierFields));
+      const listings = await storage.getPublishedListings();
+      res.json(subscribed ? listings : listings.map(stripListingSupplierFields));
     } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch projects") });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch listings") });
     }
   });
 
-  app.get("/api/products", async (req: Request, res: Response) => {
+  app.get("/api/admin/listings", async (req: Request, res: Response) => {
     try {
-      const subscribed = await isUserSubscribed(req);
-      let products = await storage.getAllProducts();
-      products = products.map(scoreProduct);
-
-      res.json(subscribed ? products : products.map(stripSupplierFields));
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const listings = await storage.getAllListings();
+      res.json(listings);
     } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch products") });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch listings") });
     }
   });
 
-  app.get("/api/products/winning", async (req: Request, res: Response) => {
+  app.get("/api/admin/listings/:id", async (req: Request, res: Response) => {
     try {
-      const subscribed = await isUserSubscribed(req);
-      let products = await storage.getAllProducts();
-      products = products.map(scoreProduct);
-      const winning = products
-        .filter(p => isProductPublishable(p))
-        .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
-      res.json(subscribed ? winning : winning.map(stripSupplierFields));
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const listing = await storage.getListing(req.params.id);
+      if (!listing) return res.status(404).json({ message: "Listing not found" });
+      res.json(listing);
     } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch winning products") });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch listing") });
     }
   });
 
-  app.get("/api/products/:id", async (req: Request, res: Response) => {
+  const listingSchema = z.object({
+    title: z.string().min(1).max(500),
+    imageUrl: z.string().max(2000).optional().nullable(),
+    description: z.string().max(5000).optional().nullable(),
+    category: z.string().max(200).optional().nullable(),
+    supplierName: z.string().max(500).optional().nullable(),
+    supplierPhone: z.string().max(50).optional().nullable(),
+    supplierWhatsapp: z.string().max(50).optional().nullable(),
+    supplierCity: z.string().max(200).optional().nullable(),
+    supplierType: z.string().max(200).optional().nullable(),
+    supplierLink: z.string().max(2000).optional().nullable(),
+    status: z.enum(["draft", "published"]).optional(),
+  });
+
+  app.post("/api/admin/listings", async (req: Request, res: Response) => {
     try {
-      const subscribed = await isUserSubscribed(req);
-      const product = await storage.getProduct(req.params.id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-      const scored = scoreProduct(product);
-      res.json(subscribed ? scored : stripSupplierFields(scored));
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const parsed = listingSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.flatten().fieldErrors });
+      const listing = await storage.createListing(parsed.data);
+      res.json(listing);
     } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch product") });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to create listing") });
+    }
+  });
+
+  app.patch("/api/admin/listings/:id", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const existing = await storage.getListing(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Listing not found" });
+      const parsed = listingSchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid data", errors: parsed.error.flatten().fieldErrors });
+      const updated = await storage.updateListing(req.params.id, parsed.data);
+      res.json(updated);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to update listing") });
+    }
+  });
+
+  app.delete("/api/admin/listings/:id", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const existing = await storage.getListing(req.params.id);
+      if (!existing) return res.status(404).json({ message: "Listing not found" });
+      await storage.deleteListing(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to delete listing") });
+    }
+  });
+
+  app.get("/api/auth/role", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const profile = await storage.getProfile(userId);
+      res.json({ role: profile?.role ?? "user" });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch role") });
     }
   });
 
@@ -291,7 +342,7 @@ export async function registerRoutes(
         return res.json([]);
       }
       const products = await storage.getSavedProducts(userId);
-      res.json(products.map(scoreProduct));
+      res.json(products);
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch saved products") });
     }
@@ -327,256 +378,6 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/products/:id/ads", async (req: Request, res: Response) => {
-    try {
-      const ads = await storage.getAdsByProductId(req.params.id);
-      res.json(ads);
-    } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch ads") });
-    }
-  });
-
-  app.post("/api/products/:id/analyze", async (req: Request, res: Response) => {
-    try {
-      const userId = await getAuthUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const product = await storage.getProduct(req.params.id);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-      }
-
-      if (!process.env.OPENAI_API_KEY) {
-        return res.status(500).json({ message: "OpenAI API key not configured" });
-      }
-
-      const aiSummary = await generateProductAnalysis({
-        title: product.title,
-        category: product.category,
-        niche: product.niche,
-        shortDescription: product.shortDescription,
-        supplierPrice: product.supplierPrice,
-        suggestedSellPrice: product.suggestedSellPrice,
-        estimatedMargin: product.estimatedMargin,
-        trendScore: product.trendScore,
-        saturationScore: product.saturationScore,
-        sourcePlatform: product.sourcePlatform,
-      });
-
-      await storage.updateProductAiSummary(req.params.id, aiSummary);
-
-      res.json({ aiSummary });
-    } catch (err: any) {
-      console.error("[openai] Analysis error:", err.message);
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to generate analysis") });
-    }
-  });
-
-  const adsQuerySchema = z.object({
-    search: z.string().max(200).optional(),
-    platform: z.string().max(50).optional(),
-    niche: z.string().max(100).optional(),
-    minViews: z.string().regex(/^\d+$/).optional(),
-  });
-
-  app.get("/api/ads", async (req: Request, res: Response) => {
-    try {
-      const parsed = adsQuerySchema.safeParse(req.query);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid query parameters" });
-      }
-
-      let ads = await storage.getAllAds();
-      const products = await storage.getAllProducts();
-      const productMap = new Map(products.map(p => [p.id, p]));
-
-      const { search, platform, niche, minViews } = parsed.data;
-
-      if (platform && platform !== "all") {
-        ads = ads.filter(a => a.platform === platform);
-      }
-
-      if (minViews) {
-        const min = parseInt(minViews as string, 10);
-        if (!isNaN(min)) ads = ads.filter(a => (a.views || 0) >= min);
-      }
-
-      if (niche && niche !== "all") {
-        ads = ads.filter(a => {
-          if (a.niche === niche) return true;
-          const product = a.productId ? productMap.get(a.productId) : null;
-          return product?.niche === niche;
-        });
-      }
-
-      if (search) {
-        const q = (search as string).toLowerCase();
-        ads = ads.filter(a => {
-          const product = a.productId ? productMap.get(a.productId) : null;
-          return (
-            product?.title.toLowerCase().includes(q) ||
-            product?.category.toLowerCase().includes(q) ||
-            (a.advertiserName || "").toLowerCase().includes(q) ||
-            (a.adDescription || "").toLowerCase().includes(q)
-          );
-        });
-      }
-
-      const adsWithProducts = ads.filter(ad => {
-        if (!ad.productId) return false;
-        return productMap.has(ad.productId);
-      });
-
-      const enriched = adsWithProducts.map(ad => {
-        const product = productMap.get(ad.productId!)!;
-        return {
-          ...ad,
-          productTitle: product.title,
-          productCategory: product.category,
-          productNiche: ad.niche || product.niche || "",
-        };
-      });
-
-      res.json(enriched);
-    } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch ads") });
-    }
-  });
-
-  const aliexpressImportSchema = z.object({
-    keyword: z.string().min(1).max(200),
-    min_orders: z.number().int().min(0).max(100000).optional().default(50),
-    min_rating: z.number().min(0).max(5).optional().default(4.0),
-    max_results: z.number().int().min(1).max(100).optional().default(20),
-  });
-
-  app.post("/api/import/aliexpress", async (req: Request, res: Response) => {
-    try {
-      const userId = await getAuthUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const parsed = aliexpressImportSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
-      }
-
-      const { keyword, min_orders, min_rating, max_results } = parsed.data;
-
-      const result = await importAliExpressProducts({
-        keyword: keyword.trim(),
-        minOrders: min_orders,
-        minRating: min_rating,
-        maxResults: max_results,
-      });
-
-      res.json(result);
-    } catch (err: any) {
-      console.error("[aliexpress] Import route error:", err.message);
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to import AliExpress products") });
-    }
-  });
-
-  app.get("/api/import/aliexpress/status", async (_req: Request, res: Response) => {
-    res.json(getAliExpressStatus());
-  });
-
-  const amazonImportSchema = z.object({
-    keyword: z.string().min(1).max(200),
-    min_orders: z.number().int().min(0).max(100000).optional().default(0),
-    min_rating: z.number().min(0).max(5).optional().default(3.5),
-    max_results: z.number().int().min(1).max(100).optional().default(20),
-    country: z.string().min(2).max(5).optional().default("US"),
-  });
-
-  app.post("/api/import/amazon", async (req: Request, res: Response) => {
-    try {
-      const userId = await getAuthUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const parsed = amazonImportSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
-      }
-
-      const { keyword, min_orders, min_rating, max_results, country } = parsed.data;
-
-      const result = await importAmazonProducts({
-        keyword: keyword.trim(),
-        minOrders: min_orders,
-        minRating: min_rating,
-        maxResults: max_results,
-        country,
-      });
-
-      res.json(result);
-    } catch (err: any) {
-      console.error("[amazon] Import route error:", err.message);
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to import Amazon products") });
-    }
-  });
-
-  app.get("/api/import/amazon/status", async (_req: Request, res: Response) => {
-    res.json(getAmazonStatus());
-  });
-
-  const tiktokImportSchema = z.object({
-    query: z.string().min(1).max(200),
-    start_date: z.string().optional(),
-    end_date: z.string().optional(),
-    max_results: z.number().int().min(1).max(100).optional().default(30),
-    country: z.string().optional(),
-  });
-
-  app.post("/api/import/tiktok-ads", async (req: Request, res: Response) => {
-    try {
-      const userId = await getAuthUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const parsed = tiktokImportSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid request", errors: parsed.error.flatten().fieldErrors });
-      }
-
-      const { query, start_date, end_date, max_results } = parsed.data;
-
-      const result = await importTikTokAds({
-        query: query.trim(),
-        startDate: start_date,
-        endDate: end_date,
-        maxResults: max_results,
-        country: parsed.data.country,
-      });
-
-      res.json(result);
-    } catch (err: any) {
-      console.error("[tiktok] Import route error:", err.message);
-      res.status(500).json({ message: safeErrorMessage(err, "Failed to import TikTok ads") });
-    }
-  });
-
-  app.get("/api/import/tiktok-ads/status", async (_req: Request, res: Response) => {
-    res.json(getTikTokStatus());
-  });
-
-  // ─── Moyasar Payment Integration ──────────────────────────────────────────
-  //
-  // Uses the Moyasar INVOICES API (/v1/invoices) which returns a hosted
-  // payment URL the user is redirected to — correct for a SaaS upgrade flow.
-  //
-  // Flow:
-  //   1. POST /api/payments/create  → creates invoice, saves pending sub, returns invoiceUrl
-  //   2. User pays on Moyasar-hosted page
-  //   3. POST /api/moyasar/webhook  → Moyasar calls this; we verify server-side, activate sub
-  //   4. GET  /api/payments/verify/:invoiceId → callback page polls this to show result
-
   const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
 
   const PLANS: Record<string, { nameAr: string; amountHalalas: number }> = {
@@ -591,7 +392,6 @@ export async function registerRoutes(
     plan: z.enum(["pro"]),
   });
 
-  // ── 1. Create Invoice ──────────────────────────────────────────────────────
   app.post("/api/payments/create", async (req: Request, res: Response) => {
     try {
       const userId = await getAuthUserId(req);
@@ -607,8 +407,6 @@ export async function registerRoutes(
       const { plan } = parsed.data;
       const planConfig = PLANS[plan];
 
-      // Build the host from the actual request so it works in dev (Replit),
-      // staging, and production without hardcoding localhost.
       let host: string;
       if (isProdEnv) {
         host = "https://nakhlah.io";
@@ -618,8 +416,6 @@ export async function registerRoutes(
         host = `${proto}://${reqHost}`;
       }
 
-      // back_url is where Moyasar redirects the browser after payment
-      // id= will be the invoice ID, status= will be paid/failed
       const backUrl = `${host}/payment/callback?plan=${encodeURIComponent(plan)}&userId=${encodeURIComponent(userId)}`;
 
       const moyasarRes = await fetch("https://api.moyasar.com/v1/invoices", {
@@ -633,145 +429,37 @@ export async function registerRoutes(
           currency:    "SAR",
           description: planConfig.nameAr,
           back_url:    backUrl,
-          metadata:    { userId, plan },
+          success_url: backUrl,
         }),
       });
 
       if (!moyasarRes.ok) {
-        const errBody = await moyasarRes.json().catch(() => ({}));
-        console.error("[moyasar] Create invoice error:", errBody);
-        return res.status(502).json({ message: safeErrorMessage(errBody, "Payment creation failed") });
+        const errBody = await moyasarRes.text();
+        console.error("[moyasar] Invoice creation failed:", errBody);
+        return res.status(502).json({ message: "Failed to create payment" });
       }
 
-      const invoice = await moyasarRes.json();
+      const invoice = (await moyasarRes.json()) as {
+        id: string;
+        url: string;
+        status: string;
+      };
 
-      // invoice.url  is the hosted payment page URL
-      if (!invoice?.url) {
-        console.error("[moyasar] No url in invoice response:", invoice);
-        return res.status(502).json({ message: "Payment gateway did not return a payment URL" });
-      }
-
-      // Save a pending subscription record so we can look it up on callback
       await storage.upsertSubscription({
         userId,
         plan,
-        status:          "pending",
+        status: "pending",
         moyasarInvoiceId: invoice.id,
-        amountHalalas:   planConfig.amountHalalas,
+        amountHalalas: planConfig.amountHalalas,
       });
 
-      res.json({ invoiceId: invoice.id, invoiceUrl: invoice.url });
+      res.json({ invoiceUrl: invoice.url, invoiceId: invoice.id });
     } catch (err: any) {
-      console.error("[moyasar] Unexpected error:", err.message);
-      res.status(500).json({ message: safeErrorMessage(err, "Payment request failed") });
+      console.error("[moyasar] Error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "Payment error") });
     }
   });
 
-  // ── 2. Webhook ─────────────────────────────────────────────────────────────
-  // Moyasar POSTs here when an invoice status changes.
-  // We always re-fetch from Moyasar to confirm the status (never trust the webhook body alone).
-  // Idempotent: if subscription is already active for this invoice, we skip.
-  app.post("/api/moyasar/webhook", async (req: Request, res: Response) => {
-    try {
-      if (!MOYASAR_SECRET_KEY) return res.status(503).end();
-
-      // ── Token verification ────────────────────────────────────────────────
-      // Moyasar sends the verification token in the Secret-Token header.
-      // We use timingSafeEqual to prevent timing-based side-channel attacks.
-      const WEBHOOK_TOKEN = process.env.MOYASAR_WEBHOOK_TOKEN;
-      if (!WEBHOOK_TOKEN) {
-        console.error("[moyasar webhook] MOYASAR_WEBHOOK_TOKEN not configured");
-        return res.status(503).end();
-      }
-
-      const receivedToken = req.headers["secret-token"];
-      if (typeof receivedToken !== "string") {
-        return res.status(401).json({ message: "Missing webhook token" });
-      }
-
-      // Constant-time comparison — prevents timing attacks
-      const { timingSafeEqual } = await import("crypto");
-      const expected = Buffer.from(WEBHOOK_TOKEN,  "utf8");
-      const received = Buffer.from(receivedToken,  "utf8");
-      const tokensMatch =
-        expected.length === received.length &&
-        timingSafeEqual(expected, received);
-
-      if (!tokensMatch) {
-        console.warn("[moyasar webhook] Invalid token — request rejected");
-        return res.status(401).json({ message: "Invalid webhook token" });
-      }
-      // ── End token verification ─────────────────────────────────────────────
-
-      // Moyasar sends the payment/invoice object in the body
-      const event = req.body;
-      const invoiceId: string | undefined = event?.id ?? event?.invoice_id;
-
-      if (!invoiceId || typeof invoiceId !== "string") {
-        return res.status(400).json({ message: "Missing invoice id" });
-      }
-
-      // Always verify server-side — never trust the webhook body status alone
-      const moyasarRes = await fetch(`https://api.moyasar.com/v1/invoices/${invoiceId}`, {
-        headers: { Authorization: moyasarAuth() },
-      });
-
-      if (!moyasarRes.ok) {
-        console.error("[moyasar webhook] Could not fetch invoice", invoiceId);
-        return res.status(502).end();
-      }
-
-      const invoice = await moyasarRes.json();
-      const invoiceStatus: string = invoice?.status ?? "";
-
-      // Find the pending subscription for this invoice
-      const existing = await storage.getSubscriptionByInvoiceId(invoiceId);
-      if (!existing) {
-        // Invoice not created by us — ignore silently
-        return res.status(200).json({ ignored: true });
-      }
-
-      // Idempotency: already activated — do not double-process
-      if (existing.status === "active" && invoiceStatus === "paid") {
-        return res.status(200).json({ already: "active" });
-      }
-
-      if (invoiceStatus === "paid") {
-        // Extract the payment ID from the invoice (Moyasar nests it under payments[])
-        const paymentId: string | undefined =
-          invoice?.payments?.[0]?.id ?? invoice?.payment_id ?? undefined;
-
-        await storage.upsertSubscription({
-          userId:           existing.userId,
-          plan:             existing.plan,
-          status:           "active",
-          moyasarInvoiceId: invoiceId,
-          moyasarPaymentId: paymentId,
-          amountHalalas:    existing.amountHalalas ?? undefined,
-          activatedAt:      new Date(),
-        });
-
-        console.log(`[moyasar webhook] Subscription activated for user ${existing.userId}, plan ${existing.plan}`);
-      } else if (invoiceStatus === "failed" || invoiceStatus === "expired") {
-        await storage.upsertSubscription({
-          userId:           existing.userId,
-          plan:             existing.plan,
-          status:           invoiceStatus,
-          moyasarInvoiceId: invoiceId,
-        });
-      }
-      // Any other status (initiated, pending) — ignore, webhook may fire again
-
-      res.status(200).json({ received: true });
-    } catch (err: any) {
-      console.error("[moyasar webhook] Error:", err.message);
-      res.status(500).end();
-    }
-  });
-
-  // ── 3. Verify (called by callback page to show paid/failed UI) ──────────────
-  // Looks up subscription in our DB first. If not yet active (webhook may lag),
-  // also checks Moyasar directly so the UI is not stuck on "pending".
   app.get("/api/payments/verify/:invoiceId", async (req: Request, res: Response) => {
     try {
       const userId = await getAuthUserId(req);
@@ -782,86 +470,99 @@ export async function registerRoutes(
       }
 
       const { invoiceId } = req.params;
-      if (!invoiceId || !/^[a-zA-Z0-9_-]+$/.test(invoiceId)) {
-        return res.status(400).json({ message: "Invalid invoice ID" });
-      }
 
-      // Check our DB first
-      const sub = await storage.getSubscriptionByInvoiceId(invoiceId);
-
-      // If subscription is already active in DB, return immediately
-      if (sub && sub.status === "active" && sub.userId === userId) {
-        return res.json({ status: "paid", plan: sub.plan, activatedAt: sub.activatedAt });
-      }
-
-      // Otherwise fetch from Moyasar directly to handle webhook lag
-      const moyasarRes = await fetch(`https://api.moyasar.com/v1/invoices/${invoiceId}`, {
-        headers: { Authorization: moyasarAuth() },
-      });
+      const moyasarRes = await fetch(
+        `https://api.moyasar.com/v1/invoices/${encodeURIComponent(invoiceId)}`,
+        { headers: { Authorization: moyasarAuth() } }
+      );
 
       if (!moyasarRes.ok) {
-        return res.status(502).json({ message: "Could not verify payment" });
+        return res.status(502).json({ message: "Failed to verify payment" });
       }
 
-      const invoice = await moyasarRes.json();
-
-      // Security: confirm this invoice belongs to the requesting user
-      const metaUserId: string | undefined = invoice?.metadata?.userId;
-      if (metaUserId && metaUserId !== userId) {
-        return res.status(403).json({ message: "Payment does not belong to this account" });
-      }
-
-      const invoiceStatus: string = invoice?.status ?? "unknown";
-
-      // If Moyasar says paid but webhook hasn't fired yet, activate now
-      if (invoiceStatus === "paid" && sub && sub.userId === userId) {
-        const paymentId: string | undefined =
-          invoice?.payments?.[0]?.id ?? invoice?.payment_id ?? undefined;
-
-        await storage.upsertSubscription({
-          userId:           userId,
-          plan:             sub.plan,
-          status:           "active",
-          moyasarInvoiceId: invoiceId,
-          moyasarPaymentId: paymentId,
-          amountHalalas:    sub.amountHalalas ?? undefined,
-          activatedAt:      new Date(),
-        });
-
-        return res.json({ status: "paid", plan: sub.plan, activatedAt: new Date() });
-      }
-
-      // Map Moyasar statuses to a simple paid/failed/pending
-      const statusMap: Record<string, string> = {
-        paid:      "paid",
-        failed:    "failed",
-        expired:   "failed",
-        initiated: "pending",
-        pending:   "pending",
+      const invoice = (await moyasarRes.json()) as {
+        id: string;
+        status: string;
+        payments?: { id: string; status: string }[];
       };
 
-      res.json({ status: statusMap[invoiceStatus] ?? "unknown" });
+      const paidPayment = invoice.payments?.find(
+        (p) => p.status === "paid"
+      );
+
+      if (invoice.status === "paid" && paidPayment) {
+        await storage.upsertSubscription({
+          userId,
+          plan: "pro",
+          status: "active",
+          moyasarInvoiceId: invoiceId,
+          moyasarPaymentId: paidPayment.id,
+          activatedAt: new Date(),
+        });
+        return res.json({ status: "active" });
+      }
+
+      return res.json({ status: invoice.status });
     } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Payment verification failed") });
+      console.error("[moyasar] Verify error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "Verification error") });
     }
   });
 
-  // ── 4. Get current user subscription ───────────────────────────────────────
+  const MOYASAR_WEBHOOK_TOKEN = process.env.MOYASAR_WEBHOOK_TOKEN;
+
+  app.post("/api/moyasar/webhook", async (req: Request, res: Response) => {
+    try {
+      if (MOYASAR_WEBHOOK_TOKEN) {
+        const providedToken =
+          req.headers["x-moyasar-token"] || req.query.token;
+        if (providedToken !== MOYASAR_WEBHOOK_TOKEN) {
+          return res.status(401).json({ message: "Invalid webhook token" });
+        }
+      }
+
+      const { id, type, data } = req.body;
+
+      if (type === "payment_paid" && data) {
+        const invoiceId = data.invoice_id;
+        const paymentId = data.id;
+
+        if (invoiceId) {
+          const sub = await storage.getSubscriptionByInvoiceId(invoiceId);
+          if (sub) {
+            await storage.upsertSubscription({
+              userId: sub.userId,
+              plan: sub.plan,
+              status: "active",
+              moyasarInvoiceId: invoiceId,
+              moyasarPaymentId: paymentId,
+              activatedAt: new Date(),
+            });
+            console.log(`[webhook] Activated subscription for user ${sub.userId}`);
+          }
+        }
+      }
+
+      res.json({ received: true });
+    } catch (err: any) {
+      console.error("[webhook] Error:", err.message);
+      res.status(500).json({ message: "Webhook processing error" });
+    }
+  });
+
   app.get("/api/payments/subscription", async (req: Request, res: Response) => {
     try {
       const userId = await getAuthUserId(req);
-      if (!userId) return res.status(401).json({ message: "Not authenticated" });
-
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const sub = await storage.getSubscriptionByUserId(userId);
-      if (!sub) return res.json({ plan: "free", status: "none" });
-
-      res.json({
-        plan:        sub.plan,
-        status:      sub.status,
-        activatedAt: sub.activatedAt,
-      });
+      if (!sub) {
+        return res.json({ plan: null, status: "none" });
+      }
+      res.json({ plan: sub.plan, status: sub.status });
     } catch (err: any) {
-      res.status(500).json({ message: safeErrorMessage(err, "Could not load subscription") });
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch subscription") });
     }
   });
 

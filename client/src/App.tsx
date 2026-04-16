@@ -10,7 +10,6 @@ import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import SignupPage from "@/pages/signup";
-import DashboardPage from "@/pages/dashboard";
 import ProjectsPage from "@/pages/projects";
 import SavedProductsPage from "@/pages/saved-products";
 import PricingPage from "@/pages/pricing-page";
@@ -19,6 +18,8 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallbackPage from "@/pages/auth-callback";
 import PaymentCallbackPage from "@/pages/payment-callback";
+import AdminListingsPage from "@/pages/admin/listings";
+import ListingFormPage from "@/pages/admin/listing-form";
 import { Loader2 } from "lucide-react";
 
 function LoadingScreen() {
@@ -85,6 +86,26 @@ function ProjectsRoute() {
   );
 }
 
+function AdminRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { user, isLoading: authLoading } = useAuth();
+
+  const { data: roleData, isLoading: roleLoading } = useQuery<{ role: string }>({
+    queryKey: ["/api/auth/role"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  if (authLoading || (user && roleLoading)) return <LoadingScreen />;
+  if (!user) return <Redirect to="/login" />;
+  if (roleData?.role !== "admin") return <Redirect to="/projects" />;
+
+  return (
+    <AppLayout>
+      <Component />
+    </AppLayout>
+  );
+}
+
 function PublicRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
 
@@ -109,8 +130,11 @@ function Router() {
       <Route path="/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
 
       <Route path="/projects">{() => <ProjectsRoute />}</Route>
-      <Route path="/dashboard">{() => <ProtectedRoute component={DashboardPage} />}</Route>
       <Route path="/saved">{() => <SubscribedRoute component={SavedProductsPage} />}</Route>
+
+      <Route path="/admin/listings/new">{() => <AdminRoute component={ListingFormPage} />}</Route>
+      <Route path="/admin/listings/:id/edit">{() => <AdminRoute component={ListingFormPage} />}</Route>
+      <Route path="/admin/listings">{() => <AdminRoute component={AdminListingsPage} />}</Route>
 
       <Route component={NotFound} />
     </Switch>

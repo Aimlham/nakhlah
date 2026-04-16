@@ -6,6 +6,9 @@ import type {
   SavedProduct,
   ProductAd,
   Subscription,
+  Listing,
+  InsertListing,
+  Profile,
 } from "@shared/schema";
 import { supabaseAdmin } from "./supabase";
 import type { IStorage } from "./storage";
@@ -39,12 +42,7 @@ async function probeAdColumns() {
   const missing = AD_NEW_COLUMNS.filter(c => !adColumnsAvailable.has(c));
   if (missing.length > 0) {
     console.log("[supabase] Missing columns in product_ads table:", missing.join(", "));
-    console.log("[supabase] Run this SQL in Supabase Dashboard > SQL Editor:");
-    console.log(missing.map(c => `ALTER TABLE product_ads ADD COLUMN IF NOT EXISTS ${c} TEXT;`).join("\n"));
-    console.log("ALTER TABLE product_ads ALTER COLUMN product_id DROP NOT NULL;");
   }
-
-  console.log(`[supabase] product_ads columns available: ${Array.from(adColumnsAvailable).join(", ") || "base only"}`);
 }
 
 async function probeColumns() {
@@ -63,20 +61,6 @@ async function probeColumns() {
   const missing = NEW_COLUMNS.filter(c => !availableNewColumns.has(c));
   if (missing.length > 0) {
     console.log("[supabase] Missing columns in products table:", missing.join(", "));
-    console.log("[supabase] Run this SQL in Supabase Dashboard > SQL Editor:");
-    console.log(missing.map(c => {
-      const types: Record<string, string> = {
-        source: "TEXT",
-        actual_sell_price: "NUMERIC",
-        orders_count: "INTEGER",
-        rating: "NUMERIC",
-        supplier_name: "TEXT",
-        is_halal_safe: "BOOLEAN DEFAULT true",
-        discovery_source: "TEXT",
-        supplier_source: "TEXT",
-      };
-      return `ALTER TABLE products ADD COLUMN IF NOT EXISTS ${c} ${types[c] || "TEXT"};`;
-    }).join("\n"));
   } else {
     console.log("[supabase] All product columns available");
   }
@@ -121,6 +105,57 @@ function mapSavedProduct(row: Record<string, unknown>): SavedProduct {
     userId: row.user_id as string,
     productId: row.product_id as string,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
+}
+
+function mapListing(row: Record<string, unknown>): Listing {
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    imageUrl: (row.image_url as string) ?? null,
+    description: (row.description as string) ?? null,
+    category: (row.category as string) ?? null,
+    supplierName: (row.supplier_name as string) ?? null,
+    supplierPhone: (row.supplier_phone as string) ?? null,
+    supplierWhatsapp: (row.supplier_whatsapp as string) ?? null,
+    supplierCity: (row.supplier_city as string) ?? null,
+    supplierType: (row.supplier_type as string) ?? null,
+    supplierLink: (row.supplier_link as string) ?? null,
+    status: (row.status as string) ?? "draft",
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
+}
+
+function mapSubscription(row: Record<string, unknown>): Subscription {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    plan: row.plan as string,
+    status: row.status as string,
+    moyasarInvoiceId: (row.moyasar_invoice_id as string) ?? null,
+    moyasarPaymentId: (row.moyasar_payment_id as string) ?? null,
+    amountHalalas: (row.amount_halalas as number) ?? null,
+    activatedAt: row.activated_at ? new Date(row.activated_at as string) : null,
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+  };
+}
+
+function mapProductAd(row: Record<string, unknown>): ProductAd {
+  return {
+    id: row.id as string,
+    productId: (row.product_id as string) ?? null,
+    platform: row.platform as string,
+    niche: (row.niche as string) ?? null,
+    videoUrl: row.video_url as string,
+    thumbnailUrl: (row.thumbnail_url as string) ?? null,
+    views: (row.views as number) ?? 0,
+    likes: (row.likes as number) ?? 0,
+    publishedAt: row.published_at ? new Date(row.published_at as string) : null,
+    createdAt: row.created_at ? new Date(row.created_at as string) : null,
+    advertiserName: (row.advertiser_name as string) ?? null,
+    adDescription: (row.ad_description as string) ?? null,
+    landingPageUrl: (row.landing_page_url as string) ?? null,
+    externalAdId: (row.external_ad_id as string) ?? null,
   };
 }
 
@@ -451,37 +486,118 @@ export class SupabaseStorage implements IStorage {
     if (error || !data) return undefined;
     return mapSubscription(data);
   }
-}
 
-function mapSubscription(row: Record<string, unknown>): Subscription {
-  return {
-    id: row.id as string,
-    userId: row.user_id as string,
-    plan: row.plan as string,
-    status: row.status as string,
-    moyasarInvoiceId: (row.moyasar_invoice_id as string) ?? null,
-    moyasarPaymentId: (row.moyasar_payment_id as string) ?? null,
-    amountHalalas: (row.amount_halalas as number) ?? null,
-    activatedAt: row.activated_at ? new Date(row.activated_at as string) : null,
-    createdAt: row.created_at ? new Date(row.created_at as string) : null,
-  };
-}
+  async getProfile(userId: string): Promise<Profile | undefined> {
+    const { data, error } = await this.db
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error || !data) return undefined;
+    return { id: data.id as string, role: (data.role as string) ?? "user" };
+  }
 
-function mapProductAd(row: Record<string, unknown>): ProductAd {
-  return {
-    id: row.id as string,
-    productId: (row.product_id as string) ?? null,
-    platform: row.platform as string,
-    niche: (row.niche as string) ?? null,
-    videoUrl: row.video_url as string,
-    thumbnailUrl: (row.thumbnail_url as string) ?? null,
-    views: (row.views as number) ?? 0,
-    likes: (row.likes as number) ?? 0,
-    publishedAt: row.published_at ? new Date(row.published_at as string) : null,
-    createdAt: row.created_at ? new Date(row.created_at as string) : null,
-    advertiserName: (row.advertiser_name as string) ?? null,
-    adDescription: (row.ad_description as string) ?? null,
-    landingPageUrl: (row.landing_page_url as string) ?? null,
-    externalAdId: (row.external_ad_id as string) ?? null,
-  };
+  async upsertProfile(userId: string, role: string): Promise<Profile> {
+    const existing = await this.getProfile(userId);
+    if (existing) {
+      const { data, error } = await this.db
+        .from("profiles")
+        .update({ role })
+        .eq("id", userId)
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return { id: data.id as string, role: data.role as string };
+    }
+    const { data, error } = await this.db
+      .from("profiles")
+      .insert({ id: userId, role })
+      .select("*")
+      .single();
+    if (error) throw new Error(error.message);
+    return { id: data.id as string, role: data.role as string };
+  }
+
+  async getAllListings(): Promise<Listing[]> {
+    const { data, error } = await this.db
+      .from("listings")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapListing);
+  }
+
+  async getPublishedListings(): Promise<Listing[]> {
+    const { data, error } = await this.db
+      .from("listings")
+      .select("*")
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapListing);
+  }
+
+  async getListing(id: string): Promise<Listing | undefined> {
+    const { data, error } = await this.db
+      .from("listings")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) return undefined;
+    return mapListing(data);
+  }
+
+  async createListing(listing: InsertListing): Promise<Listing> {
+    const { data, error } = await this.db
+      .from("listings")
+      .insert({
+        title: listing.title,
+        image_url: listing.imageUrl ?? null,
+        description: listing.description ?? null,
+        category: listing.category ?? null,
+        supplier_name: listing.supplierName ?? null,
+        supplier_phone: listing.supplierPhone ?? null,
+        supplier_whatsapp: listing.supplierWhatsapp ?? null,
+        supplier_city: listing.supplierCity ?? null,
+        supplier_type: listing.supplierType ?? null,
+        supplier_link: listing.supplierLink ?? null,
+        status: listing.status ?? "draft",
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return mapListing(data);
+  }
+
+  async updateListing(id: string, listing: Partial<InsertListing>): Promise<Listing> {
+    const updateData: Record<string, unknown> = {};
+    if (listing.title !== undefined) updateData.title = listing.title;
+    if (listing.imageUrl !== undefined) updateData.image_url = listing.imageUrl;
+    if (listing.description !== undefined) updateData.description = listing.description;
+    if (listing.category !== undefined) updateData.category = listing.category;
+    if (listing.supplierName !== undefined) updateData.supplier_name = listing.supplierName;
+    if (listing.supplierPhone !== undefined) updateData.supplier_phone = listing.supplierPhone;
+    if (listing.supplierWhatsapp !== undefined) updateData.supplier_whatsapp = listing.supplierWhatsapp;
+    if (listing.supplierCity !== undefined) updateData.supplier_city = listing.supplierCity;
+    if (listing.supplierType !== undefined) updateData.supplier_type = listing.supplierType;
+    if (listing.supplierLink !== undefined) updateData.supplier_link = listing.supplierLink;
+    if (listing.status !== undefined) updateData.status = listing.status;
+
+    const { data, error } = await this.db
+      .from("listings")
+      .update(updateData)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return mapListing(data);
+  }
+
+  async deleteListing(id: string): Promise<void> {
+    const { error } = await this.db
+      .from("listings")
+      .delete()
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+  }
 }

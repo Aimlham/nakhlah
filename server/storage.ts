@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd, type Subscription } from "@shared/schema";
+import { type User, type InsertUser, type Product, type InsertProduct, type SavedProduct, type InsertSavedProduct, type ProductAd, type InsertProductAd, type Subscription, type Listing, type InsertListing, type Profile } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { supabaseConfigured } from "./supabase";
@@ -36,6 +36,17 @@ export interface IStorage {
   }): Promise<Subscription>;
   getSubscriptionByUserId(userId: string): Promise<Subscription | undefined>;
   getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined>;
+
+  getProfile(userId: string): Promise<Profile | undefined>;
+  upsertProfile(userId: string, role: string): Promise<Profile>;
+
+  getAllListings(): Promise<Listing[]>;
+  getPublishedListings(): Promise<Listing[]>;
+  getListing(id: string): Promise<Listing | undefined>;
+  createListing(listing: InsertListing): Promise<Listing>;
+  updateListing(id: string, listing: Partial<InsertListing>): Promise<Listing>;
+  deleteListing(id: string): Promise<void>;
+
   init?(): Promise<void>;
 }
 
@@ -57,6 +68,8 @@ export class MemStorage implements IStorage {
   private savedProducts: Map<string, SavedProduct>;
   private ads: Map<string, ProductAd>;
   private subscriptions: Map<string, Subscription>;
+  private profiles: Map<string, Profile>;
+  private listings: Map<string, Listing>;
 
   constructor() {
     this.users = new Map();
@@ -64,6 +77,8 @@ export class MemStorage implements IStorage {
     this.savedProducts = new Map();
     this.ads = new Map();
     this.subscriptions = new Map();
+    this.profiles = new Map();
+    this.listings = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -252,6 +267,63 @@ export class MemStorage implements IStorage {
 
   async getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined> {
     return Array.from(this.subscriptions.values()).find(s => s.moyasarInvoiceId === invoiceId);
+  }
+
+  async getProfile(userId: string): Promise<Profile | undefined> {
+    return this.profiles.get(userId);
+  }
+
+  async upsertProfile(userId: string, role: string): Promise<Profile> {
+    const profile: Profile = { id: userId, role };
+    this.profiles.set(userId, profile);
+    return profile;
+  }
+
+  async getAllListings(): Promise<Listing[]> {
+    return Array.from(this.listings.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+  }
+
+  async getPublishedListings(): Promise<Listing[]> {
+    return (await this.getAllListings()).filter(l => l.status === "published");
+  }
+
+  async getListing(id: string): Promise<Listing | undefined> {
+    return this.listings.get(id);
+  }
+
+  async createListing(listing: InsertListing): Promise<Listing> {
+    const id = randomUUID();
+    const newListing: Listing = {
+      id,
+      title: listing.title,
+      imageUrl: listing.imageUrl ?? null,
+      description: listing.description ?? null,
+      category: listing.category ?? null,
+      supplierName: listing.supplierName ?? null,
+      supplierPhone: listing.supplierPhone ?? null,
+      supplierWhatsapp: listing.supplierWhatsapp ?? null,
+      supplierCity: listing.supplierCity ?? null,
+      supplierType: listing.supplierType ?? null,
+      supplierLink: listing.supplierLink ?? null,
+      status: listing.status ?? "draft",
+      createdAt: new Date(),
+    };
+    this.listings.set(id, newListing);
+    return newListing;
+  }
+
+  async updateListing(id: string, listing: Partial<InsertListing>): Promise<Listing> {
+    const existing = this.listings.get(id);
+    if (!existing) throw new Error("Listing not found");
+    const updated: Listing = { ...existing, ...listing };
+    this.listings.set(id, updated);
+    return updated;
+  }
+
+  async deleteListing(id: string): Promise<void> {
+    this.listings.delete(id);
   }
 }
 

@@ -11,15 +11,16 @@ import { EmptyState } from "@/components/empty-state";
 import {
   FolderOpen,
   Search,
-  Package,
   Lock,
+  MapPin,
+  Tag,
+  Phone,
   ExternalLink,
-  Star,
-  ShoppingCart,
-  TrendingUp,
+  MessageCircle,
+  User,
+  ImageIcon,
 } from "lucide-react";
-import { cn, formatMoney, getCategoryGradient } from "@/lib/utils";
-import type { Product } from "@shared/schema";
+import type { Listing } from "@shared/schema";
 
 interface ProjectsPageProps {
   isSubscribed: boolean;
@@ -28,43 +29,39 @@ interface ProjectsPageProps {
 export default function ProjectsPage({ isSubscribed }: ProjectsPageProps) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState("newest");
+  const [city, setCity] = useState("all");
 
-  const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: ["/api/projects"],
+  const { data: listings, isLoading } = useQuery<Listing[]>({
+    queryKey: ["/api/listings"],
   });
 
   const categories = useMemo(() => {
-    if (!products) return [];
-    return [...new Set(products.map((p) => p.category))];
-  }, [products]);
+    if (!listings) return [];
+    return [...new Set(listings.map((l) => l.category).filter(Boolean))] as string[];
+  }, [listings]);
+
+  const cities = useMemo(() => {
+    if (!listings) return [];
+    return [...new Set(listings.map((l) => l.supplierCity).filter(Boolean))] as string[];
+  }, [listings]);
 
   const filtered = useMemo(() => {
-    let result = products || [];
+    let result = listings || [];
 
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          (p.aiSummary || "").toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q)
+        (l) =>
+          l.title.toLowerCase().includes(q) ||
+          (l.description || "").toLowerCase().includes(q) ||
+          (l.category || "").toLowerCase().includes(q)
       );
     }
-    if (category !== "all") result = result.filter((p) => p.category === category);
-
-    result = [...result].sort((a, b) => {
-      if (sort === "newest")
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-      if (sort === "price")
-        return parseFloat(b.suggestedSellPrice || "0") - parseFloat(a.suggestedSellPrice || "0");
-      if (sort === "opportunity")
-        return (b.opportunityScore || 0) - (a.opportunityScore || 0);
-      return 0;
-    });
+    if (category !== "all") result = result.filter((l) => l.category === category);
+    if (city !== "all") result = result.filter((l) => l.supplierCity === city);
 
     return result;
-  }, [products, search, category, sort]);
+  }, [listings, search, category, city]);
 
   if (isLoading) {
     return (
@@ -73,7 +70,7 @@ export default function ProjectsPage({ isSubscribed }: ProjectsPageProps) {
         <Skeleton className="h-10 w-full" />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-96 rounded-md" />
+            <Skeleton key={i} className="h-80 rounded-md" />
           ))}
         </div>
       </div>
@@ -90,7 +87,7 @@ export default function ProjectsPage({ isSubscribed }: ProjectsPageProps) {
           </h1>
         </div>
         <p className="text-muted-foreground mt-1">
-          اكتشف فرص مشاريع دروبشيبنق جاهزة للبدء
+          اكتشف موردين ومشاريع محلية جاهزة للتعاون
         </p>
       </div>
 
@@ -118,14 +115,17 @@ export default function ProjectsPage({ isSubscribed }: ProjectsPageProps) {
             ))}
           </SelectContent>
         </Select>
-        <Select value={sort} onValueChange={setSort}>
-          <SelectTrigger className="w-[160px]" data-testid="select-sort">
-            <SelectValue placeholder="الترتيب" />
+        <Select value={city} onValueChange={setCity}>
+          <SelectTrigger className="w-[160px]" data-testid="select-city">
+            <SelectValue placeholder="المدينة" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="newest">الأحدث</SelectItem>
-            <SelectItem value="opportunity">أعلى فرصة</SelectItem>
-            <SelectItem value="price">أعلى سعر</SelectItem>
+            <SelectItem value="all">جميع المدن</SelectItem>
+            {cities.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -142,10 +142,10 @@ export default function ProjectsPage({ isSubscribed }: ProjectsPageProps) {
         />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((product) => (
-            <ProjectCard
-              key={product.id}
-              product={product}
+          {filtered.map((listing) => (
+            <ListingCard
+              key={listing.id}
+              listing={listing}
               isSubscribed={isSubscribed}
             />
           ))}
@@ -155,132 +155,117 @@ export default function ProjectsPage({ isSubscribed }: ProjectsPageProps) {
   );
 }
 
-function ProjectCard({
-  product,
+function ListingCard({
+  listing,
   isSubscribed,
 }: {
-  product: Product;
+  listing: Listing;
   isSubscribed: boolean;
 }) {
-  let summary = "";
-  if (product.aiSummary) {
-    try {
-      const parsed = JSON.parse(product.aiSummary);
-      summary = parsed.whyPromising || "";
-    } catch {
-      summary = product.aiSummary.slice(0, 120);
-    }
-  }
-
   return (
     <Card
       className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 overflow-hidden"
-      data-testid={`card-project-${product.id}`}
+      data-testid={`card-listing-${listing.id}`}
     >
       <CardContent className="p-0">
-        <div
-          className={cn(
-            "relative h-44 rounded-t-lg bg-gradient-to-br flex items-center justify-center overflow-hidden",
-            getCategoryGradient(product.category)
-          )}
-        >
-          {product.imageUrl ? (
+        <div className="relative h-44 rounded-t-lg bg-muted flex items-center justify-center overflow-hidden">
+          {listing.imageUrl ? (
             <img
-              src={product.imageUrl}
-              alt={product.title}
+              src={listing.imageUrl}
+              alt={listing.title}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
               loading="lazy"
             />
           ) : (
-            <Package className="w-10 h-10 text-white/60" />
+            <ImageIcon className="w-10 h-10 text-muted-foreground/40" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
 
-          {(product.opportunityScore || 0) >= 70 && (
-            <div className="absolute top-2 end-2">
-              <div className="inline-flex items-center gap-1 rounded-md bg-emerald-500 text-white px-2 py-1 text-xs font-medium shadow-sm">
-                <TrendingUp className="w-3 h-3" />
-                فرصة عالية
-              </div>
+          {listing.category && (
+            <div className="absolute bottom-2 start-2">
+              <Badge
+                variant="secondary"
+                className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm"
+              >
+                <Tag className="w-3 h-3 me-1" />
+                {listing.category}
+              </Badge>
             </div>
           )}
 
-          <div className="absolute bottom-2 start-2">
-            <Badge
-              variant="secondary"
-              className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm"
-            >
-              {product.category}
-            </Badge>
-          </div>
+          {listing.supplierCity && (
+            <div className="absolute bottom-2 end-2">
+              <Badge
+                variant="secondary"
+                className="text-[10px] bg-black/50 text-white border-0 backdrop-blur-sm"
+              >
+                <MapPin className="w-3 h-3 me-1" />
+                {listing.supplierCity}
+              </Badge>
+            </div>
+          )}
         </div>
 
         <div className="p-4 space-y-3">
           <h3
             className="font-semibold text-sm leading-tight line-clamp-2 min-h-[2.5rem]"
-            data-testid={`text-project-title-${product.id}`}
+            data-testid={`text-listing-title-${listing.id}`}
           >
-            {product.title}
+            {listing.title}
           </h3>
 
-          {summary && (
-            <p className="text-xs text-muted-foreground line-clamp-2">{summary}</p>
+          {listing.description && (
+            <p className="text-xs text-muted-foreground line-clamp-2">{listing.description}</p>
           )}
 
-          <div className="grid grid-cols-2 gap-2 text-center bg-muted/30 rounded-lg p-2.5">
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-0.5">سعر البيع المتوقع</p>
-              <p className="text-sm font-bold tabular-nums">
-                {formatMoney(product.suggestedSellPrice)}
-              </p>
+          {listing.supplierType && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="w-3.5 h-3.5" />
+              <span>{listing.supplierType}</span>
             </div>
-            <div className="border-s border-border/50">
-              <p className="text-[10px] text-muted-foreground mb-0.5">هامش الربح</p>
-              <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {parseFloat(product.estimatedMargin || "0").toFixed(0)}%
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              {product.ordersCount != null && product.ordersCount > 0 && (
-                <span className="flex items-center gap-0.5">
-                  <ShoppingCart className="w-3 h-3" />
-                  {product.ordersCount.toLocaleString()}
-                </span>
-              )}
-              {product.rating != null && (
-                <span className="flex items-center gap-0.5">
-                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                  {Number(product.rating).toFixed(1)}
-                </span>
-              )}
-            </div>
-          </div>
+          )}
 
           {isSubscribed ? (
-            <div className="space-y-2">
-              {product.supplierLink && (
-                <div className="flex items-center justify-between">
-                  <a
-                    href={product.supplierLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                    data-testid={`link-supplier-${product.id}`}
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    عرض صفحة المورد
-                  </a>
-                  {product.supplierSource && (
-                    <Badge variant="outline" className="text-[10px]" data-testid={`badge-supplier-source-${product.id}`}>
-                      {product.supplierSource === "aliexpress" ? "AliExpress" :
-                       product.supplierSource === "cjdropshipping" || product.supplierSource === "cj" ? "CJ Dropshipping" :
-                       product.supplierSource}
-                    </Badge>
-                  )}
+            <div className="space-y-2 border-t border-border/50 pt-3">
+              {listing.supplierName && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <User className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-medium" data-testid={`text-supplier-name-${listing.id}`}>{listing.supplierName}</span>
                 </div>
+              )}
+              {listing.supplierPhone && (
+                <a
+                  href={`tel:${listing.supplierPhone}`}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                  data-testid={`link-supplier-phone-${listing.id}`}
+                >
+                  <Phone className="w-3.5 h-3.5" />
+                  {listing.supplierPhone}
+                </a>
+              )}
+              {listing.supplierWhatsapp && (
+                <a
+                  href={`https://wa.me/${listing.supplierWhatsapp.replace(/[^0-9]/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-emerald-600 hover:underline"
+                  data-testid={`link-supplier-whatsapp-${listing.id}`}
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  واتساب
+                </a>
+              )}
+              {listing.supplierLink && (
+                <a
+                  href={listing.supplierLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+                  data-testid={`link-supplier-link-${listing.id}`}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  رابط المورد
+                </a>
               )}
             </div>
           ) : (
@@ -291,7 +276,7 @@ function ProjectCard({
                   بيانات المورد مخفية
                 </div>
                 <Button size="sm" className="w-full" asChild>
-                  <Link href="/pricing" data-testid={`button-subscribe-${product.id}`}>
+                  <Link href="/pricing" data-testid={`button-subscribe-${listing.id}`}>
                     اشترك لعرض بيانات المورد
                   </Link>
                 </Button>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Bookmark, Settings, FolderOpen } from "lucide-react";
+import { Bookmark, Settings, FolderOpen, Shield } from "lucide-react";
 import nakhlahLogo from "@assets/nakhlah-logo.png";
 import {
   Sidebar,
@@ -18,7 +18,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { title: "لوحة التحكم", url: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
   { title: "المشاريع", url: "/projects", icon: FolderOpen, key: "projects" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
   { title: "الإعدادات", url: "/settings", icon: Settings, key: "settings" },
@@ -31,7 +30,12 @@ export function AppSidebar() {
     queryKey: ["/api/payments/subscription"],
     enabled: !!user,
   });
+  const { data: roleData } = useQuery<{ role: string }>({
+    queryKey: ["/api/auth/role"],
+    enabled: !!user,
+  });
   const isSubscribed = sub?.status === "active";
+  const isAdmin = roleData?.role === "admin";
 
   return (
     <Sidebar side="right">
@@ -49,7 +53,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = location === item.url || (item.url !== "/dashboard" && location.startsWith(item.url));
+                const isActive = location === item.url || location.startsWith(item.url + "/");
                 return (
                   <SidebarMenuItem key={item.key}>
                     <SidebarMenuButton asChild data-active={isActive}>
@@ -64,6 +68,27 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>الإدارة</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    data-active={location.startsWith("/admin/listings")}
+                  >
+                    <Link href="/admin/listings" data-testid="link-nav-admin-listings">
+                      <Shield className="w-4 h-4" />
+                      <span>إدارة البوستات</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter className="p-4">
         {user && (
