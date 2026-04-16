@@ -129,6 +129,9 @@ shared/
 - `PATCH/DELETE /api/admin/listings/:id`
 - `POST/DELETE /api/admin/categories` - CRUD categories
 - `POST /api/admin/upload-image` - Image upload to Supabase Storage
+- `POST /api/admin/subscriptions/:id/cancel` - Cancel subscription (status → cancelled)
+- `POST /api/admin/subscriptions/:id/refund` - Refund via Moyasar API + mark refunded
+- `GET /api/admin/overview` - Subscription stats + recent subscribers
 
 ### Auth & Payments
 - `POST /api/auth/signup`, `POST /api/auth/login`, `GET /api/auth/me`
@@ -143,7 +146,7 @@ shared/
 - `listings`: id, title, image_url, description, category, supplier_name, supplier_phone, supplier_whatsapp, supplier_city, supplier_type, supplier_link, status, created_at
 - `categories`: id, name, created_at
 - `supplier_products`: id, title, image_url, description, category, supplier_id, status, created_at
-- `subscriptions`: id, user_id, plan, status, moyasar_invoice_id, moyasar_payment_id, amount_halalas, activated_at, created_at
+- `subscriptions`: id, user_id, plan, status, moyasar_invoice_id, moyasar_payment_id, amount_halalas, activated_at, refund_status, refunded_at, refund_amount_halalas, created_at
 - `products`: (legacy) id, title, image_url, category, supplier_price, etc.
 - `saved_products`: id, user_id, product_id, created_at
 

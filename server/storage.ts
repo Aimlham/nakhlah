@@ -34,8 +34,13 @@ export interface IStorage {
     amountHalalas?: number;
     activatedAt?: Date | null;
   }): Promise<Subscription>;
+  getSubscriptionById(id: string): Promise<Subscription | undefined>;
   getSubscriptionByUserId(userId: string): Promise<Subscription | undefined>;
   getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined>;
+  cancelSubscription(id: string): Promise<Subscription>;
+  markSubscriptionRefundProcessing(id: string): Promise<void>;
+  resetSubscriptionRefundStatus(id: string): Promise<void>;
+  markSubscriptionRefunded(id: string, refundAmountHalalas: number): Promise<Subscription>;
 
   getProfile(userId: string): Promise<Profile | undefined>;
 
@@ -270,10 +275,17 @@ export class MemStorage implements IStorage {
       moyasarPaymentId: sub.moyasarPaymentId ?? existing?.moyasarPaymentId ?? null,
       amountHalalas: sub.amountHalalas ?? existing?.amountHalalas ?? null,
       activatedAt: sub.activatedAt !== undefined ? sub.activatedAt : (existing?.activatedAt ?? null),
+      refundStatus: existing?.refundStatus ?? null,
+      refundedAt: existing?.refundedAt ?? null,
+      refundAmountHalalas: existing?.refundAmountHalalas ?? null,
       createdAt: existing?.createdAt ?? new Date(),
     };
     this.subscriptions.set(record.id, record);
     return record;
+  }
+
+  async getSubscriptionById(id: string): Promise<Subscription | undefined> {
+    return this.subscriptions.get(id);
   }
 
   async getSubscriptionByUserId(userId: string): Promise<Subscription | undefined> {
@@ -282,6 +294,38 @@ export class MemStorage implements IStorage {
 
   async getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined> {
     return Array.from(this.subscriptions.values()).find(s => s.moyasarInvoiceId === invoiceId);
+  }
+
+  async cancelSubscription(id: string): Promise<Subscription> {
+    const sub = this.subscriptions.get(id);
+    if (!sub) throw new Error("Subscription not found");
+    sub.status = "cancelled";
+    this.subscriptions.set(id, sub);
+    return sub;
+  }
+
+  async markSubscriptionRefundProcessing(id: string): Promise<void> {
+    const sub = this.subscriptions.get(id);
+    if (!sub) throw new Error("Subscription not found");
+    sub.refundStatus = "processing";
+    this.subscriptions.set(id, sub);
+  }
+
+  async resetSubscriptionRefundStatus(id: string): Promise<void> {
+    const sub = this.subscriptions.get(id);
+    if (!sub) throw new Error("Subscription not found");
+    sub.refundStatus = null;
+    this.subscriptions.set(id, sub);
+  }
+
+  async markSubscriptionRefunded(id: string, refundAmountHalalas: number): Promise<Subscription> {
+    const sub = this.subscriptions.get(id);
+    if (!sub) throw new Error("Subscription not found");
+    sub.refundStatus = "refunded";
+    sub.refundedAt = new Date();
+    sub.refundAmountHalalas = refundAmountHalalas;
+    this.subscriptions.set(id, sub);
+    return sub;
   }
 
   async getProfile(userId: string): Promise<Profile | undefined> {

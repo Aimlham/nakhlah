@@ -113,6 +113,9 @@ export const subscriptions = pgTable("subscriptions", {
   moyasarPaymentId: text("moyasar_payment_id"),
   amountHalalas: integer("amount_halalas"),
   activatedAt: timestamp("activated_at"),
+  refundStatus: text("refund_status"),
+  refundedAt: timestamp("refunded_at"),
+  refundAmountHalalas: integer("refund_amount_halalas"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

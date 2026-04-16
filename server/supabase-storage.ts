@@ -161,6 +161,9 @@ function mapSubscription(row: Record<string, unknown>): Subscription {
     moyasarPaymentId: (row.moyasar_payment_id as string) ?? null,
     amountHalalas: (row.amount_halalas as number) ?? null,
     activatedAt: row.activated_at ? new Date(row.activated_at as string) : null,
+    refundStatus: (row.refund_status as string) ?? null,
+    refundedAt: row.refunded_at ? new Date(row.refunded_at as string) : null,
+    refundAmountHalalas: (row.refund_amount_halalas as number) ?? null,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
 }
@@ -501,6 +504,17 @@ export class SupabaseStorage implements IStorage {
     return mapSubscription(data);
   }
 
+  async getSubscriptionById(id: string): Promise<Subscription | undefined> {
+    if (!supabaseAdmin) return undefined;
+    const { data, error } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error || !data) return undefined;
+    return mapSubscription(data);
+  }
+
   async getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined> {
     if (!supabaseAdmin) return undefined;
     const { data, error } = await supabaseAdmin
@@ -509,6 +523,48 @@ export class SupabaseStorage implements IStorage {
       .eq("moyasar_invoice_id", invoiceId)
       .maybeSingle();
     if (error || !data) return undefined;
+    return mapSubscription(data);
+  }
+
+  async cancelSubscription(id: string): Promise<Subscription> {
+    const { data, error } = await this.db
+      .from("subscriptions")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error || !data) throw new Error("Failed to cancel subscription");
+    return mapSubscription(data);
+  }
+
+  async markSubscriptionRefundProcessing(id: string): Promise<void> {
+    const { error } = await this.db
+      .from("subscriptions")
+      .update({ refund_status: "processing" })
+      .eq("id", id);
+    if (error) throw new Error("Failed to mark refund as processing");
+  }
+
+  async resetSubscriptionRefundStatus(id: string): Promise<void> {
+    const { error } = await this.db
+      .from("subscriptions")
+      .update({ refund_status: null })
+      .eq("id", id);
+    if (error) throw new Error("Failed to reset refund status");
+  }
+
+  async markSubscriptionRefunded(id: string, refundAmountHalalas: number): Promise<Subscription> {
+    const { data, error } = await this.db
+      .from("subscriptions")
+      .update({
+        refund_status: "refunded",
+        refunded_at: new Date().toISOString(),
+        refund_amount_halalas: refundAmountHalalas,
+      })
+      .eq("id", id)
+      .select("*")
+      .single();
+    if (error || !data) throw new Error("Failed to mark subscription as refunded");
     return mapSubscription(data);
   }
 

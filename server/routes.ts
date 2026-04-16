@@ -549,11 +549,15 @@ export async function registerRoutes(
         0
       );
 
-      const { data: recentRows } = await supabaseAdmin
+      const { data: recentRows, error: recentError } = await supabaseAdmin
         .from("subscriptions")
-        .select("user_id, plan, status, amount_halalas, created_at")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
+
+      if (recentError) {
+        console.error("[admin-overview] recentRows error:", recentError.message);
+      }
 
       const recent = recentRows || [];
       const userIds = recent.map((r: any) => r.user_id);
@@ -567,10 +571,13 @@ export async function registerRoutes(
       }
 
       const recentSubscribers = recent.map((r: any) => ({
+        id: r.id,
         email: emailMap[r.user_id] || r.user_id,
         plan: r.plan,
         status: r.status,
         amountRiyal: r.amount_halalas ? (r.amount_halalas / 100).toFixed(2) : "0.00",
+        hasMoyasarPayment: !!r.moyasar_payment_id,
+        refundStatus: r.refund_status || null,
         createdAt: r.created_at,
       }));
 
@@ -583,6 +590,86 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[admin-overview]", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch overview") });
+    }
+  });
+
+  app.post("/api/admin/subscriptions/:id/cancel", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+
+      const { id } = req.params;
+      const sub = await storage.getSubscriptionById(id);
+      if (!sub) return res.status(404).json({ message: "الاشتراك غير موجود" });
+
+      const updated = await storage.cancelSubscription(id);
+      res.json({ message: "تم إلغاء الاشتراك بنجاح", subscription: updated });
+    } catch (err: any) {
+      console.error("[admin-cancel]", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "فشل إلغاء الاشتراك") });
+    }
+  });
+
+  app.post("/api/admin/subscriptions/:id/refund", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+
+      const { id } = req.params;
+      const sub = await storage.getSubscriptionById(id);
+      if (!sub) return res.status(404).json({ message: "الاشتراك غير موجود" });
+      if (!sub.moyasarPaymentId) {
+        return res.status(400).json({ message: "لا يوجد معرف دفع — الاسترجاع غير متاح" });
+      }
+      if (sub.refundStatus === "refunded") {
+        return res.status(400).json({ message: "تم استرجاع المبلغ مسبقا" });
+      }
+      if (sub.refundStatus === "processing") {
+        return res.status(409).json({ message: "عملية الاسترجاع قيد التنفيذ بالفعل" });
+      }
+
+      const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
+      if (!MOYASAR_SECRET_KEY) {
+        return res.status(503).json({ message: "خدمة الدفع غير مُعدّة" });
+      }
+
+      await storage.markSubscriptionRefundProcessing(id);
+
+      const moyasarAuth = `Basic ${Buffer.from(`${MOYASAR_SECRET_KEY}:`).toString("base64")}`;
+      let refundRes: Response;
+      try {
+        refundRes = await fetch(
+          `https://api.moyasar.com/v1/payments/${encodeURIComponent(sub.moyasarPaymentId)}/refund`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: moyasarAuth,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}),
+          }
+        );
+      } catch (fetchErr: any) {
+        await storage.resetSubscriptionRefundStatus(id);
+        console.error("[admin-refund] Moyasar fetch error:", fetchErr.message);
+        return res.status(502).json({ message: "فشل الاتصال ببوابة الدفع" });
+      }
+
+      if (!refundRes.ok) {
+        await storage.resetSubscriptionRefundStatus(id);
+        const errBody = await refundRes.text();
+        console.error("[admin-refund] Moyasar refund failed:", errBody);
+        return res.status(502).json({ message: "فشل استرجاع المبلغ من بوابة الدفع" });
+      }
+
+      const refundData = (await refundRes.json()) as { amount: number; refunded_amount?: number };
+      const refundAmountHalalas = refundData.refunded_amount || refundData.amount || (sub.amountHalalas || 0);
+
+      const updated = await storage.markSubscriptionRefunded(id, refundAmountHalalas);
+      res.json({ message: "تم استرجاع المبلغ بنجاح", subscription: updated });
+    } catch (err: any) {
+      console.error("[admin-refund]", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "فشل استرجاع المبلغ") });
     }
   });
 
