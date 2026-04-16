@@ -13,7 +13,11 @@ export const users = pgTable("users", {
 
 export const profiles = pgTable("profiles", {
   id: varchar("id").primaryKey(),
-  role: text("role").notNull().default("user"),
+  email: text("email"),
+  fullName: text("full_name"),
+  avatarUrl: text("avatar_url"),
+  plan: text("plan").notNull().default("free"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const listings = pgTable("listings", {
@@ -141,3 +145,8 @@ export type InsertProductAd = z.infer<typeof insertProductAdSchema>;
 export type Listing = typeof listings.$inferSelect;
 export type InsertListing = z.infer<typeof insertListingSchema>;
 export type Profile = typeof profiles.$inferSelect;
+
+export const insertProfileSchema = createInsertSchema(profiles).omit({
+  createdAt: true,
+});
+export type InsertProfile = z.infer<typeof insertProfileSchema>;

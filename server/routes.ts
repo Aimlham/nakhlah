@@ -35,7 +35,7 @@ async function isUserAdmin(req: Request): Promise<boolean> {
   const userId = await getAuthUserId(req);
   if (!userId) return false;
   const profile = await storage.getProfile(userId);
-  return profile?.role === "admin";
+  return profile?.plan === "admin";
 }
 
 async function getAuthUserId(req: Request): Promise<string | null> {
@@ -210,7 +210,7 @@ export async function registerRoutes(
         return res.status(401).json({ message: "Not authenticated" });
       }
       const profile = await storage.getProfile(user.id);
-      res.json({ user, role: profile?.role ?? "user" });
+      res.json({ user, role: profile?.plan === "admin" ? "admin" : "user" });
     } catch {
       return res.status(401).json({ message: "Not authenticated" });
     }
@@ -316,7 +316,7 @@ export async function registerRoutes(
       const userId = await getAuthUserId(req);
       if (!userId) return res.status(401).json({ message: "Not authenticated" });
       const profile = await storage.getProfile(userId);
-      res.json({ role: profile?.role ?? "user" });
+      res.json({ role: profile?.plan === "admin" ? "admin" : "user" });
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch role") });
     }

@@ -494,28 +494,14 @@ export class SupabaseStorage implements IStorage {
       .eq("id", userId)
       .maybeSingle();
     if (error || !data) return undefined;
-    return { id: data.id as string, role: (data.role as string) ?? "user" };
-  }
-
-  async upsertProfile(userId: string, role: string): Promise<Profile> {
-    const existing = await this.getProfile(userId);
-    if (existing) {
-      const { data, error } = await this.db
-        .from("profiles")
-        .update({ role })
-        .eq("id", userId)
-        .select("*")
-        .single();
-      if (error) throw new Error(error.message);
-      return { id: data.id as string, role: data.role as string };
-    }
-    const { data, error } = await this.db
-      .from("profiles")
-      .insert({ id: userId, role })
-      .select("*")
-      .single();
-    if (error) throw new Error(error.message);
-    return { id: data.id as string, role: data.role as string };
+    return {
+      id: data.id as string,
+      email: (data.email as string) ?? null,
+      fullName: (data.full_name as string) ?? null,
+      avatarUrl: (data.avatar_url as string) ?? null,
+      plan: (data.plan as string) ?? "free",
+      createdAt: data.created_at ? new Date(data.created_at as string) : null,
+    };
   }
 
   async getAllListings(): Promise<Listing[]> {

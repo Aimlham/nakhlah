@@ -38,7 +38,6 @@ export interface IStorage {
   getSubscriptionByInvoiceId(invoiceId: string): Promise<Subscription | undefined>;
 
   getProfile(userId: string): Promise<Profile | undefined>;
-  upsertProfile(userId: string, role: string): Promise<Profile>;
 
   getAllListings(): Promise<Listing[]>;
   getPublishedListings(): Promise<Listing[]>;
@@ -271,12 +270,6 @@ export class MemStorage implements IStorage {
 
   async getProfile(userId: string): Promise<Profile | undefined> {
     return this.profiles.get(userId);
-  }
-
-  async upsertProfile(userId: string, role: string): Promise<Profile> {
-    const profile: Profile = { id: userId, role };
-    this.profiles.set(userId, profile);
-    return profile;
   }
 
   async getAllListings(): Promise<Listing[]> {
