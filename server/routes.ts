@@ -20,6 +20,17 @@ function safeErrorMessage(err: any, fallback: string): string {
   return err?.message || fallback;
 }
 
+function stripSupplierFields<T extends Record<string, any>>(product: T): T {
+  return { ...product, supplierLink: null, supplierSource: null, supplierName: null };
+}
+
+async function isUserSubscribed(req: Request): Promise<boolean> {
+  const userId = await getAuthUserId(req);
+  if (!userId) return false;
+  const sub = await storage.getSubscriptionByUserId(userId);
+  return sub?.status === "active";
+}
+
 async function getAuthUserId(req: Request): Promise<string | null> {
   if (supabaseConfigured) {
     const authHeader = req.headers.authorization;
@@ -204,12 +215,29 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  app.get("/api/projects", async (req: Request, res: Response) => {
+    try {
+      const subscribed = await isUserSubscribed(req);
+
+      let products = await storage.getAllProducts();
+      products = products.map(scoreProduct);
+      const publishable = products
+        .filter(p => isProductPublishable(p))
+        .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
+
+      res.json(subscribed ? publishable : publishable.map(stripSupplierFields));
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch projects") });
+    }
+  });
+
   app.get("/api/products", async (req: Request, res: Response) => {
     try {
+      const subscribed = await isUserSubscribed(req);
       let products = await storage.getAllProducts();
       products = products.map(scoreProduct);
 
-      res.json(products);
+      res.json(subscribed ? products : products.map(stripSupplierFields));
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch products") });
     }
@@ -217,12 +245,13 @@ export async function registerRoutes(
 
   app.get("/api/products/winning", async (req: Request, res: Response) => {
     try {
+      const subscribed = await isUserSubscribed(req);
       let products = await storage.getAllProducts();
       products = products.map(scoreProduct);
       const winning = products
         .filter(p => isProductPublishable(p))
         .sort((a, b) => (b.opportunityScore || 0) - (a.opportunityScore || 0));
-      res.json(winning);
+      res.json(subscribed ? winning : winning.map(stripSupplierFields));
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch winning products") });
     }
@@ -230,11 +259,13 @@ export async function registerRoutes(
 
   app.get("/api/products/:id", async (req: Request, res: Response) => {
     try {
+      const subscribed = await isUserSubscribed(req);
       const product = await storage.getProduct(req.params.id);
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
       }
-      res.json(scoreProduct(product));
+      const scored = scoreProduct(product);
+      res.json(subscribed ? scored : stripSupplierFields(scored));
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch product") });
     }

@@ -11,12 +11,10 @@ import LandingPage from "@/pages/landing";
 import LoginPage from "@/pages/login";
 import SignupPage from "@/pages/signup";
 import DashboardPage from "@/pages/dashboard";
-import ProductsPage from "@/pages/products";
-import ProductDetailsPage from "@/pages/product-details";
+import ProjectsPage from "@/pages/projects";
 import SavedProductsPage from "@/pages/saved-products";
 import PricingPage from "@/pages/pricing-page";
 import SettingsPage from "@/pages/settings";
-import AdsPage from "@/pages/ads";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallbackPage from "@/pages/auth-callback";
@@ -31,8 +29,6 @@ function LoadingScreen() {
   );
 }
 
-// Requires authentication only (no subscription needed).
-// Used for: pricing, settings, payment callback.
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
 
@@ -46,8 +42,6 @@ function ProtectedRoute({ component: Component }: { component: () => JSX.Element
   );
 }
 
-// Requires authentication AND an active subscription.
-// Used for: dashboard, products, ads, saved — all paid features.
 function SubscribedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading: authLoading } = useAuth();
 
@@ -70,12 +64,32 @@ function SubscribedRoute({ component: Component }: { component: () => JSX.Elemen
   );
 }
 
-// Public-only: redirect logged-in users away (login, signup).
+function ProjectsRoute() {
+  const { user, isLoading: authLoading } = useAuth();
+
+  const { data: sub, isLoading: subLoading } = useQuery<{ plan: string; status: string }>({
+    queryKey: ["/api/payments/subscription"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  if (authLoading || (user && subLoading)) return <LoadingScreen />;
+  if (!user) return <Redirect to="/login" />;
+
+  const isSubscribed = sub?.status === "active";
+
+  return (
+    <AppLayout>
+      <ProjectsPage isSubscribed={isSubscribed} />
+    </AppLayout>
+  );
+}
+
 function PublicRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) return <LoadingScreen />;
-  if (user) return <Redirect to="/dashboard" />;
+  if (user) return <Redirect to="/projects" />;
 
   return <Component />;
 }
@@ -83,24 +97,19 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
 function Router() {
   return (
     <Switch>
-      {/* Public pages */}
-      <Route path="/" component={LandingPage} />
+      <Route path="/">{() => <Redirect to="/projects" />}</Route>
       <Route path="/login">{() => <PublicRoute component={LoginPage} />}</Route>
       <Route path="/signup">{() => <PublicRoute component={SignupPage} />}</Route>
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/auth/callback" component={AuthCallbackPage} />
 
-      {/* Requires login but NOT subscription */}
       <Route path="/payment/callback" component={PaymentCallbackPage} />
       <Route path="/pricing">{() => <ProtectedRoute component={PricingPage} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
 
-      {/* Requires login AND active subscription */}
-      <Route path="/dashboard">{() => <SubscribedRoute component={DashboardPage} />}</Route>
-      <Route path="/products">{() => <SubscribedRoute component={ProductsPage} />}</Route>
-      <Route path="/products/:id">{() => <SubscribedRoute component={ProductDetailsPage} />}</Route>
-      <Route path="/ads">{() => <SubscribedRoute component={AdsPage} />}</Route>
+      <Route path="/projects">{() => <ProjectsRoute />}</Route>
+      <Route path="/dashboard">{() => <ProtectedRoute component={DashboardPage} />}</Route>
       <Route path="/saved">{() => <SubscribedRoute component={SavedProductsPage} />}</Route>
 
       <Route component={NotFound} />

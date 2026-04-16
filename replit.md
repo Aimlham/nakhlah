@@ -1,7 +1,7 @@
-# Nakhlah (نخلة) - Winning Product Discovery Platform
+# Nakhlah (نخلة) - Product Discovery Platform (MVP)
 
 ## Overview
-Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for dropshipping/e-commerce sellers. The core flow is: discover trending ads → identify winning products → go to AliExpress product page. The platform uses AI-powered opportunity scoring, supplier pricing, and marketing insights. Domain: nakhlah.io
+Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for dropshipping/e-commerce sellers. MVP mode: projects page shows available opportunities with supplier info gated behind subscription. Domain: nakhlah.io
 
 ## Branding
 - Site name: نخلة (Nakhlah)
@@ -16,15 +16,36 @@ Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for dropshipping/e-comme
 - No emojis
 
 ## System Architecture
-Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + TanStack Query. Backend: Express 5 (Node.js). Database: Supabase (PostgreSQL) with in-memory fallback (no seeded data). Auth: Supabase Auth with session-based fallback. AI: OpenAI API (gpt-4o-mini). Build: Vite.
+Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + TanStack Query. Backend: Express 5 (Node.js). Database: Supabase (PostgreSQL) with in-memory fallback (no seeded data). Auth: Supabase Auth with session-based fallback. AI: OpenAI API (gpt-4o-mini). Build: Vite. Payments: Moyasar (SAR).
+
+## MVP App Flow
+1. `/` → redirects to `/projects`
+2. `/projects` — Browse all opportunities. Supplier info visible only for subscribers.
+3. `/dashboard` — Overview KPIs and top projects
+4. `/saved` — Bookmarked products (requires subscription)
+5. `/pricing` — Hidden from nav. Accessible only via "اشترك لعرض بيانات المورد" buttons or internal redirects.
+6. `/settings` — Account settings
+
+## Subscription Model
+- **Single plan**: "نخلة برو" = 99 SAR/month (9900 halalas)
+- **No free tier**: Subscription required for supplier info and saved products
+- **Server-side protection**: `/api/projects` strips `supplierLink`, `supplierSource`, `supplierName` for non-subscribers
+- **Client-side**: Non-subscribers see locked card with "اشترك لعرض بيانات المورد" button
+
+## Route Guards
+- **PublicRoute**: Login/signup only — redirects logged-in users to `/projects`
+- **ProtectedRoute**: Requires login (pricing, settings)
+- **SubscribedRoute**: Requires login + active subscription (saved products)
+- **ProjectsRoute**: Requires login, passes `isSubscribed` prop to page (no redirect)
 
 ## Data Policy
 All data comes from real sources (Supabase database, Apify importers). No mock/fake/seeded data exists anywhere in the codebase. Pages show proper Arabic empty states when no data is available. The MemStorage fallback starts completely empty.
 
 ## External Dependencies
 - **Supabase**: Database (PostgreSQL) and authentication
-- **OpenAI API**: AI product analysis, marketing insights, ad angles, Arabic translation
-- **Apify**: Product importing from AliExpress (`piotrv1001/aliexpress-listings-scraper`), Amazon (`igview-owner/amazon-search-scraper`), and TikTok ads (`lexis-solutions~tiktok-ads-scraper`). Note: TikTok ads actor requires a paid Apify subscription (free trial expired).
+- **Moyasar**: Payment gateway (SAR, supports mada/Visa/Mastercard)
+- **OpenAI API**: AI product analysis
+- **Apify**: Product importing from AliExpress, Amazon, TikTok ads
 - **Google Fonts**: IBM Plex Sans Arabic
 
 ## Environment Secrets
@@ -32,25 +53,21 @@ All data comes from real sources (Supabase database, Apify importers). No mock/f
 - `VITE_SUPABASE_ANON_KEY` — Public anon key (client)
 - `SUPABASE_SERVICE_ROLE_KEY` — Service role key (server-only)
 - `OPENAI_API_KEY` — OpenAI API key
-- `APIFY_API_TOKEN` — Apify API token for AliExpress/Amazon importers
+- `APIFY_API_TOKEN` — Apify API token for importers
 - `SESSION_SECRET` — Express session secret
-
-## App Flow
-1. **Dashboard** (`/dashboard`) — Overview KPIs, recent ads section (shown first), then top winning products
-2. **Ads Library** (`/ads`) — Browse trending ads to discover winning products
-3. **Winning Products** (`/products`) — Qualified products filtered through qualification system, with AliExpress links
-4. **Product Details** (`/products/:id`) — Full analysis, AI insights, "عرض على AliExpress" button
-5. **Saved** (`/saved`) — User's bookmarked products
+- `MOYASAR_SECRET_KEY` — Moyasar secret key (server-only)
+- `MOYASAR_PUBLISHABLE_KEY` — Moyasar publishable key
+- `MOYASAR_WEBHOOK_TOKEN` — Webhook verification token
 
 ## File Structure
 ```
 client/src/
-  App.tsx              - Root router with auth protection
+  App.tsx              - Root router with auth protection + ProjectsRoute
   components/
-    app-sidebar.tsx    - Navigation sidebar (side="right" for RTL)
+    app-sidebar.tsx    - Navigation sidebar (Dashboard, Projects, Saved, Settings)
     app-layout.tsx     - Authenticated page layout wrapper
     topbar.tsx         - Top bar with theme toggle and logout
-    product-card.tsx   - Product card with source badge, scores
+    product-card.tsx   - Product card (legacy, kept for reference)
     score-badge.tsx    - Score indicator badge
     filter-bar.tsx     - Search + filter controls
     empty-state.tsx    - Empty state placeholder
@@ -61,21 +78,23 @@ client/src/
     queryClient.ts     - TanStack Query config
     utils.ts           - Formatting helpers (money, scores, margins)
   pages/
-    landing.tsx        - Public landing page
+    projects.tsx       - NEW: Main projects/opportunities page with supplier gating
+    landing.tsx        - Public landing page (kept, but / now redirects to /projects)
     login.tsx          - Login form
     signup.tsx         - Signup form
-    dashboard.tsx      - Dashboard with KPIs and top winning products
-    products.tsx       - Winning products list (filtered by qualification)
-    product-details.tsx - Product details + AI analysis + AliExpress link
-    ads.tsx            - Ads library (Minea-style)
+    dashboard.tsx      - Dashboard with KPIs and top projects
     saved-products.tsx - User's saved products
-    pricing-page.tsx   - Pricing plans
+    pricing-page.tsx   - Subscription page (hidden from nav)
     settings.tsx       - Account settings
+    payment-callback.tsx - Payment result handler
+    products.tsx       - Legacy products page (kept, removed from nav)
+    product-details.tsx - Legacy product details (kept, removed from nav)
+    ads.tsx            - Legacy ads page (kept, removed from nav)
 
 server/
   index.ts             - Express server entry
-  routes.ts            - API endpoints
-  storage.ts           - IStorage interface + MemStorage fallback (empty, no seeded data)
+  routes.ts            - API endpoints (includes /api/projects with supplier gating)
+  storage.ts           - IStorage interface + MemStorage fallback
   supabase.ts          - Server-side Supabase admin client
   supabase-storage.ts  - SupabaseStorage implementation
   aliexpress-importer.ts - AliExpress product importer (Apify)
@@ -90,50 +109,33 @@ shared/
   qualification.ts     - Product qualification system
 ```
 
-## Moyasar Payment Integration
-- **Flow**: User clicks upgrade → POST `/api/payments/create` → backend calls Moyasar API → returns `redirectUrl` → frontend redirects user → Moyasar payment page → redirect to `/payment/callback?status=paid&id=...` → frontend verifies via GET `/api/payments/verify/:id`
-- **Plans**: Pro = 109 ر.س/month (10,900 halalas), Enterprise = 371 ر.س/month (37,100 halalas)
-- **Pricing page**: `client/src/pages/pricing-page.tsx` — real SAR prices, upgrade buttons call Moyasar
-- **Callback page**: `client/src/pages/payment-callback.tsx` — handles paid/failed states
-- **Backend routes**: `POST /api/payments/create`, `GET /api/payments/verify/:id`
-- **Security**: Secret key server-side only (`MOYASAR_SECRET_KEY`). Publishable key available as `MOYASAR_PUBLISHABLE_KEY` for future embedded form use.
-- **Currency**: SAR, supports مدى / Visa / Mastercard via Moyasar
-
-## API Routes
-- `GET /api/config` - Supabase enabled check
-- `POST /api/auth/signup` - Create account
-- `POST /api/auth/login` - Login
-- `GET /api/auth/me` - Current user
-- `POST /api/auth/logout` - Logout
-- `GET /api/health` - Healthcheck
-- `GET /api/products` - All products (with scoring)
-- `GET /api/products/winning` - Qualified winning products only
+## Key API Routes
+- `GET /api/projects` - Projects list (supplier info stripped for non-subscribers)
+- `GET /api/products` - All products (internal)
+- `GET /api/products/winning` - Qualified winning products
 - `GET /api/products/:id` - Single product
-- `POST /api/products/:id/analyze` - AI analysis
-- `GET /api/products/:id/ads` - Product ads
-- `GET /api/ads` - All ads
 - `GET /api/saved/ids` - Saved product IDs
 - `GET /api/saved/products` - Saved products
 - `POST /api/saved/:productId` - Save product
 - `DELETE /api/saved/:productId` - Unsave product
-- `POST /api/import/aliexpress` - Import AliExpress products
-- `GET /api/import/aliexpress/status` - AliExpress importer status
-- `POST /api/import/amazon` - Import Amazon products
-- `GET /api/import/amazon/status` - Amazon importer status
-- `POST /api/import/tiktok-ads` - Import TikTok ads via Apify (supports `country` param)
-- `GET /api/import/tiktok-ads/status` - TikTok importer status
+- `POST /api/payments/create` - Create Moyasar invoice
+- `GET /api/payments/verify/:id` - Verify payment
+- `GET /api/payments/subscription` - Get subscription status
+- `POST /api/moyasar/webhook` - Moyasar webhook
 
-## Product Qualification System (`shared/qualification.ts`)
-- `qualifyProduct(product)` → `{ isPublishable, reasons[] }`
-- `isProductPublishable(product)` → boolean
-- **Criteria**: content-safe, excluded keywords (phones/laptops/TVs/gaming), excluded categories, price range ($0.50-$80 USD), opportunityScore >= 55, rating >= 3.5, valid supplier price
-- **Source roles**: AliExpress = supplier+discovery, Amazon = discovery-only
-- Products must have a valid `supplierLink` to AliExpress for the "عرض على AliExpress" button
+## Moyasar Payment Integration
+- **Flow**: User clicks subscribe → POST `/api/payments/create` → Moyasar hosted page → redirect to `/payment/callback` → verify
+- **Plan**: Pro = 99 SAR/month (9900 halalas)
+- **back_url**: Uses `x-forwarded-proto`/`x-forwarded-host` headers; production override to `https://nakhlah.io`
+- **Invoice ID fallback**: Saved in sessionStorage (`nakhlah_pending_invoice`) for cases where Moyasar doesn't append `id=` to redirect URL
+- **Auth**: Callback page uses `getAccessToken()` for Bearer token in verify calls
 
-## Scoring Engine (`shared/scoring.ts`)
-- Weighted: 40% demand + 30% margin + 20% competition + 10% rating
-- All scores 0-100 integers
-- Applied server-side in API routes
+## Database Tables
+- `users`: id, username, password, full_name, email
+- `products`: id, title, image_url, category, supplier_price, suggested_sell_price, estimated_margin, supplier_link, supplier_source, opportunity_score, trend_score, saturation_score, ai_summary, etc.
+- `product_ads`: id, product_id, platform, video_url, thumbnail_url, views, likes, advertiser_name, ad_description, etc.
+- `saved_products`: id, user_id, product_id, created_at
+- `subscriptions`: id, user_id, plan, status, moyasar_invoice_id, moyasar_payment_id, amount_halalas, activated_at, created_at
 
 ## RTL / Arabic
 - HTML `dir="rtl"` and `lang="ar"`
@@ -141,53 +143,10 @@ shared/
 - CSS logical properties (ms-*, me-*, start-*, end-*)
 - Sidebar on right side
 - Prices in Saudi Riyal (ر.س), USD→SAR × 3.75
-- data-testid attributes use English keys
 
-## AliExpress Importer
-- Actor: `piotrv1001/aliexpress-listings-scraper` (async: start→poll→get)
-- Pipeline: Apify → normalize → content safety filter → quality filter → dedup → score → save
-- Products include `supplierLink` to AliExpress product page
-- On duplicate: updates price if new price is lower
-
-## Amazon Importer
-- Actor: `igview-owner/amazon-search-scraper` (async)
-- Amazon = discovery-only source (no supplier link for dropshipping)
-
-## TikTok Ads Importer
-- Actor: `lexis-solutions~tiktok-ads-scraper` (async: start→poll→get, requires paid Apify subscription)
-- File: `server/tiktok-importer.ts`
-- Saves to `product_ads` table with dedup via `externalAdId` + `videoUrl` fallback
-- TikTok ads have `productId` (nullable in DB) — ads without a linked product are filtered out from API responses
-- **Auto-matching**: On import, ads are automatically linked to existing products via keyword similarity (min 2 shared keywords, 30% overlap threshold)
-- Extra columns: `advertiserName`, `adDescription`, `landingPageUrl`, `externalAdId`
-- Supported countries: all, FR, AT, BE, BG, HR, CY, CZ, DK, EE, FI, DE, GR, HU, IS, IE, IT, LV, LI, LT, LU, MT, NL, NO, PL, PT, RO, SK, SI, ES, SE, CH, GB (no Saudi/Gulf support in TikTok Ad Library API)
-
-## Pricing Logic
-- **AliExpress**: `supplierPrice` = actual sale/discounted price (what we pay). `suggestedSellPrice` = supplierPrice × markup (3.5x under $5, 3x under $15, 2.5x under $30, 2x above). All in SAR (×3.75).
-- **Amazon**: `supplierPrice` = estimated AliExpress cost (Amazon price × 0.6). `suggestedSellPrice` = Amazon price × markup. `actualSellPrice` = Amazon retail price in SAR.
-- Rule: `supplierPrice` must ALWAYS be lower than `suggestedSellPrice` / `actualSellPrice`
-
-## Security Audit Results (April 2026)
-- **Passwords (MemStorage)**: Hashed with bcrypt (12 rounds) — fixed. Production uses Supabase which handles its own hashing.
-- **Supabase admin key**: Confirmed server-side only. Client uses anon key only. Not an issue.
-- **localStorage**: Stores `{id, email, fullName}` only — no tokens or passwords. Acceptable.
-- **CSRF**: Not a real risk — primary auth uses Bearer token (not cookies). Not an issue.
-- **MemStorage data loss**: Architectural limitation only, not a security issue.
-- **Prompt injection (OpenAI)**: Low risk — structured data from own DB. Acceptable.
-
-## Production Security
-- **Helmet**: Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) — CSP disabled for SPA compatibility
-- **CORS**: Production-only restriction to `nakhlah.io` / `www.nakhlah.io`; dev mode allows all origins
-- **Rate limiting**: 200 req/15min for API, 20 req/15min for auth endpoints
-- **HTTPS redirect**: Forces HTTPS in production via `x-forwarded-proto` header check (Railway proxy)
-- **Trust proxy**: Enabled in production for correct client IP detection behind Railway proxy
-- **Cookies**: `secure: true` and `sameSite: strict` in production
-- **Error masking**: Internal error details hidden from clients in production
-- **Process guards**: `uncaughtException` and `unhandledRejection` handlers prevent silent crashes
-- **Body limits**: JSON and URL-encoded bodies capped at 1MB
-- **Packages**: `helmet`, `cors`, `express-rate-limit`
-
-## Supabase Migration Notes
-- New `product_ads` columns (`advertiser_name`, `ad_description`, `landing_page_url`, `external_ad_id`) must be added via Supabase Dashboard SQL Editor
-- `product_id` must be made nullable: `ALTER TABLE product_ads ALTER COLUMN product_id DROP NOT NULL;`
-- App probes for column existence at startup and gracefully skips unavailable columns
+## Security
+- Helmet security headers, CORS restricted in production
+- Rate limiting: 200 req/15min API, 20 req/15min auth
+- HTTPS redirect in production
+- Supplier data server-side protected (stripped from API for non-subscribers)
+- Moyasar webhook verified with timing-safe comparison

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Bookmark, CreditCard, Settings, Megaphone, Trophy } from "lucide-react";
+import { LayoutDashboard, Bookmark, Settings, FolderOpen } from "lucide-react";
 import nakhlahLogo from "@assets/nakhlah-logo.png";
 import {
   Sidebar,
@@ -14,25 +14,29 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   { title: "لوحة التحكم", url: "/dashboard", icon: LayoutDashboard, key: "dashboard" },
-  { title: "مكتبة الإعلانات", url: "/ads", icon: Megaphone, key: "ads" },
-  { title: "المنتجات الرابحة", url: "/products", icon: Trophy, key: "products" },
+  { title: "المشاريع", url: "/projects", icon: FolderOpen, key: "projects" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
-  { title: "الأسعار", url: "/pricing", icon: CreditCard, key: "pricing" },
   { title: "الإعدادات", url: "/settings", icon: Settings, key: "settings" },
 ];
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { data: sub } = useQuery<{ status: string; plan?: string }>({
+    queryKey: ["/api/payments/subscription"],
+    enabled: !!user,
+  });
+  const isSubscribed = sub?.status === "active";
 
   return (
     <Sidebar side="right">
       <SidebarHeader className="p-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/projects" className="flex items-center gap-2">
           <img src={nakhlahLogo} alt="نخلة" className="w-8 h-8 rounded-md object-contain" />
           <span className="text-lg font-semibold tracking-tight" data-testid="text-brand-name">
             نخلة
@@ -73,7 +77,9 @@ export function AppSidebar() {
               <span className="text-sm font-medium truncate" data-testid="text-sidebar-username">
                 {user.fullName || user.email}
               </span>
-              <span className="text-xs text-muted-foreground truncate">نخلة برو</span>
+              <span className="text-xs text-muted-foreground truncate">
+                {isSubscribed ? "نخلة برو" : "غير مشترك"}
+              </span>
             </div>
           </div>
         )}
