@@ -1,7 +1,7 @@
 # Nakhlah (نخلة) - Local Listings Platform (MVP)
 
 ## Overview
-Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for local supplier and project discovery. Admin adds listings (posts) manually. Users browse published listings. Supplier contact info (name, phone, WhatsApp, link) is gated behind "نخلة برو" subscription at 99 SAR/month. Domain: nakhlah.io
+Nakhlah (نخلة) is an Arabic-first RTL SaaS platform for local supplier discovery. Admin adds listings manually. Users browse clean summary cards on /projects ("الموردين المحليين"), click "عرض التفاصيل" to see full listing at /listings/:id, where supplier contact info (name, phone, WhatsApp, location) is gated behind "نخلة برو" subscription at 99 SAR/month. Domain: nakhlah.io
 
 ## Branding
 - Site name: نخلة (Nakhlah)
@@ -20,19 +20,20 @@ Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + 
 
 ## MVP App Flow
 1. `/` → redirects to `/projects`
-2. `/projects` — Browse published listings. Supplier info visible only for subscribers.
-3. `/saved` — Bookmarked products (requires subscription)
-4. `/pricing` — Hidden from nav. Accessible only via "اشترك لعرض بيانات المورد" buttons.
-5. `/settings` — Account settings
-6. `/admin/listings` — Admin-only: manage all listings (add, edit, delete, publish/hide)
-7. `/admin/listings/new` — Admin: add new listing
-8. `/admin/listings/:id/edit` — Admin: edit listing
+2. `/projects` — Browse published listings as clean summary cards (image, title, short desc, category, city, type, "عرض التفاصيل" button)
+3. `/listings/:id` — Listing detail page with full info + gated supplier contact section
+4. `/saved` — Bookmarked products (requires subscription)
+5. `/pricing` — Hidden from nav. Accessible only via "اشترك لعرض بيانات المورد" buttons.
+6. `/settings` — Account settings
+7. `/admin/listings` — Admin-only: manage all listings (add, edit, delete, publish/hide)
+8. `/admin/listings/new` — Admin: add new listing
+9. `/admin/listings/:id/edit` — Admin: edit listing
 
 ## Subscription Model
 - **Single plan**: "نخلة برو" = 99 SAR/month (9900 halalas)
 - **No free tier**: Subscription required for supplier contact info
-- **Server-side protection**: `/api/listings` strips `supplierName`, `supplierPhone`, `supplierWhatsapp`, `supplierLink` for non-subscribers
-- **Client-side**: Non-subscribers see locked card with "اشترك لعرض بيانات المورد" button
+- **Server-side protection**: `/api/listings` and `/api/listings/:id` strip `supplierName`, `supplierPhone`, `supplierWhatsapp`, `supplierLocation` for non-subscribers
+- **Client-side**: Non-subscribers see blurred/locked supplier section in detail page with "اشترك لعرض بيانات المورد" button
 
 ## Admin System
 - Admin role is determined by `profiles.plan = 'admin'` in Supabase
@@ -82,7 +83,8 @@ client/src/
     queryClient.ts     - TanStack Query config
     utils.ts           - Formatting helpers
   pages/
-    projects.tsx       - Main listings page with supplier data gating
+    projects.tsx       - Main listings page with clean summary cards
+    listing-detail.tsx - Single listing detail page with gated supplier section
     admin/
       listings.tsx     - Admin listings management page
       listing-form.tsx - Add/edit listing form
@@ -106,6 +108,7 @@ shared/
 
 ## Key API Routes
 - `GET /api/listings` - Published listings (supplier info stripped for non-subscribers)
+- `GET /api/listings/:id` - Single published listing (supplier info stripped for non-subscribers)
 - `GET /api/admin/listings` - All listings (admin only)
 - `GET /api/admin/listings/:id` - Single listing (admin only)
 - `POST /api/admin/listings` - Create listing (admin only)
@@ -135,10 +138,13 @@ Hidden fields for non-subscribers (both server & client):
 - `supplierName` — اسم المورد
 - `supplierPhone` — رقم الهاتف
 - `supplierWhatsapp` — واتساب
-- `supplierLink` — رابط المورد
+- `supplierLocation` — موقع المورد (رابط خرائط Google)
 
-Visible to all:
+Visible to all (shown on cards + detail page):
 - `title`, `imageUrl`, `description`, `category`, `supplierCity`, `supplierType`
+
+Cards on /projects show only public info + "عرض التفاصيل" button.
+Detail page at /listings/:id shows full description + gated supplier contact section.
 
 ## Moyasar Payment Integration
 - **Flow**: User clicks subscribe → POST `/api/payments/create` → Moyasar hosted page → redirect to `/payment/callback` → verify

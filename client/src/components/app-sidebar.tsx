@@ -18,7 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { title: "المشاريع", url: "/projects", icon: FolderOpen, key: "projects" },
+  { title: "الموردين المحليين", url: "/projects", icon: FolderOpen, key: "projects" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
   { title: "الإعدادات", url: "/settings", icon: Settings, key: "settings" },
 ];

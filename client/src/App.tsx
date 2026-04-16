@@ -18,6 +18,7 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 import AuthCallbackPage from "@/pages/auth-callback";
 import PaymentCallbackPage from "@/pages/payment-callback";
+import ListingDetailPage from "@/pages/listing-detail";
 import AdminListingsPage from "@/pages/admin/listings";
 import ListingFormPage from "@/pages/admin/listing-form";
 import { Loader2 } from "lucide-react";
@@ -86,6 +87,27 @@ function ProjectsRoute() {
   );
 }
 
+function ListingDetailRoute() {
+  const { user, isLoading: authLoading } = useAuth();
+
+  const { data: sub, isLoading: subLoading } = useQuery<{ plan: string; status: string }>({
+    queryKey: ["/api/payments/subscription"],
+    enabled: !!user,
+    retry: false,
+  });
+
+  if (authLoading || (user && subLoading)) return <LoadingScreen />;
+  if (!user) return <Redirect to="/login" />;
+
+  const isSubscribed = sub?.status === "active";
+
+  return (
+    <AppLayout>
+      <ListingDetailPage isSubscribed={isSubscribed} />
+    </AppLayout>
+  );
+}
+
 function AdminRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading: authLoading } = useAuth();
 
@@ -130,6 +152,7 @@ function Router() {
       <Route path="/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
 
       <Route path="/projects">{() => <ProjectsRoute />}</Route>
+      <Route path="/listings/:id">{() => <ListingDetailRoute />}</Route>
       <Route path="/saved">{() => <SubscribedRoute component={SavedProductsPage} />}</Route>
 
       <Route path="/admin/listings/new">{() => <AdminRoute component={ListingFormPage} />}</Route>

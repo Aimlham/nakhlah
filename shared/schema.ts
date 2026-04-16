@@ -31,7 +31,7 @@ export const listings = pgTable("listings", {
   supplierWhatsapp: text("supplier_whatsapp"),
   supplierCity: text("supplier_city"),
   supplierType: text("supplier_type"),
-  supplierLink: text("supplier_link"),
+  supplierLocation: text("supplier_link"),
   status: text("status").notNull().default("draft"),
   createdAt: timestamp("created_at").defaultNow(),
 });

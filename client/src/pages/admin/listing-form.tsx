@@ -33,7 +33,7 @@ const formSchema = z.object({
   supplierWhatsapp: z.string().max(50).optional().or(z.literal("")),
   supplierCity: z.string().max(200).optional().or(z.literal("")),
   supplierType: z.string().max(200).optional().or(z.literal("")),
-  supplierLink: z.string().max(2000).optional().or(z.literal("")),
+  supplierLocation: z.string().max(2000).optional().or(z.literal("")),
   status: z.enum(["draft", "published"]),
 });
 
@@ -62,7 +62,7 @@ export default function ListingFormPage() {
       supplierWhatsapp: "",
       supplierCity: "",
       supplierType: "",
-      supplierLink: "",
+      supplierLocation: "",
       status: "draft",
     },
   });
@@ -79,7 +79,7 @@ export default function ListingFormPage() {
         supplierWhatsapp: listing.supplierWhatsapp || "",
         supplierCity: listing.supplierCity || "",
         supplierType: listing.supplierType || "",
-        supplierLink: listing.supplierLink || "",
+        supplierLocation: listing.supplierLocation || "",
         status: (listing.status as "draft" | "published") || "draft",
       });
     }
@@ -97,7 +97,7 @@ export default function ListingFormPage() {
         supplierWhatsapp: values.supplierWhatsapp || null,
         supplierCity: values.supplierCity || null,
         supplierType: values.supplierType || null,
-        supplierLink: values.supplierLink || null,
+        supplierLocation: values.supplierLocation || null,
       };
       if (isEdit) {
         await apiRequest("PATCH", `/api/admin/listings/${params.id}`, data);
@@ -279,12 +279,12 @@ export default function ListingFormPage() {
 
               <FormField
                 control={form.control}
-                name="supplierLink"
+                name="supplierLocation"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رابط المورد</FormLabel>
+                    <FormLabel>موقع المورد (رابط خرائط Google)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="https://..." dir="ltr" data-testid="input-supplier-link" />
+                      <Input {...field} placeholder="https://maps.google.com/..." dir="ltr" data-testid="input-supplier-location" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

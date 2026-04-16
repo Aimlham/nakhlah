@@ -299,7 +299,7 @@ export class MemStorage implements IStorage {
       supplierWhatsapp: listing.supplierWhatsapp ?? null,
       supplierCity: listing.supplierCity ?? null,
       supplierType: listing.supplierType ?? null,
-      supplierLink: listing.supplierLink ?? null,
+      supplierLocation: listing.supplierLocation ?? null,
       status: listing.status ?? "draft",
       createdAt: new Date(),
     };

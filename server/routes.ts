@@ -20,7 +20,7 @@ function stripListingSupplierFields<T extends Record<string, any>>(listing: T): 
     supplierName: null,
     supplierPhone: null,
     supplierWhatsapp: null,
-    supplierLink: null,
+    supplierLocation: null,
   };
 }
 
@@ -233,6 +233,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/listings/:id", async (req: Request, res: Response) => {
+    try {
+      const listing = await storage.getListing(req.params.id);
+      if (!listing || listing.status !== "published") {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+      const subscribed = await isUserSubscribed(req);
+      res.json(subscribed ? listing : stripListingSupplierFields(listing));
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch listing") });
+    }
+  });
+
   app.get("/api/admin/listings", async (req: Request, res: Response) => {
     try {
       const admin = await isUserAdmin(req);
@@ -266,7 +279,7 @@ export async function registerRoutes(
     supplierWhatsapp: z.string().max(50).optional().nullable(),
     supplierCity: z.string().max(200).optional().nullable(),
     supplierType: z.string().max(200).optional().nullable(),
-    supplierLink: z.string().max(2000).optional().nullable(),
+    supplierLocation: z.string().max(2000).optional().nullable(),
     status: z.enum(["draft", "published"]).optional(),
   });
 

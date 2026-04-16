@@ -120,7 +120,7 @@ function mapListing(row: Record<string, unknown>): Listing {
     supplierWhatsapp: (row.supplier_whatsapp as string) ?? null,
     supplierCity: (row.supplier_city as string) ?? null,
     supplierType: (row.supplier_type as string) ?? null,
-    supplierLink: (row.supplier_link as string) ?? null,
+    supplierLocation: (row.supplier_link as string) ?? null,
     status: (row.status as string) ?? "draft",
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
@@ -546,7 +546,7 @@ export class SupabaseStorage implements IStorage {
         supplier_whatsapp: listing.supplierWhatsapp ?? null,
         supplier_city: listing.supplierCity ?? null,
         supplier_type: listing.supplierType ?? null,
-        supplier_link: listing.supplierLink ?? null,
+        supplier_link: listing.supplierLocation ?? null,
         status: listing.status ?? "draft",
       })
       .select()
@@ -566,7 +566,7 @@ export class SupabaseStorage implements IStorage {
     if (listing.supplierWhatsapp !== undefined) updateData.supplier_whatsapp = listing.supplierWhatsapp;
     if (listing.supplierCity !== undefined) updateData.supplier_city = listing.supplierCity;
     if (listing.supplierType !== undefined) updateData.supplier_type = listing.supplierType;
-    if (listing.supplierLink !== undefined) updateData.supplier_link = listing.supplierLink;
+    if (listing.supplierLocation !== undefined) updateData.supplier_link = listing.supplierLocation;
     if (listing.status !== undefined) updateData.status = listing.status;
 
     const { data, error } = await this.db
