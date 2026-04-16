@@ -3,12 +3,29 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import multer from "multer";
-import { randomUUID } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { z } from "zod";
+import path from "path";
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      return cb(new Error("نوع الملف غير مسموح. الأنواع المسموحة: JPEG, PNG, WebP"));
+    }
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error("امتداد الملف غير مسموح. الامتدادات المسموحة: jpg, jpeg, png, webp"));
+    }
+    cb(null, true);
+  },
+});
 
 const SessionStore = MemoryStore(session);
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -79,11 +96,13 @@ export async function registerRoutes(
 ): Promise<Server> {
   const isProd = process.env.NODE_ENV === "production";
 
+  if (isProd && !process.env.SESSION_SECRET) {
+    console.error("FATAL: SESSION_SECRET is required in production");
+    process.exit(1);
+  }
+
   if (!supabaseConfigured) {
     const sessionSecret = process.env.SESSION_SECRET;
-    if (isProd && !sessionSecret) {
-      throw new Error("SESSION_SECRET environment variable is required in production");
-    }
 
     app.use(
       session({
@@ -567,7 +586,20 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/admin/upload-image", upload.single("image"), async (req: Request, res: Response) => {
+  app.post("/api/admin/upload-image", (req: Request, res: Response, next) => {
+    upload.single("image")(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ message: "حجم الملف يتجاوز الحد الأقصى (5MB)" });
+          }
+          return res.status(400).json({ message: err.message });
+        }
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, async (req: Request, res: Response) => {
     try {
       const admin = await isUserAdmin(req);
       if (!admin) return res.status(403).json({ message: "Forbidden" });
@@ -575,7 +607,7 @@ export async function registerRoutes(
       const file = req.file;
       if (!file) return res.status(400).json({ message: "No image provided" });
 
-      const ext = file.originalname.split(".").pop() || "jpg";
+      const ext = path.extname(file.originalname).toLowerCase().replace(".", "") || "jpg";
       const filename = `${randomUUID()}.${ext}`;
 
       if (!supabaseAdmin) {
@@ -805,34 +837,65 @@ export async function registerRoutes(
 
   const MOYASAR_WEBHOOK_TOKEN = process.env.MOYASAR_WEBHOOK_TOKEN;
 
+  function safeTokenCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false;
+    try {
+      return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+    } catch {
+      return false;
+    }
+  }
+
   app.post("/api/moyasar/webhook", async (req: Request, res: Response) => {
     try {
-      if (MOYASAR_WEBHOOK_TOKEN) {
-        const providedToken =
-          req.headers["x-moyasar-token"] || req.query.token;
-        if (providedToken !== MOYASAR_WEBHOOK_TOKEN) {
-          return res.status(401).json({ message: "Invalid webhook token" });
-        }
+      if (!MOYASAR_WEBHOOK_TOKEN) {
+        console.error("[webhook] MOYASAR_WEBHOOK_TOKEN not configured — rejecting request");
+        return res.status(503).json({ message: "Webhook not configured" });
       }
 
-      const { id, type, data } = req.body;
+      const providedToken = String(
+        req.headers["x-moyasar-token"] || req.query.token || ""
+      );
+      if (!providedToken || !safeTokenCompare(providedToken, MOYASAR_WEBHOOK_TOKEN)) {
+        return res.status(401).json({ message: "Invalid webhook token" });
+      }
+
+      const { type, data } = req.body;
 
       if (type === "payment_paid" && data) {
         const invoiceId = data.invoice_id;
-        const paymentId = data.id;
 
-        if (invoiceId) {
+        if (invoiceId && MOYASAR_SECRET_KEY) {
           const sub = await storage.getSubscriptionByInvoiceId(invoiceId);
           if (sub) {
-            await storage.upsertSubscription({
-              userId: sub.userId,
-              plan: sub.plan,
-              status: "active",
-              moyasarInvoiceId: invoiceId,
-              moyasarPaymentId: paymentId,
-              activatedAt: new Date(),
-            });
-            console.log(`[webhook] Activated subscription for user ${sub.userId}`);
+            const verifyRes = await fetch(
+              `https://api.moyasar.com/v1/invoices/${encodeURIComponent(invoiceId)}`,
+              { headers: { Authorization: moyasarAuth() } }
+            );
+            if (!verifyRes.ok) {
+              console.error("[webhook] Failed to verify invoice with Moyasar API");
+              return res.status(502).json({ message: "Failed to verify payment" });
+            }
+            const invoice = (await verifyRes.json()) as {
+              id: string;
+              status: string;
+              payments?: { id: string; status: string }[];
+            };
+
+            const paidPayment = invoice.payments?.find((p) => p.status === "paid");
+            if (invoice.status === "paid" && paidPayment) {
+              await storage.upsertSubscription({
+                userId: sub.userId,
+                plan: sub.plan,
+                status: "active",
+                moyasarInvoiceId: invoiceId,
+                moyasarPaymentId: paidPayment.id,
+                activatedAt: new Date(),
+              });
+              console.log(`[webhook] Activated subscription for user ${sub.userId}`);
+            } else {
+              console.warn(`[webhook] Invoice ${invoiceId} status is ${invoice.status}, not activating`);
+            }
           }
         }
       }
