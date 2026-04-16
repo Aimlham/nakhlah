@@ -507,6 +507,16 @@ export async function registerRoutes(
         .select("*", { count: "exact", head: true })
         .eq("status", "active");
 
+      const { data: allActiveSubs } = await supabaseAdmin
+        .from("subscriptions")
+        .select("amount_halalas")
+        .eq("status", "active");
+
+      const totalRevenueHalalas = (allActiveSubs || []).reduce(
+        (sum: number, s: any) => sum + (s.amount_halalas || 0),
+        0
+      );
+
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
 
@@ -547,6 +557,7 @@ export async function registerRoutes(
 
       res.json({
         activeSubscribers: activeCount || 0,
+        totalRevenueRiyal: (totalRevenueHalalas / 100).toFixed(2),
         todayRevenueRiyal: (todayRevenueHalalas / 100).toFixed(2),
         recentSubscribers,
       });

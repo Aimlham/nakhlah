@@ -6,6 +6,7 @@ import { Users, Banknote, Clock } from "lucide-react";
 
 interface OverviewData {
   activeSubscribers: number;
+  totalRevenueRiyal: string;
   todayRevenueRiyal: string;
   recentSubscribers: {
     email: string;
@@ -34,7 +35,7 @@ export default function AdminOverviewPage() {
     );
   }
 
-  const overview = data || { activeSubscribers: 0, todayRevenueRiyal: "0.00", recentSubscribers: [] };
+  const overview = data || { activeSubscribers: 0, totalRevenueRiyal: "0.00", todayRevenueRiyal: "0.00", recentSubscribers: [] };
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -42,7 +43,7 @@ export default function AdminOverviewPage() {
         إحصائيات الاشتراكات
       </h1>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-3 gap-4">
         <Card className="rounded-2xl border-border/50">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -53,6 +54,22 @@ export default function AdminOverviewPage() {
                 <p className="text-sm text-muted-foreground">المشتركين النشطين</p>
                 <p className="text-3xl font-bold mt-1" data-testid="text-active-subscribers">
                   {overview.activeSubscribers}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-border/50">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Banknote className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">إجمالي الدخل</p>
+                <p className="text-3xl font-bold mt-1" dir="ltr" data-testid="text-total-revenue">
+                  {overview.totalRevenueRiyal} <span className="text-base font-normal text-muted-foreground">ر.س</span>
                 </p>
               </div>
             </div>
