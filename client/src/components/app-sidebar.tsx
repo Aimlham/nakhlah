@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bookmark, Settings, Package, Store, Factory, Shield, Tag } from "lucide-react";
+import { Bookmark, Settings, Package, Store, Factory, Shield, Tag, BarChart3 } from "lucide-react";
 import nakhlahLogo from "@assets/nakhlah-logo.png";
 import {
   Sidebar,
@@ -26,6 +26,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { title: "إحصائيات الاشتراكات", url: "/admin/overview", icon: BarChart3, key: "admin-overview" },
   { title: "إدارة الموردين", url: "/admin/listings", icon: Store, key: "admin-listings" },
   { title: "إدارة المنتجات", url: "/admin/products", icon: Package, key: "admin-products" },
   { title: "إدارة التصنيفات", url: "/admin/categories", icon: Tag, key: "admin-categories" },

@@ -493,6 +493,69 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/overview", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+
+      if (!supabaseAdmin) {
+        return res.status(503).json({ message: "Database not configured" });
+      }
+
+      const { count: activeCount } = await supabaseAdmin
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active");
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const { data: todaySubs } = await supabaseAdmin
+        .from("subscriptions")
+        .select("amount_halalas")
+        .gte("created_at", todayStart.toISOString());
+
+      const todayRevenueHalalas = (todaySubs || []).reduce(
+        (sum: number, s: any) => sum + (s.amount_halalas || 0),
+        0
+      );
+
+      const { data: recentRows } = await supabaseAdmin
+        .from("subscriptions")
+        .select("user_id, plan, status, amount_halalas, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      const recent = recentRows || [];
+      const userIds = recent.map((r: any) => r.user_id);
+
+      const emailMap: Record<string, string> = {};
+      for (const uid of userIds) {
+        try {
+          const { data } = await supabaseAdmin.auth.admin.getUserById(uid);
+          if (data?.user?.email) emailMap[uid] = data.user.email;
+        } catch {}
+      }
+
+      const recentSubscribers = recent.map((r: any) => ({
+        email: emailMap[r.user_id] || r.user_id,
+        plan: r.plan,
+        status: r.status,
+        amountRiyal: r.amount_halalas ? (r.amount_halalas / 100).toFixed(2) : "0.00",
+        createdAt: r.created_at,
+      }));
+
+      res.json({
+        activeSubscribers: activeCount || 0,
+        todayRevenueRiyal: (todayRevenueHalalas / 100).toFixed(2),
+        recentSubscribers,
+      });
+    } catch (err: any) {
+      console.error("[admin-overview]", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch overview") });
+    }
+  });
+
   app.post("/api/admin/upload-image", upload.single("image"), async (req: Request, res: Response) => {
     try {
       const admin = await isUserAdmin(req);

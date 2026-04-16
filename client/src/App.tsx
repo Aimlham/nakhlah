@@ -25,6 +25,7 @@ import ListingFormPage from "@/pages/admin/listing-form";
 import AdminSupplierProductsPage from "@/pages/admin/supplier-products";
 import SupplierProductFormPage from "@/pages/admin/supplier-product-form";
 import AdminCategoriesPage from "@/pages/admin/categories";
+import AdminOverviewPage from "@/pages/admin/overview";
 import { Loader2 } from "lucide-react";
 
 function LoadingScreen() {
@@ -150,6 +151,7 @@ function Router() {
       <Route path="/admin/products">{() => <AdminRoute component={AdminSupplierProductsPage} />}</Route>
 
       <Route path="/admin/categories">{() => <AdminRoute component={AdminCategoriesPage} />}</Route>
+      <Route path="/admin/overview">{() => <AdminRoute component={AdminOverviewPage} />}</Route>
 
       <Route component={NotFound} />
     </Switch>
