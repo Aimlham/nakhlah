@@ -2,9 +2,13 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import multer from "multer";
+import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { z } from "zod";
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 const SessionStore = MemoryStore(session);
 const isProdEnv = process.env.NODE_ENV === "production";
@@ -321,6 +325,44 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to delete listing") });
+    }
+  });
+
+  app.post("/api/admin/upload-image", upload.single("image"), async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "No image provided" });
+
+      const ext = file.originalname.split(".").pop() || "jpg";
+      const filename = `${randomUUID()}.${ext}`;
+
+      if (!supabaseAdmin) {
+        return res.status(503).json({ message: "Storage not configured" });
+      }
+
+      const { error } = await supabaseAdmin.storage
+        .from("listing-images")
+        .upload(filename, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
+
+      if (error) {
+        console.error("[upload] Supabase storage error:", error.message);
+        return res.status(500).json({ message: "Failed to upload image" });
+      }
+
+      const { data: urlData } = supabaseAdmin.storage
+        .from("listing-images")
+        .getPublicUrl(filename);
+
+      res.json({ url: urlData.publicUrl });
+    } catch (err: any) {
+      console.error("[upload] Error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "Upload failed") });
     }
   });
 

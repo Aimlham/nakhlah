@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useParams } from "wouter";
 import { useForm } from "react-hook-form";
@@ -18,10 +18,29 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { getAccessToken } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowRight, Save, Loader2 } from "lucide-react";
+import { ArrowRight, Save, Loader2, Upload, ImageIcon, X } from "lucide-react";
 import type { Listing } from "@shared/schema";
+
+const CATEGORIES = [
+  "ملابس",
+  "أحذية",
+  "إلكترونيات",
+  "أغذية",
+  "مستحضرات تجميل",
+  "عطور",
+  "أثاث",
+  "مجوهرات",
+  "ألعاب أطفال",
+  "أدوات منزلية",
+  "قرطاسية",
+  "رياضة",
+  "سيارات وقطع غيار",
+  "هدايا",
+  "أخرى",
+];
 
 const formSchema = z.object({
   title: z.string().min(1, "العنوان مطلوب"),
@@ -44,6 +63,8 @@ export default function ListingFormPage() {
   const isEdit = !!params.id;
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: listing, isLoading } = useQuery<Listing>({
     queryKey: ["/api/admin/listings", params.id],
@@ -85,8 +106,37 @@ export default function ListingFormPage() {
     }
   }, [listing]);
 
+  async function handleImageUpload(file: File) {
+    setUploading(true);
+    try {
+      const token = await getAccessToken();
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch("/api/admin/upload-image", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Upload failed");
+      }
+
+      const data = await res.json();
+      form.setValue("imageUrl", data.url);
+      toast({ title: "تم رفع الصورة بنجاح" });
+    } catch (err: any) {
+      toast({ title: "فشل رفع الصورة", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
+      const token = await getAccessToken();
       const data = {
         ...values,
         imageUrl: values.imageUrl || null,
@@ -99,10 +149,22 @@ export default function ListingFormPage() {
         supplierType: values.supplierType || null,
         supplierLocation: values.supplierLocation || null,
       };
-      if (isEdit) {
-        await apiRequest("PATCH", `/api/admin/listings/${params.id}`, data);
-      } else {
-        await apiRequest("POST", "/api/admin/listings", data);
+
+      const url = isEdit ? `/api/admin/listings/${params.id}` : "/api/admin/listings";
+      const method = isEdit ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Request failed");
       }
     },
     onSuccess: () => {
@@ -124,6 +186,8 @@ export default function ListingFormPage() {
       </div>
     );
   }
+
+  const currentImageUrl = form.watch("imageUrl");
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -164,10 +228,67 @@ export default function ListingFormPage() {
                 name="imageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رابط الصورة</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://..." dir="ltr" data-testid="input-image-url" />
-                    </FormControl>
+                    <FormLabel>صورة البوست</FormLabel>
+                    <div className="space-y-3">
+                      {currentImageUrl && (
+                        <div className="relative w-full h-40 rounded-lg overflow-hidden bg-muted border">
+                          <img
+                            src={currentImageUrl}
+                            alt="معاينة"
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 start-2 w-7 h-7"
+                            onClick={() => form.setValue("imageUrl", "")}
+                            data-testid="button-remove-image"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1"
+                          disabled={uploading}
+                          onClick={() => fileInputRef.current?.click()}
+                          data-testid="button-upload-image"
+                        >
+                          {uploading ? (
+                            <Loader2 className="w-4 h-4 animate-spin me-2" />
+                          ) : (
+                            <Upload className="w-4 h-4 me-2" />
+                          )}
+                          {uploading ? "جاري الرفع..." : "رفع صورة من الجهاز"}
+                        </Button>
+                      </div>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file);
+                          e.target.value = "";
+                        }}
+                      />
+
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="أو أدخل رابط الصورة مباشرة"
+                          dir="ltr"
+                          data-testid="input-image-url"
+                        />
+                      </FormControl>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -194,9 +315,20 @@ export default function ListingFormPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>التصنيف</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="مثال: ملابس" data-testid="input-category" />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-category">
+                            <SelectValue placeholder="اختر التصنيف" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {CATEGORIES.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
