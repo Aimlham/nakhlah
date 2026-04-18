@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface SuppliersPageProps {
   filterTypes?: string[];
+  excludeTypes?: string[];
   title?: string;
   subtitle?: string;
   emptyTitle?: string;
@@ -31,6 +32,7 @@ interface SuppliersPageProps {
 
 export default function SuppliersPage({
   filterTypes,
+  excludeTypes,
   title = "الموردين",
   subtitle = "تصفح جميع الموردين المحليين",
   emptyTitle = "لا يوجد موردين حالياً",
@@ -78,6 +80,13 @@ export default function SuppliersPage({
       result = result.filter((l) => {
         const type = (l.supplierType || "").toLowerCase();
         return filterTypes.some((ft) => type.includes(ft.toLowerCase()));
+      });
+    }
+
+    if (excludeTypes && excludeTypes.length > 0) {
+      result = result.filter((l) => {
+        const type = (l.supplierType || "").toLowerCase();
+        return !excludeTypes.some((et) => type.includes(et.toLowerCase()));
       });
     }
 

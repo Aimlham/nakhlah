@@ -786,7 +786,7 @@ export async function registerRoutes(
       }
       const listings = await storage.getSavedListings(userId);
       // Strip gated supplier contact fields for non-subscribers
-      const isSubscribed = await isUserSubscribed(userId);
+      const isSubscribed = await isUserSubscribed(req);
       const stripped = isSubscribed
         ? listings
         : listings.map((l) => ({

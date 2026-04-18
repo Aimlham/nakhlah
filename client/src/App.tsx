@@ -132,7 +132,7 @@ function Router() {
       <Route path="/products">{() => <ProtectedRoute component={ProductsPage} />}</Route>
       <Route path="/products/:id">{() => <SubscriptionAwareRoute component={ProductDetailPage} />}</Route>
 
-      <Route path="/suppliers">{() => <ProtectedRoute component={() => <SuppliersPage />} />}</Route>
+      <Route path="/suppliers">{() => <ProtectedRoute component={() => <SuppliersPage excludeTypes={["مصنع", "تصنيع"]} />} />}</Route>
       <Route path="/suppliers/:id">{() => <SubscriptionAwareRoute component={SupplierDetailPage} />}</Route>
 
       <Route path="/factories">{() => <FactoriesRoute />}</Route>
