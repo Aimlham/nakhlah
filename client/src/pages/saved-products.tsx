@@ -18,11 +18,11 @@ export default function SavedProductsPage() {
     queryFn: async () => {
       // saved products endpoint returns legacy products; we want supplier-products
       // Use saved IDs and resolve them client-side via /api/supplier-products
-      const idsRes = await fetch("/api/saved/ids", { credentials: "include" });
+      const idsRes = await apiRequest("GET", "/api/saved/ids");
       const idsData = await idsRes.json();
       const ids: string[] = idsData.savedProductIds || [];
       if (ids.length === 0) return [];
-      const allRes = await fetch("/api/supplier-products", { credentials: "include" });
+      const allRes = await apiRequest("GET", "/api/supplier-products");
       const all: SupplierProductWithSupplier[] = await allRes.json();
       return all.filter((p) => ids.includes(p.id));
     },
@@ -31,7 +31,7 @@ export default function SavedProductsPage() {
   const { data: savedListings, isLoading: loadingListings } = useQuery<Listing[]>({
     queryKey: ["/api/saved", "listings"],
     queryFn: async () => {
-      const res = await fetch("/api/saved/listings", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/saved/listings");
       return res.json();
     },
   });
