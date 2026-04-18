@@ -121,6 +121,46 @@ export default function ProductsPage() {
   );
 }
 
+function fmtPrice(v?: string | null): string | null {
+  if (v == null || v === "") return null;
+  const n = parseFloat(v);
+  if (!Number.isFinite(n)) return null;
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function PriceBlock({ product }: { product: SupplierProductWithSupplier }) {
+  const buy = fmtPrice(product.supplierPrice);
+  const sell = fmtPrice(product.suggestedSellPrice);
+  let margin = fmtPrice(product.estimatedMargin);
+  if (!margin && buy && sell) {
+    const m = parseFloat(sell) - parseFloat(buy);
+    if (m > 0) margin = fmtPrice(String(m));
+  }
+  if (!buy && !sell && !margin) return null;
+  return (
+    <div className="rounded-lg bg-primary/[0.04] border border-primary/15 p-2 sm:p-2.5 space-y-1" data-testid={`pricing-${product.id}`}>
+      {buy && (
+        <div className="flex items-center justify-between text-[11px] sm:text-xs">
+          <span className="text-muted-foreground">سعر الجملة</span>
+          <span className="font-semibold text-foreground" data-testid={`price-buy-${product.id}`}>{buy} ر.س</span>
+        </div>
+      )}
+      {sell && (
+        <div className="flex items-center justify-between text-[11px] sm:text-xs">
+          <span className="text-muted-foreground">سعر البيع</span>
+          <span className="font-semibold text-foreground" data-testid={`price-sell-${product.id}`}>{sell} ر.س</span>
+        </div>
+      )}
+      {margin && (
+        <div className="flex items-center justify-between text-[11px] sm:text-xs pt-1 border-t border-primary/15">
+          <span className="text-primary/80 font-medium">الربح المتوقع</span>
+          <span className="font-bold text-primary" data-testid={`price-margin-${product.id}`}>{margin} ر.س</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductCard({ product }: { product: SupplierProductWithSupplier }) {
   return (
     <Link href={`/products/${product.id}`} data-testid={`card-product-${product.id}`}>
@@ -151,7 +191,7 @@ function ProductCard({ product }: { product: SupplierProductWithSupplier }) {
             )}
           </div>
 
-          <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2.5">
+          <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-2.5">
             <h3
               className="font-semibold text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]"
               data-testid={`text-product-title-${product.id}`}
@@ -159,7 +199,9 @@ function ProductCard({ product }: { product: SupplierProductWithSupplier }) {
               {product.title}
             </h3>
 
-            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
+            <PriceBlock product={product} />
+
+            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground flex-wrap pt-0.5">
               {product.supplier?.supplierCity && (
                 <span className="flex items-center gap-0.5 sm:gap-1" data-testid={`text-product-city-${product.id}`}>
                   <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/70" />

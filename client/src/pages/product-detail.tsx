@@ -18,6 +18,9 @@ import {
   Crown,
   ExternalLink,
   Package,
+  ShoppingCart,
+  TrendingUp,
+  Wallet,
 } from "lucide-react";
 import type { SupplierProductWithSupplier } from "@shared/schema";
 import type { Listing } from "@shared/schema";
@@ -117,6 +120,8 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
           )}
         </div>
       </div>
+
+      <PricingSection product={product} />
 
       {product.description && (
         <Card className="rounded-2xl border-border/50">
@@ -292,6 +297,66 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
         </Card>
       )}
     </div>
+  );
+}
+
+function fmtPrice(v?: string | null): string | null {
+  if (v == null || v === "") return null;
+  const n = parseFloat(v);
+  if (!Number.isFinite(n)) return null;
+  return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function PricingSection({ product }: { product: ProductWithSupplier }) {
+  const buy = fmtPrice(product.supplierPrice);
+  const sell = fmtPrice(product.suggestedSellPrice);
+  let margin = fmtPrice(product.estimatedMargin);
+  if (!margin && buy && sell) {
+    const m = parseFloat(sell) - parseFloat(buy);
+    if (m > 0) margin = fmtPrice(String(m));
+  }
+  if (!buy && !sell && !margin) return null;
+
+  return (
+    <Card className="rounded-2xl border-primary/20 bg-gradient-to-b from-primary/[0.04] to-transparent" data-testid="card-pricing">
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Wallet className="w-4 h-4 text-primary" />
+          </div>
+          <h2 className="text-lg font-bold">التسعير</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {buy && (
+            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-1.5" data-testid="block-price-buy">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <ShoppingCart className="w-3.5 h-3.5" />
+                سعر الجملة
+              </div>
+              <p className="text-xl font-bold text-foreground">{buy} <span className="text-sm font-medium text-muted-foreground">ر.س</span></p>
+            </div>
+          )}
+          {sell && (
+            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-1.5" data-testid="block-price-sell">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Tag className="w-3.5 h-3.5" />
+                سعر البيع المقترح
+              </div>
+              <p className="text-xl font-bold text-foreground">{sell} <span className="text-sm font-medium text-muted-foreground">ر.س</span></p>
+            </div>
+          )}
+          {margin && (
+            <div className="rounded-xl border border-primary/30 bg-primary/[0.08] p-4 space-y-1.5" data-testid="block-price-margin">
+              <div className="flex items-center gap-1.5 text-xs text-primary/80 font-medium">
+                <TrendingUp className="w-3.5 h-3.5" />
+                الربح المتوقع
+              </div>
+              <p className="text-xl font-bold text-primary">{margin} <span className="text-sm font-medium text-primary/70">ر.س</span></p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -33,6 +33,28 @@ let adColumnsProbed = false;
 let savedItemTypeAvailable = false;
 let savedItemTypeProbed = false;
 
+const SUPPLIER_PRODUCT_PRICE_COLS = ["supplier_price", "suggested_sell_price", "estimated_margin"];
+let supplierProductPriceColsAvailable: Set<string> = new Set();
+let supplierProductPriceColsProbed = false;
+
+async function probeSupplierProductPriceCols(): Promise<Set<string>> {
+  if (supplierProductPriceColsProbed || !supabaseAdmin) return supplierProductPriceColsAvailable;
+  supplierProductPriceColsProbed = true;
+  for (const col of SUPPLIER_PRODUCT_PRICE_COLS) {
+    try {
+      const { error } = await supabaseAdmin.from("supplier_products").select(col).limit(1);
+      if (!error) supplierProductPriceColsAvailable.add(col);
+    } catch {}
+  }
+  const missing = SUPPLIER_PRODUCT_PRICE_COLS.filter(c => !supplierProductPriceColsAvailable.has(c));
+  if (missing.length > 0) {
+    console.log("[supabase] Missing pricing columns in supplier_products:", missing.join(", "));
+  } else {
+    console.log("[supabase] All supplier_products pricing columns available");
+  }
+  return supplierProductPriceColsAvailable;
+}
+
 async function probeSavedItemType(): Promise<boolean> {
   if (savedItemTypeProbed || !supabaseAdmin) return savedItemTypeAvailable;
   savedItemTypeProbed = true;
@@ -166,6 +188,9 @@ function mapSupplierProduct(row: Record<string, unknown>): SupplierProduct {
     category: (row.category as string) ?? null,
     supplierId: (row.supplier_id as string) ?? null,
     status: (row.status as string) ?? "draft",
+    supplierPrice: row.supplier_price != null ? String(row.supplier_price) : null,
+    suggestedSellPrice: row.suggested_sell_price != null ? String(row.suggested_sell_price) : null,
+    estimatedMargin: row.estimated_margin != null ? String(row.estimated_margin) : null,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
 }
@@ -216,6 +241,7 @@ export class SupabaseStorage implements IStorage {
     await probeColumns();
     await probeAdColumns();
     await probeSavedItemType();
+    await probeSupplierProductPriceCols();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -820,16 +846,22 @@ export class SupabaseStorage implements IStorage {
   }
 
   async createSupplierProduct(product: InsertSupplierProduct): Promise<SupplierProduct> {
+    const priceCols = await probeSupplierProductPriceCols();
+    const insertData: Record<string, unknown> = {
+      title: product.title,
+      image_url: product.imageUrl ?? null,
+      description: product.description ?? null,
+      category: product.category ?? null,
+      supplier_id: product.supplierId ?? null,
+      status: product.status ?? "draft",
+    };
+    if (priceCols.has("supplier_price")) insertData.supplier_price = product.supplierPrice ?? null;
+    if (priceCols.has("suggested_sell_price")) insertData.suggested_sell_price = product.suggestedSellPrice ?? null;
+    if (priceCols.has("estimated_margin")) insertData.estimated_margin = product.estimatedMargin ?? null;
+
     const { data, error } = await this.db
       .from("supplier_products")
-      .insert({
-        title: product.title,
-        image_url: product.imageUrl ?? null,
-        description: product.description ?? null,
-        category: product.category ?? null,
-        supplier_id: product.supplierId ?? null,
-        status: product.status ?? "draft",
-      })
+      .insert(insertData)
       .select()
       .single();
     if (error) throw new Error(error.message);
@@ -837,13 +869,26 @@ export class SupabaseStorage implements IStorage {
   }
 
   async updateSupplierProduct(id: string, product: Partial<InsertSupplierProduct>): Promise<SupplierProduct> {
+    const priceCols = await probeSupplierProductPriceCols();
+    const { data: existingRow } = await this.db
+      .from("supplier_products")
+      .select("supplier_id")
+      .eq("id", id)
+      .single();
+    const existingSupplierId = (existingRow?.supplier_id as string) ?? null;
+
     const updateData: Record<string, unknown> = {};
     if (product.title !== undefined) updateData.title = product.title;
     if (product.imageUrl !== undefined) updateData.image_url = product.imageUrl;
     if (product.description !== undefined) updateData.description = product.description;
     if (product.category !== undefined) updateData.category = product.category;
-    if (product.supplierId !== undefined) updateData.supplier_id = product.supplierId;
+    if (product.supplierId !== undefined && product.supplierId !== existingSupplierId) {
+      updateData.supplier_id = product.supplierId;
+    }
     if (product.status !== undefined) updateData.status = product.status;
+    if (product.supplierPrice !== undefined && priceCols.has("supplier_price")) updateData.supplier_price = product.supplierPrice;
+    if (product.suggestedSellPrice !== undefined && priceCols.has("suggested_sell_price")) updateData.suggested_sell_price = product.suggestedSellPrice;
+    if (product.estimatedMargin !== undefined && priceCols.has("estimated_margin")) updateData.estimated_margin = product.estimatedMargin;
 
     const { data, error } = await this.db
       .from("supplier_products")

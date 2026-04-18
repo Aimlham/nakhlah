@@ -50,6 +50,9 @@ export const supplierProducts = pgTable("supplier_products", {
   category: text("category"),
   supplierId: text("supplier_id"),
   status: text("status").notNull().default("draft"),
+  supplierPrice: numeric("supplier_price"),
+  suggestedSellPrice: numeric("suggested_sell_price"),
+  estimatedMargin: numeric("estimated_margin"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

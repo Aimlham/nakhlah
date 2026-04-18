@@ -353,6 +353,17 @@ export async function registerRoutes(
     }
   });
 
+  const priceField = z
+    .union([z.string(), z.number()])
+    .optional()
+    .nullable()
+    .transform((v) => {
+      if (v === null || v === undefined || v === "") return null;
+      const num = typeof v === "number" ? v : parseFloat(v);
+      if (Number.isNaN(num) || num < 0) return null;
+      return String(num);
+    });
+
   const supplierProductSchema = z.object({
     title: z.string().min(1).max(500),
     imageUrl: z.string().max(2000).optional().nullable(),
@@ -360,6 +371,9 @@ export async function registerRoutes(
     category: z.string().max(200).optional().nullable(),
     supplierId: z.string().max(200).optional().nullable(),
     status: z.enum(["draft", "published"]).optional(),
+    supplierPrice: priceField,
+    suggestedSellPrice: priceField,
+    estimatedMargin: priceField,
   });
 
   app.post("/api/admin/supplier-products", async (req: Request, res: Response) => {

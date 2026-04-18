@@ -24,9 +24,20 @@ const formSchema = z.object({
   category: z.string().optional(),
   supplierId: z.string().optional(),
   status: z.enum(["draft", "published"]),
+  supplierPrice: z.string().optional(),
+  suggestedSellPrice: z.string().optional(),
+  estimatedMargin: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+function calcMargin(buy?: string, sell?: string): string {
+  const b = parseFloat(buy ?? "");
+  const s = parseFloat(sell ?? "");
+  if (!Number.isFinite(b) || !Number.isFinite(s)) return "";
+  const m = s - b;
+  return m > 0 ? String(Math.round(m * 100) / 100) : "";
+}
 
 export default function SupplierProductFormPage() {
   const params = useParams<{ id: string }>();
@@ -57,6 +68,9 @@ export default function SupplierProductFormPage() {
       category: "",
       supplierId: "",
       status: "draft",
+      supplierPrice: "",
+      suggestedSellPrice: "",
+      estimatedMargin: "",
     },
   });
 
@@ -68,10 +82,22 @@ export default function SupplierProductFormPage() {
         category: existing.category || "",
         supplierId: existing.supplierId || "",
         status: (existing.status as "draft" | "published") || "draft",
+        supplierPrice: existing.supplierPrice ?? "",
+        suggestedSellPrice: existing.suggestedSellPrice ?? "",
+        estimatedMargin: existing.estimatedMargin ?? "",
       });
       setImageUrl(existing.imageUrl || null);
     }
   }, [existing, form]);
+
+  const watchedBuy = form.watch("supplierPrice");
+  const watchedSell = form.watch("suggestedSellPrice");
+  useEffect(() => {
+    const auto = calcMargin(watchedBuy, watchedSell);
+    if (auto && form.getValues("estimatedMargin") !== auto) {
+      form.setValue("estimatedMargin", auto, { shouldValidate: false });
+    }
+  }, [watchedBuy, watchedSell, form]);
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
@@ -263,6 +289,54 @@ export default function SupplierProductFormPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-3 pt-2 border-t border-border/40">
+                <div>
+                  <h3 className="text-sm font-semibold mb-1">التسعير</h3>
+                  <p className="text-xs text-muted-foreground">اعرض الأسعار للمشتركين. الربح يُحسب تلقائياً.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="supplierPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>سعر الجملة (ر.س)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" inputMode="decimal" step="0.01" min="0" placeholder="35" className="rounded-lg" data-testid="input-product-supplier-price" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="suggestedSellPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>سعر البيع المقترح (ر.س)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" inputMode="decimal" step="0.01" min="0" placeholder="79" className="rounded-lg" data-testid="input-product-sell-price" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="estimatedMargin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>الربح المتوقع (ر.س)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" inputMode="decimal" step="0.01" min="0" placeholder="44" className="rounded-lg" data-testid="input-product-margin" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
 
               <Button type="submit" className="w-full h-11 rounded-xl" disabled={mutation.isPending} data-testid="button-save-product">
                 {mutation.isPending ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : null}
