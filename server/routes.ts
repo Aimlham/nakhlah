@@ -832,9 +832,13 @@ export async function registerRoutes(
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
-      const product = await storage.getProduct(req.params.productId);
-      if (!product) {
-        return res.status(404).json({ message: "Product not found" });
+      // /products page shows supplier_products items; check both tables
+      const supplierProduct = await storage.getSupplierProduct(req.params.productId);
+      if (!supplierProduct) {
+        const legacyProduct = await storage.getProduct(req.params.productId);
+        if (!legacyProduct) {
+          return res.status(404).json({ message: "Product not found" });
+        }
       }
       const saved = await storage.saveProduct(userId, req.params.productId);
       res.json(saved);

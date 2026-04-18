@@ -1,9 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   ArrowRight,
   MapPin,
@@ -21,6 +23,8 @@ import {
   ShoppingCart,
   TrendingUp,
   Wallet,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import type { SupplierProductWithSupplier } from "@shared/schema";
 import type { Listing } from "@shared/schema";
@@ -35,9 +39,34 @@ interface ProductWithSupplier extends SupplierProductWithSupplier {
 
 export default function ProductDetailPage({ isSubscribed }: ProductDetailPageProps) {
   const params = useParams<{ id: string }>();
+  const { toast } = useToast();
 
   const { data: product, isLoading, error } = useQuery<ProductWithSupplier>({
     queryKey: ["/api/supplier-products", params.id],
+  });
+
+  const { data: savedData } = useQuery<{ savedProductIds: string[]; savedListingIds: string[] }>({
+    queryKey: ["/api/saved", "ids"],
+  });
+  const isSaved = !!(params.id && savedData?.savedProductIds?.includes(params.id));
+
+  const toggleSave = useMutation({
+    mutationFn: async () => {
+      if (!params.id) return;
+      if (isSaved) {
+        await apiRequest("DELETE", `/api/saved/${params.id}`);
+      } else {
+        await apiRequest("POST", `/api/saved/${params.id}`);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/saved"] }),
+    onError: (err: any) => {
+      toast({
+        title: "تعذّر حفظ المنتج",
+        description: err?.message?.includes("401") ? "سجّل الدخول أولاً" : "حاول مرة أخرى",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -95,9 +124,32 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
       </div>
 
       <div className="space-y-5">
-        <h1 className="text-3xl font-bold leading-tight" data-testid="text-product-detail-title">
-          {product.title}
-        </h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-3xl font-bold leading-tight flex-1" data-testid="text-product-detail-title">
+            {product.title}
+          </h1>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl shrink-0"
+            onClick={() => toggleSave.mutate()}
+            disabled={toggleSave.isPending}
+            data-testid="button-save-product-detail"
+          >
+            {isSaved ? (
+              <>
+                <BookmarkCheck className="w-4 h-4 me-1.5 text-primary" />
+                محفوظ
+              </>
+            ) : (
+              <>
+                <Bookmark className="w-4 h-4 me-1.5" />
+                حفظ
+              </>
+            )}
+          </Button>
+        </div>
 
         <div className="flex flex-wrap gap-2.5">
           {product.category && (

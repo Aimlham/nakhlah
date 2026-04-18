@@ -66,6 +66,9 @@ export default function ListingFormPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  const isFactoryDefault = !isEdit && typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("type") === "factory";
+
   const { data: listing, isLoading } = useQuery<Listing>({
     queryKey: ["/api/admin/listings", params.id],
     enabled: isEdit,
@@ -82,7 +85,7 @@ export default function ListingFormPage() {
       supplierPhone: "",
       supplierWhatsapp: "",
       supplierCity: "",
-      supplierType: "",
+      supplierType: isFactoryDefault ? "مصنع" : "",
       supplierLocation: "",
       status: "draft",
     },
@@ -370,9 +373,22 @@ export default function ListingFormPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>نوع المورد</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="مثال: مصنع، تاجر جملة" data-testid="input-supplier-type" />
-                      </FormControl>
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-supplier-type">
+                            <SelectValue placeholder="اختر النوع" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="مصنع">مصنع</SelectItem>
+                          <SelectItem value="تاجر جملة">تاجر جملة</SelectItem>
+                          <SelectItem value="موزع">موزع</SelectItem>
+                          <SelectItem value="مستورد">مستورد</SelectItem>
+                          <SelectItem value="تاجر تجزئة">تاجر تجزئة</SelectItem>
+                          <SelectItem value="ورشة">ورشة</SelectItem>
+                          <SelectItem value="أخرى">أخرى</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

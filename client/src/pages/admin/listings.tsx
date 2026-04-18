@@ -67,21 +67,29 @@ export default function AdminListingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold" data-testid="text-admin-listings-title">
-            إدارة البوستات
+            إدارة الموردين والمصانع
           </h1>
           <p className="text-muted-foreground mt-1">
             {listings?.length || 0} بوست
           </p>
         </div>
-        <Button asChild>
-          <Link href="/admin/listings/new" data-testid="link-add-listing">
-            <Plus className="w-4 h-4 me-1" />
-            إضافة بوست
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/admin/listings/new?type=factory" data-testid="link-add-factory">
+              <Plus className="w-4 h-4 me-1" />
+              إضافة مصنع
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/admin/listings/new" data-testid="link-add-listing">
+              <Plus className="w-4 h-4 me-1" />
+              إضافة مورد
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {!listings || listings.length === 0 ? (

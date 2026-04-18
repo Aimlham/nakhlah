@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EmptyState } from "@/components/empty-state";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Package,
   Search,
@@ -16,6 +18,8 @@ import {
   Store,
   ImageIcon,
   ChevronLeft,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import type { SupplierProductWithSupplier } from "@shared/schema";
 import type { Category } from "@shared/schema";
@@ -24,12 +28,37 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
+  const { toast } = useToast();
+
   const { data: products, isLoading } = useQuery<SupplierProductWithSupplier[]>({
     queryKey: ["/api/supplier-products"],
   });
 
   const { data: categories } = useQuery<Category[]>({
     queryKey: ["/api/categories"],
+  });
+
+  const { data: savedData } = useQuery<{ savedProductIds: string[]; savedListingIds: string[] }>({
+    queryKey: ["/api/saved", "ids"],
+  });
+  const savedIds = new Set(savedData?.savedProductIds || []);
+
+  const toggleSave = useMutation({
+    mutationFn: async (productId: string) => {
+      if (savedIds.has(productId)) {
+        await apiRequest("DELETE", `/api/saved/${productId}`);
+      } else {
+        await apiRequest("POST", `/api/saved/${productId}`);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/saved"] }),
+    onError: (err: any) => {
+      toast({
+        title: "تعذّر حفظ المنتج",
+        description: err?.message?.includes("401") ? "سجّل الدخول أولاً" : "حاول مرة أخرى",
+        variant: "destructive",
+      });
+    },
   });
 
   const filtered = useMemo(() => {
@@ -113,7 +142,13 @@ export default function ProductsPage() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              isSaved={savedIds.has(product.id)}
+              onToggleSave={() => toggleSave.mutate(product.id)}
+              savePending={toggleSave.isPending}
+            />
           ))}
         </div>
       )}
@@ -161,7 +196,14 @@ function PriceBlock({ product }: { product: SupplierProductWithSupplier }) {
   );
 }
 
-function ProductCard({ product }: { product: SupplierProductWithSupplier }) {
+interface ProductCardProps {
+  product: SupplierProductWithSupplier;
+  isSaved: boolean;
+  onToggleSave: () => void;
+  savePending: boolean;
+}
+
+function ProductCard({ product, isSaved, onToggleSave, savePending }: ProductCardProps) {
   return (
     <Link href={`/products/${product.id}`} data-testid={`card-product-${product.id}`}>
       <Card
@@ -189,6 +231,24 @@ function ProductCard({ product }: { product: SupplierProductWithSupplier }) {
                 </Badge>
               </div>
             )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSave();
+              }}
+              disabled={savePending}
+              aria-label={isSaved ? "إلغاء الحفظ" : "حفظ المنتج"}
+              className="absolute top-2 end-2 sm:top-3 sm:end-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background/90 backdrop-blur-sm border-0 shadow-sm flex items-center justify-center hover:bg-background disabled:opacity-50 transition-colors"
+              data-testid={`button-save-product-${product.id}`}
+            >
+              {isSaved ? (
+                <BookmarkCheck className="w-4 h-4 text-primary" />
+              ) : (
+                <Bookmark className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
           </div>
 
           <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-2.5">
