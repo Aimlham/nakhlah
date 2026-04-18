@@ -2,19 +2,19 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Crown, Phone, MessageCircle, MapPin, Store, Factory, Bookmark, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 const PRO_FEATURES = [
-  "وصول كامل لجميع المنتجات الرابحة",
-  "تحليل ذكاء اصطناعي لكل منتج",
-  "رابط مورّد مباشر من AliExpress",
-  "حفظ منتجات غير محدود",
-  "فلاتر وترتيب متقدم",
-  "إعلانات TikTok الرابحة",
-  "تنبيهات رواج يومية",
-  "دعم ذو أولوية",
+  { icon: Eye, text: "عرض بيانات المورد كاملة" },
+  { icon: Phone, text: "رقم التواصل المباشر مع المورد" },
+  { icon: MessageCircle, text: "رقم الواتساب للتواصل الفوري" },
+  { icon: MapPin, text: "موقع المورد على الخريطة" },
+  { icon: Store, text: "وصول كامل للموردين المحليين" },
+  { icon: Factory, text: "وصول كامل للمصانع المحلية" },
+  { icon: Bookmark, text: "حفظ المنتجات والموردين والمصانع" },
+  { icon: CheckCircle2, text: "عرض التفاصيل الكاملة لكل عرض" },
 ];
 
 export default function PricingPage() {
@@ -28,7 +28,6 @@ export default function PricingPage() {
       const data = await res.json();
       const url = data.invoiceUrl || data.redirectUrl;
       if (url && data.invoiceId) {
-        // Save invoiceId so callback page can verify even if Moyasar omits ?id= from redirect
         sessionStorage.setItem("nakhlah_pending_invoice", data.invoiceId);
         window.location.href = url;
       } else if (url) {
@@ -50,55 +49,67 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-pricing-title">الاشتراك</h1>
-        <p className="text-muted-foreground">اشترك للوصول الكامل لمنصة نخلة.</p>
+    <div className="space-y-6 sm:space-y-8 max-w-3xl mx-auto">
+      <div className="text-center space-y-2 sm:space-y-3">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-pricing-title">
+          اشترك في نخلة برو
+        </h1>
+        <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
+          الوصول الكامل لبيانات الموردين والمصانع المحليين في السعودية. تواصل مباشر، حفظ غير محدود، وكل ما تحتاجه لإطلاق متجر دروبشيبينج محلي ناجح.
+        </p>
       </div>
 
       <div className="flex justify-center">
         <Card
-          className="hover-elevate relative border-primary border-2 w-full max-w-sm"
+          className="relative border-primary border-2 w-full max-w-md shadow-lg shadow-primary/5"
           data-testid="card-plan-pro"
         >
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-            <Badge className="no-default-active-elevate">الباقة الوحيدة</Badge>
+            <Badge className="px-3 py-1">الباقة الوحيدة</Badge>
           </div>
 
-          <CardContent className="p-8 space-y-6">
-            <div className="text-center">
-              <h2 className="text-xl font-bold">نخلة برو</h2>
-              <p className="text-sm text-muted-foreground mt-1">وصول كامل لجميع المزايا</p>
-              <div className="flex items-baseline justify-center gap-1 mt-4">
-                <span className="text-4xl font-bold" data-testid="text-price-pro">99</span>
+          <CardContent className="p-6 sm:p-8 space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 mx-auto flex items-center justify-center mb-2">
+                <Crown className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold">نخلة برو</h2>
+              <p className="text-sm text-muted-foreground">وصول كامل لجميع الموردين والمصانع</p>
+              <div className="flex items-baseline justify-center gap-1 pt-3">
+                <span className="text-4xl sm:text-5xl font-bold" data-testid="text-price-pro">99</span>
                 <span className="text-muted-foreground">ر.س / شهرياً</span>
               </div>
             </div>
 
             <ul className="space-y-3">
-              {PRO_FEATURES.map((f, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  {f}
-                </li>
-              ))}
+              {PRO_FEATURES.map((f, i) => {
+                const Icon = f.icon;
+                return (
+                  <li key={i} className="flex items-center gap-3 text-sm sm:text-base" data-testid={`feature-${i}`}>
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="leading-relaxed">{f.text}</span>
+                  </li>
+                );
+              })}
             </ul>
 
             <Button
-              className="w-full"
+              className="w-full h-12 rounded-xl text-base font-bold"
               size="lg"
               onClick={handleUpgrade}
               disabled={loading}
               data-testid="button-plan-pro"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : null}
-              اشترك الآن
+              {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Crown className="w-4 h-4 me-2" />}
+              اشترك الآن - 99 ر.س
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs sm:text-sm text-muted-foreground text-center max-w-xl mx-auto leading-relaxed">
         جميع المدفوعات تتم عبر بوابة Moyasar الآمنة. تدعم مدى، فيزا، وماستركارد.
         الأسعار بالريال السعودي وتشمل ضريبة القيمة المضافة.
       </p>

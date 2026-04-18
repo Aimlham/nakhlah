@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,10 +13,13 @@ import {
   Search,
   MapPin,
   ImageIcon,
-  ChevronLeft,
   Users,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SuppliersPageProps {
   filterTypes?: string[];
@@ -36,8 +39,31 @@ export default function SuppliersPage({
   const [search, setSearch] = useState("");
   const [city, setCity] = useState("all");
 
+  const { toast } = useToast();
+
   const { data: listings, isLoading } = useQuery<Listing[]>({
     queryKey: ["/api/listings"],
+  });
+
+  const { data: savedData } = useQuery<{ savedListingIds: string[] }>({
+    queryKey: ["/api/saved", "ids"],
+  });
+  const savedIds = new Set(savedData?.savedListingIds || []);
+
+  const toggleSave = useMutation({
+    mutationFn: async (listingId: string) => {
+      if (savedIds.has(listingId)) {
+        await apiRequest("DELETE", `/api/saved/listings/${listingId}`);
+      } else {
+        await apiRequest("POST", `/api/saved/listings/${listingId}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+    },
   });
 
   const cities = useMemo(() => {
@@ -71,12 +97,12 @@ export default function SuppliersPage({
 
   if (isLoading) {
     return (
-      <div className="space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-6 sm:space-y-8 max-w-6xl mx-auto">
         <Skeleton className="h-10 w-56" />
         <Skeleton className="h-12 w-full rounded-xl" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-72 rounded-2xl" />
+            <Skeleton key={i} className="aspect-[4/5] rounded-xl sm:rounded-2xl" />
           ))}
         </div>
       </div>
@@ -84,12 +110,12 @@ export default function SuppliersPage({
   }
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-suppliers-title">
+    <div className="space-y-6 sm:space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-1.5 sm:space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-suppliers-title">
           {title}
         </h1>
-        <p className="text-muted-foreground text-base">{subtitle}</p>
+        <p className="text-muted-foreground text-sm sm:text-base">{subtitle}</p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -129,9 +155,15 @@ export default function SuppliersPage({
           description={emptyDescription}
         />
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {filtered.map((listing) => (
-            <SupplierCard key={listing.id} listing={listing} />
+            <SupplierCard
+              key={listing.id}
+              listing={listing}
+              isSaved={savedIds.has(listing.id)}
+              onToggleSave={() => toggleSave.mutate(listing.id)}
+              savePending={toggleSave.isPending}
+            />
           ))}
         </div>
       )}
@@ -139,72 +171,79 @@ export default function SuppliersPage({
   );
 }
 
-function SupplierCard({ listing }: { listing: Listing }) {
+interface SupplierCardProps {
+  listing: Listing;
+  isSaved: boolean;
+  onToggleSave: () => void;
+  savePending: boolean;
+}
+
+function SupplierCard({ listing, isSaved, onToggleSave, savePending }: SupplierCardProps) {
   return (
-    <Card
-      className="group overflow-hidden rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5"
-      data-testid={`card-supplier-${listing.id}`}
-    >
-      <CardContent className="p-0">
-        <div className="relative h-44 bg-muted/50 overflow-hidden">
-          {listing.imageUrl ? (
-            <img
-              src={listing.imageUrl}
-              alt={listing.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
-              <Store className="w-14 h-14 text-muted-foreground/20" />
+    <div className="relative group" data-testid={`card-supplier-${listing.id}`}>
+      <Link href={`/suppliers/${listing.id}`}>
+        <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 cursor-pointer">
+          <CardContent className="p-0">
+            <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
+              {listing.imageUrl ? (
+                <img
+                  src={listing.imageUrl}
+                  alt={listing.title}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
+                  <Store className="w-10 h-10 sm:w-14 sm:h-14 text-muted-foreground/20" />
+                </div>
+              )}
+              {listing.supplierType && (
+                <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
+                  <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 shadow-sm">
+                    <Store className="w-2.5 h-2.5 sm:w-3 sm:h-3 me-1 text-primary" />
+                    {listing.supplierType}
+                  </Badge>
+                </div>
+              )}
             </div>
-          )}
-          {listing.supplierType && (
-            <div className="absolute top-3 start-3">
-              <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-xs px-2.5 py-1 shadow-sm">
-                <Store className="w-3 h-3 me-1 text-primary" />
-                {listing.supplierType}
-              </Badge>
+
+            <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2.5">
+              <h3
+                className="font-semibold text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]"
+                data-testid={`text-supplier-title-${listing.id}`}
+              >
+                {listing.title}
+              </h3>
+
+              {listing.supplierCity && (
+                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/70" />
+                  {listing.supplierCity}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+      </Link>
 
-        <div className="p-5 space-y-3">
-          <h3
-            className="font-bold text-lg leading-snug line-clamp-1"
-            data-testid={`text-supplier-title-${listing.id}`}
-          >
-            {listing.title}
-          </h3>
-
-          {listing.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-              {listing.description}
-            </p>
-          )}
-
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {listing.supplierCity && (
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-primary/70" />
-                {listing.supplierCity}
-              </span>
-            )}
-          </div>
-
-          <Button
-            variant="default"
-            size="sm"
-            className="w-full h-10 rounded-xl font-medium text-sm"
-            asChild
-          >
-            <Link href={`/suppliers/${listing.id}`} data-testid={`button-view-supplier-${listing.id}`}>
-              عرض المورد
-              <ChevronLeft className="w-4 h-4 ms-1" />
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleSave();
+        }}
+        disabled={savePending}
+        aria-label={isSaved ? "إلغاء الحفظ" : "حفظ"}
+        className="absolute top-2 end-2 sm:top-3 sm:end-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center shadow-sm hover:bg-background hover:scale-110 transition-all disabled:opacity-50"
+        data-testid={`button-save-supplier-${listing.id}`}
+      >
+        {isSaved ? (
+          <BookmarkCheck className="w-4 h-4 text-primary" />
+        ) : (
+          <Bookmark className="w-4 h-4 text-muted-foreground" />
+        )}
+      </button>
+    </div>
   );
 }

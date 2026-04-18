@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,8 +19,12 @@ import {
   ExternalLink,
   Package,
   ChevronLeft,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import type { Listing, SupplierProduct } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SupplierDetailPageProps {
   isSubscribed: boolean;
@@ -32,9 +36,32 @@ interface ListingWithProducts extends Listing {
 
 export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageProps) {
   const params = useParams<{ id: string }>();
+  const { toast } = useToast();
 
   const { data: listing, isLoading, error } = useQuery<ListingWithProducts>({
     queryKey: ["/api/listings", params.id],
+  });
+
+  const { data: savedData } = useQuery<{ savedListingIds: string[] }>({
+    queryKey: ["/api/saved", "ids"],
+  });
+  const isSaved = !!(params.id && savedData?.savedListingIds?.includes(params.id));
+
+  const toggleSave = useMutation({
+    mutationFn: async () => {
+      if (!params.id) return;
+      if (isSaved) {
+        await apiRequest("DELETE", `/api/saved/listings/${params.id}`);
+      } else {
+        await apiRequest("POST", `/api/saved/listings/${params.id}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/saved"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "خطأ", description: err.message, variant: "destructive" });
+    },
   });
 
   if (isLoading) {
@@ -76,24 +103,60 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
         </Link>
       </Button>
 
-      <div className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden bg-muted/50">
+      <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
         {listing.imageUrl ? (
           <img
             src={listing.imageUrl}
             alt={listing.title}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
             <Store className="w-20 h-20 text-muted-foreground/20" />
           </div>
         )}
+        <button
+          type="button"
+          onClick={() => toggleSave.mutate()}
+          disabled={toggleSave.isPending}
+          aria-label={isSaved ? "إلغاء الحفظ" : "حفظ المورد"}
+          className="absolute top-3 end-3 w-10 h-10 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center shadow-md hover:bg-background hover:scale-110 transition-all disabled:opacity-50"
+          data-testid="button-save-supplier-detail"
+        >
+          {isSaved ? (
+            <BookmarkCheck className="w-5 h-5 text-primary" />
+          ) : (
+            <Bookmark className="w-5 h-5 text-muted-foreground" />
+          )}
+        </button>
       </div>
 
       <div className="space-y-5">
-        <h1 className="text-3xl font-bold leading-tight" data-testid="text-supplier-detail-title">
-          {listing.title}
-        </h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold leading-tight flex-1" data-testid="text-supplier-detail-title">
+            {listing.title}
+          </h1>
+          <Button
+            variant={isSaved ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => toggleSave.mutate()}
+            disabled={toggleSave.isPending}
+            className="rounded-xl shrink-0"
+            data-testid="button-save-supplier-inline"
+          >
+            {isSaved ? (
+              <>
+                <BookmarkCheck className="w-4 h-4 me-1.5" />
+                محفوظ
+              </>
+            ) : (
+              <>
+                <Bookmark className="w-4 h-4 me-1.5" />
+                حفظ
+              </>
+            )}
+          </Button>
+        </div>
 
         <div className="flex flex-wrap gap-2.5">
           {listing.supplierType && (

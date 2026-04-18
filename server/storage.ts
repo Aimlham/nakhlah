@@ -18,6 +18,10 @@ export interface IStorage {
   getSavedProducts(userId: string): Promise<Product[]>;
   saveProduct(userId: string, productId: string): Promise<SavedProduct>;
   unsaveProduct(userId: string, productId: string): Promise<void>;
+  getSavedListingIds(userId: string): Promise<string[]>;
+  getSavedListings(userId: string): Promise<Listing[]>;
+  saveListing(userId: string, listingId: string): Promise<SavedProduct>;
+  unsaveListing(userId: string, listingId: string): Promise<void>;
   createProduct(product: InsertProduct): Promise<Product>;
   getAdsByProductId(productId: string): Promise<ProductAd[]>;
   getAllAds(): Promise<ProductAd[]>;
@@ -137,7 +141,7 @@ export class MemStorage implements IStorage {
 
   async getSavedProductIds(userId: string): Promise<string[]> {
     return Array.from(this.savedProducts.values())
-      .filter(sp => sp.userId === userId)
+      .filter(sp => sp.userId === userId && (sp.itemType ?? "product") === "product")
       .map(sp => sp.productId);
   }
 
@@ -147,13 +151,14 @@ export class MemStorage implements IStorage {
   }
 
   async saveProduct(userId: string, productId: string): Promise<SavedProduct> {
-    const key = `${userId}:${productId}`;
+    const key = `product:${userId}:${productId}`;
     const existing = this.savedProducts.get(key);
     if (existing) return existing;
     const sp: SavedProduct = {
       id: randomUUID(),
       userId,
       productId,
+      itemType: "product",
       createdAt: new Date(),
     };
     this.savedProducts.set(key, sp);
@@ -161,7 +166,38 @@ export class MemStorage implements IStorage {
   }
 
   async unsaveProduct(userId: string, productId: string): Promise<void> {
-    const key = `${userId}:${productId}`;
+    const key = `product:${userId}:${productId}`;
+    this.savedProducts.delete(key);
+  }
+
+  async getSavedListingIds(userId: string): Promise<string[]> {
+    return Array.from(this.savedProducts.values())
+      .filter(sp => sp.userId === userId && sp.itemType === "listing")
+      .map(sp => sp.productId);
+  }
+
+  async getSavedListings(userId: string): Promise<Listing[]> {
+    const ids = await this.getSavedListingIds(userId);
+    return ids.map(id => this.listings.get(id)).filter(Boolean) as Listing[];
+  }
+
+  async saveListing(userId: string, listingId: string): Promise<SavedProduct> {
+    const key = `listing:${userId}:${listingId}`;
+    const existing = this.savedProducts.get(key);
+    if (existing) return existing;
+    const sp: SavedProduct = {
+      id: randomUUID(),
+      userId,
+      productId: listingId,
+      itemType: "listing",
+      createdAt: new Date(),
+    };
+    this.savedProducts.set(key, sp);
+    return sp;
+  }
+
+  async unsaveListing(userId: string, listingId: string): Promise<void> {
+    const key = `listing:${userId}:${listingId}`;
     this.savedProducts.delete(key);
   }
 

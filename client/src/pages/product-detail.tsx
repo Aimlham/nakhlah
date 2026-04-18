@@ -77,12 +77,12 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
         </Link>
       </Button>
 
-      <div className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden bg-muted/50">
+      <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.title}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">

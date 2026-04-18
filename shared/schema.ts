@@ -84,6 +84,7 @@ export const savedProducts = pgTable("saved_products", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   productId: varchar("product_id").notNull(),
+  itemType: text("item_type").default("product"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

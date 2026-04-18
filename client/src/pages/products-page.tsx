@@ -51,12 +51,12 @@ export default function ProductsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-6 sm:space-y-8 max-w-6xl mx-auto">
         <Skeleton className="h-10 w-56" />
         <Skeleton className="h-12 w-full rounded-xl" />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-80 rounded-2xl" />
+            <Skeleton key={i} className="aspect-[4/5] rounded-xl sm:rounded-2xl" />
           ))}
         </div>
       </div>
@@ -64,12 +64,12 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-products-title">
+    <div className="space-y-6 sm:space-y-8 max-w-6xl mx-auto">
+      <div className="space-y-1.5 sm:space-y-2">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-products-title">
           المنتجات
         </h1>
-        <p className="text-muted-foreground text-base">
+        <p className="text-muted-foreground text-sm sm:text-base">
           تصفح المنتجات المتاحة من الموردين المحليين
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function ProductsPage() {
           description="سيتم إضافة منتجات جديدة قريباً"
         />
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {filtered.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -123,78 +123,59 @@ export default function ProductsPage() {
 
 function ProductCard({ product }: { product: SupplierProductWithSupplier }) {
   return (
-    <Card
-      className="group overflow-hidden rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5"
-      data-testid={`card-product-${product.id}`}
-    >
-      <CardContent className="p-0">
-        <div className="relative h-52 bg-muted/50 overflow-hidden">
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
-              <ImageIcon className="w-14 h-14 text-muted-foreground/20" />
-            </div>
-          )}
-          {product.category && (
-            <div className="absolute top-3 start-3">
-              <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-xs px-2.5 py-1 shadow-sm">
-                <Tag className="w-3 h-3 me-1 text-primary" />
-                {product.category}
-              </Badge>
-            </div>
-          )}
-        </div>
+    <Link href={`/products/${product.id}`} data-testid={`card-product-${product.id}`}>
+      <Card
+        className="group overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 cursor-pointer"
+      >
+        <CardContent className="p-0">
+          <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={product.title}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
+                <ImageIcon className="w-10 h-10 sm:w-14 sm:h-14 text-muted-foreground/20" />
+              </div>
+            )}
+            {product.category && (
+              <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
+                <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 shadow-sm">
+                  <Tag className="w-2.5 h-2.5 sm:w-3 sm:h-3 me-1 text-primary" />
+                  {product.category}
+                </Badge>
+              </div>
+            )}
+          </div>
 
-        <div className="p-5 space-y-4">
-          <div className="space-y-2">
+          <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2.5">
             <h3
-              className="font-bold text-lg leading-snug line-clamp-1"
+              className="font-semibold text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]"
               data-testid={`text-product-title-${product.id}`}
             >
               {product.title}
             </h3>
 
-            {product.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                {product.description}
-              </p>
-            )}
+            <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
+              {product.supplier?.supplierCity && (
+                <span className="flex items-center gap-0.5 sm:gap-1" data-testid={`text-product-city-${product.id}`}>
+                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/70" />
+                  {product.supplier.supplierCity}
+                </span>
+              )}
+              {product.supplier?.supplierType && (
+                <span className="flex items-center gap-0.5 sm:gap-1" data-testid={`text-product-type-${product.id}`}>
+                  <Store className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/70" />
+                  {product.supplier.supplierType}
+                </span>
+              )}
+            </div>
           </div>
-
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {product.supplier?.supplierCity && (
-              <span className="flex items-center gap-1" data-testid={`text-product-city-${product.id}`}>
-                <MapPin className="w-3.5 h-3.5 text-primary/70" />
-                {product.supplier.supplierCity}
-              </span>
-            )}
-            {product.supplier?.supplierType && (
-              <span className="flex items-center gap-1" data-testid={`text-product-type-${product.id}`}>
-                <Store className="w-3.5 h-3.5 text-primary/70" />
-                {product.supplier.supplierType}
-              </span>
-            )}
-          </div>
-
-          <Button
-            variant="default"
-            size="sm"
-            className="w-full h-10 rounded-xl font-medium text-sm"
-            asChild
-          >
-            <Link href={`/products/${product.id}`} data-testid={`button-view-product-${product.id}`}>
-              عرض التفاصيل
-              <ChevronLeft className="w-4 h-4 ms-1" />
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

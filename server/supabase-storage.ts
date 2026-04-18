@@ -30,6 +30,24 @@ const AD_NEW_COLUMNS = [
 let adColumnsAvailable: Set<string> = new Set();
 let adColumnsProbed = false;
 
+let savedItemTypeAvailable = false;
+let savedItemTypeProbed = false;
+
+async function probeSavedItemType(): Promise<boolean> {
+  if (savedItemTypeProbed || !supabaseAdmin) return savedItemTypeAvailable;
+  savedItemTypeProbed = true;
+  try {
+    const { error } = await supabaseAdmin.from("saved_products").select("item_type").limit(1);
+    savedItemTypeAvailable = !error;
+    if (!savedItemTypeAvailable) {
+      console.log("[supabase] saved_products.item_type column missing — listings save shares product namespace");
+    }
+  } catch {
+    savedItemTypeAvailable = false;
+  }
+  return savedItemTypeAvailable;
+}
+
 async function probeAdColumns() {
   if (adColumnsProbed || !supabaseAdmin) return;
   adColumnsProbed = true;
@@ -108,6 +126,7 @@ function mapSavedProduct(row: Record<string, unknown>): SavedProduct {
     id: row.id as string,
     userId: row.user_id as string,
     productId: row.product_id as string,
+    itemType: (row.item_type as string) ?? "product",
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
 }
@@ -196,6 +215,7 @@ export class SupabaseStorage implements IStorage {
   async init() {
     await probeColumns();
     await probeAdColumns();
+    await probeSavedItemType();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -263,21 +283,20 @@ export class SupabaseStorage implements IStorage {
   }
 
   async getSavedProductIds(userId: string): Promise<string[]> {
+    const hasItemType = await probeSavedItemType();
+    const selectCols = hasItemType ? "product_id, item_type" : "product_id";
     const { data, error } = await this.db
       .from("saved_products")
-      .select("product_id")
+      .select(selectCols)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row) => row.product_id);
+    return (data ?? [])
+      .filter((row: any) => !hasItemType || (row.item_type ?? "product") === "product")
+      .map((row: any) => row.product_id);
   }
 
   async getSavedProducts(userId: string): Promise<Product[]> {
-    const { data: savedRows, error: savedErr } = await this.db
-      .from("saved_products")
-      .select("product_id")
-      .eq("user_id", userId);
-    if (savedErr) throw new Error(savedErr.message);
-    const ids = (savedRows ?? []).map((r) => r.product_id);
+    const ids = await this.getSavedProductIds(userId);
     if (ids.length === 0) return [];
     const { data: products, error: prodErr } = await this.db
       .from("products")
@@ -288,17 +307,21 @@ export class SupabaseStorage implements IStorage {
   }
 
   async saveProduct(userId: string, productId: string): Promise<SavedProduct> {
-    const { data: existing } = await this.db
+    const hasItemType = await probeSavedItemType();
+    let query = this.db
       .from("saved_products")
       .select("*")
       .eq("user_id", userId)
-      .eq("product_id", productId)
-      .single();
+      .eq("product_id", productId);
+    if (hasItemType) query = query.eq("item_type", "product");
+    const { data: existing } = await query.maybeSingle();
     if (existing) return mapSavedProduct(existing);
 
+    const insertRow: Record<string, unknown> = { user_id: userId, product_id: productId };
+    if (hasItemType) insertRow.item_type = "product";
     const { data, error } = await this.db
       .from("saved_products")
-      .insert({ user_id: userId, product_id: productId })
+      .insert(insertRow)
       .select()
       .single();
     if (error || !data) throw new Error(error?.message ?? "Failed to save product");
@@ -306,11 +329,72 @@ export class SupabaseStorage implements IStorage {
   }
 
   async unsaveProduct(userId: string, productId: string): Promise<void> {
-    const { error } = await this.db
+    const hasItemType = await probeSavedItemType();
+    let query = this.db
       .from("saved_products")
       .delete()
       .eq("user_id", userId)
       .eq("product_id", productId);
+    if (hasItemType) query = query.eq("item_type", "product");
+    const { error } = await query;
+    if (error) throw new Error(error.message);
+  }
+
+  async getSavedListingIds(userId: string): Promise<string[]> {
+    const hasItemType = await probeSavedItemType();
+    if (!hasItemType) return []; // Cannot distinguish listings without column
+    const { data, error } = await this.db
+      .from("saved_products")
+      .select("product_id, item_type")
+      .eq("user_id", userId)
+      .eq("item_type", "listing");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row: any) => row.product_id);
+  }
+
+  async getSavedListings(userId: string): Promise<Listing[]> {
+    const ids = await this.getSavedListingIds(userId);
+    if (ids.length === 0) return [];
+    const { data, error } = await this.db
+      .from("listings")
+      .select("*")
+      .in("id", ids);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(mapListing);
+  }
+
+  async saveListing(userId: string, listingId: string): Promise<SavedProduct> {
+    const hasItemType = await probeSavedItemType();
+    if (!hasItemType) {
+      throw new Error("لتفعيل حفظ الموردين والمصانع، يجب إضافة عمود item_type في قاعدة البيانات أولاً");
+    }
+    const { data: existing } = await this.db
+      .from("saved_products")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("product_id", listingId)
+      .eq("item_type", "listing")
+      .maybeSingle();
+    if (existing) return mapSavedProduct(existing);
+
+    const { data, error } = await this.db
+      .from("saved_products")
+      .insert({ user_id: userId, product_id: listingId, item_type: "listing" })
+      .select()
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "Failed to save listing");
+    return mapSavedProduct(data);
+  }
+
+  async unsaveListing(userId: string, listingId: string): Promise<void> {
+    const hasItemType = await probeSavedItemType();
+    if (!hasItemType) return;
+    const { error } = await this.db
+      .from("saved_products")
+      .delete()
+      .eq("user_id", userId)
+      .eq("product_id", listingId)
+      .eq("item_type", "listing");
     if (error) throw new Error(error.message);
   }
 

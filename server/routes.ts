@@ -739,10 +739,13 @@ export async function registerRoutes(
     try {
       const userId = await getAuthUserId(req);
       if (!userId) {
-        return res.json({ savedProductIds: [] });
+        return res.json({ savedProductIds: [], savedListingIds: [] });
       }
-      const ids = await storage.getSavedProductIds(userId);
-      res.json({ savedProductIds: ids });
+      const [productIds, listingIds] = await Promise.all([
+        storage.getSavedProductIds(userId),
+        storage.getSavedListingIds(userId),
+      ]);
+      res.json({ savedProductIds: productIds, savedListingIds: listingIds });
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch saved IDs") });
     }
@@ -758,6 +761,54 @@ export async function registerRoutes(
       res.json(products);
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch saved products") });
+    }
+  });
+
+  app.get("/api/saved/listings", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) {
+        return res.json([]);
+      }
+      const listings = await storage.getSavedListings(userId);
+      // Strip gated supplier contact fields for non-subscribers
+      const isSubscribed = await isUserSubscribed(userId);
+      const stripped = isSubscribed
+        ? listings
+        : listings.map((l) => ({
+            ...l,
+            supplierName: null,
+            supplierPhone: null,
+            supplierWhatsapp: null,
+            supplierLocation: null,
+          }));
+      res.json(stripped);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch saved listings") });
+    }
+  });
+
+  app.post("/api/saved/listings/:listingId", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      const listing = await storage.getListing(req.params.listingId);
+      if (!listing) return res.status(404).json({ message: "Listing not found" });
+      const saved = await storage.saveListing(userId, req.params.listingId);
+      res.json(saved);
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to save listing") });
+    }
+  });
+
+  app.delete("/api/saved/listings/:listingId", async (req: Request, res: Response) => {
+    try {
+      const userId = await getAuthUserId(req);
+      if (!userId) return res.status(401).json({ message: "Not authenticated" });
+      await storage.unsaveListing(userId, req.params.listingId);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "Failed to unsave listing") });
     }
   });
 
