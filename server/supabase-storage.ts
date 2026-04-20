@@ -33,7 +33,7 @@ let adColumnsProbed = false;
 let savedItemTypeAvailable = false;
 let savedItemTypeProbed = false;
 
-const SUPPLIER_PRODUCT_PRICE_COLS = ["supplier_price", "suggested_sell_price", "estimated_margin"];
+const SUPPLIER_PRODUCT_PRICE_COLS = ["supplier_price", "suggested_sell_price", "estimated_margin", "minimum_order_quantity"];
 let supplierProductPriceColsAvailable: Set<string> = new Set();
 let supplierProductPriceColsProbed = false;
 
@@ -191,6 +191,7 @@ function mapSupplierProduct(row: Record<string, unknown>): SupplierProduct {
     supplierPrice: row.supplier_price != null ? String(row.supplier_price) : null,
     suggestedSellPrice: row.suggested_sell_price != null ? String(row.suggested_sell_price) : null,
     estimatedMargin: row.estimated_margin != null ? String(row.estimated_margin) : null,
+    minimumOrderQuantity: row.minimum_order_quantity != null ? Number(row.minimum_order_quantity) : null,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
 }
@@ -858,6 +859,7 @@ export class SupabaseStorage implements IStorage {
     if (priceCols.has("supplier_price")) insertData.supplier_price = product.supplierPrice ?? null;
     if (priceCols.has("suggested_sell_price")) insertData.suggested_sell_price = product.suggestedSellPrice ?? null;
     if (priceCols.has("estimated_margin")) insertData.estimated_margin = product.estimatedMargin ?? null;
+    if (priceCols.has("minimum_order_quantity")) insertData.minimum_order_quantity = product.minimumOrderQuantity ?? null;
 
     const { data, error } = await this.db
       .from("supplier_products")
@@ -889,6 +891,7 @@ export class SupabaseStorage implements IStorage {
     if (product.supplierPrice !== undefined && priceCols.has("supplier_price")) updateData.supplier_price = product.supplierPrice;
     if (product.suggestedSellPrice !== undefined && priceCols.has("suggested_sell_price")) updateData.suggested_sell_price = product.suggestedSellPrice;
     if (product.estimatedMargin !== undefined && priceCols.has("estimated_margin")) updateData.estimated_margin = product.estimatedMargin;
+    if (product.minimumOrderQuantity !== undefined && priceCols.has("minimum_order_quantity")) updateData.minimum_order_quantity = product.minimumOrderQuantity;
 
     const { data, error } = await this.db
       .from("supplier_products")

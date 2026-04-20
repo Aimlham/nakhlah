@@ -360,14 +360,9 @@ function fmtPrice(v?: string | null): string | null {
 }
 
 function PricingSection({ product }: { product: ProductWithSupplier }) {
-  const buy = fmtPrice(product.supplierPrice);
-  const sell = fmtPrice(product.suggestedSellPrice);
-  let margin = fmtPrice(product.estimatedMargin);
-  if (!margin && buy && sell) {
-    const m = parseFloat(sell) - parseFloat(buy);
-    if (m > 0) margin = fmtPrice(String(m));
-  }
-  if (!buy && !sell && !margin) return null;
+  const unit = fmtPrice(product.supplierPrice);
+  const minQty = product.minimumOrderQuantity;
+  if (!unit && !minQty) return null;
 
   return (
     <Card className="rounded-2xl border-primary/20 bg-gradient-to-b from-primary/[0.04] to-transparent" data-testid="card-pricing">
@@ -378,32 +373,27 @@ function PricingSection({ product }: { product: ProductWithSupplier }) {
           </div>
           <h2 className="text-lg font-bold">التسعير</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {buy && (
-            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-1.5" data-testid="block-price-buy">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ShoppingCart className="w-3.5 h-3.5" />
-                سعر الجملة
-              </div>
-              <p className="text-xl font-bold text-foreground">{buy} <span className="text-sm font-medium text-muted-foreground">ر.س</span></p>
-            </div>
-          )}
-          {sell && (
-            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-1.5" data-testid="block-price-sell">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Tag className="w-3.5 h-3.5" />
-                سعر البيع المقترح
-              </div>
-              <p className="text-xl font-bold text-foreground">{sell} <span className="text-sm font-medium text-muted-foreground">ر.س</span></p>
-            </div>
-          )}
-          {margin && (
-            <div className="rounded-xl border border-primary/30 bg-primary/[0.08] p-4 space-y-1.5" data-testid="block-price-margin">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {unit && (
+            <div className="rounded-xl border border-primary/30 bg-primary/[0.06] p-4 space-y-1.5" data-testid="block-price-unit">
               <div className="flex items-center gap-1.5 text-xs text-primary/80 font-medium">
-                <TrendingUp className="w-3.5 h-3.5" />
-                الربح المتوقع
+                <ShoppingCart className="w-3.5 h-3.5" />
+                سعر الحبة
               </div>
-              <p className="text-xl font-bold text-primary">{margin} <span className="text-sm font-medium text-primary/70">ر.س</span></p>
+              <p className="text-2xl font-bold text-primary">
+                {unit} <span className="text-sm font-medium text-primary/70">ر.س / حبة</span>
+              </p>
+            </div>
+          )}
+          {minQty != null && minQty > 0 && (
+            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-1.5" data-testid="block-price-min-qty">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Package className="w-3.5 h-3.5" />
+                الحد الأدنى للطلب
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                {minQty} <span className="text-sm font-medium text-muted-foreground">قطعة</span>
+              </p>
             </div>
           )}
         </div>

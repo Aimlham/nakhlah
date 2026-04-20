@@ -59,13 +59,22 @@ function SubscriptionAwareRoute({ component: Component }: { component: (props: {
   });
 
   if (authLoading || (user && subLoading)) return <LoadingScreen />;
-  if (!user) return <Redirect to="/login" />;
 
-  const isSubscribed = sub?.status === "active";
+  const isSubscribed = !!user && sub?.status === "active";
 
   return (
     <AppLayout>
       <Component isSubscribed={isSubscribed} />
+    </AppLayout>
+  );
+}
+
+function PublicLayoutRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { isLoading } = useAuth();
+  if (isLoading) return <LoadingScreen />;
+  return (
+    <AppLayout>
+      <Component />
     </AppLayout>
   );
 }
@@ -101,7 +110,7 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
 
 function FactoriesRoute() {
   return (
-    <SubscriptionAwareRoute
+    <PublicLayoutRoute
       component={() => (
         <SuppliersPage
           filterTypes={["مصنع", "تصنيع"]}
@@ -129,10 +138,10 @@ function Router() {
       <Route path="/pricing">{() => <ProtectedRoute component={PricingPage} />}</Route>
       <Route path="/settings">{() => <ProtectedRoute component={SettingsPage} />}</Route>
 
-      <Route path="/products">{() => <ProtectedRoute component={ProductsPage} />}</Route>
+      <Route path="/products">{() => <PublicLayoutRoute component={ProductsPage} />}</Route>
       <Route path="/products/:id">{() => <SubscriptionAwareRoute component={ProductDetailPage} />}</Route>
 
-      <Route path="/suppliers">{() => <ProtectedRoute component={() => <SuppliersPage excludeTypes={["مصنع", "تصنيع"]} />} />}</Route>
+      <Route path="/suppliers">{() => <PublicLayoutRoute component={() => <SuppliersPage excludeTypes={["مصنع", "تصنيع"]} />} />}</Route>
       <Route path="/suppliers/:id">{() => <SubscriptionAwareRoute component={SupplierDetailPage} />}</Route>
 
       <Route path="/factories">{() => <FactoriesRoute />}</Route>

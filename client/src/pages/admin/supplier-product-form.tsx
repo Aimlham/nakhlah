@@ -27,6 +27,7 @@ const formSchema = z.object({
   supplierPrice: z.string().optional(),
   suggestedSellPrice: z.string().optional(),
   estimatedMargin: z.string().optional(),
+  minimumOrderQuantity: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +72,7 @@ export default function SupplierProductFormPage() {
       supplierPrice: "",
       suggestedSellPrice: "",
       estimatedMargin: "",
+      minimumOrderQuantity: "",
     },
   });
 
@@ -85,6 +87,7 @@ export default function SupplierProductFormPage() {
         supplierPrice: existing.supplierPrice ?? "",
         suggestedSellPrice: existing.suggestedSellPrice ?? "",
         estimatedMargin: existing.estimatedMargin ?? "",
+        minimumOrderQuantity: existing.minimumOrderQuantity != null ? String(existing.minimumOrderQuantity) : "",
       });
       setImageUrl(existing.imageUrl || null);
     }
@@ -101,7 +104,13 @@ export default function SupplierProductFormPage() {
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      const body = { ...values, imageUrl };
+      const body: any = { ...values, imageUrl };
+      if (values.minimumOrderQuantity && values.minimumOrderQuantity.trim() !== "") {
+        const n = parseInt(values.minimumOrderQuantity, 10);
+        body.minimumOrderQuantity = Number.isFinite(n) && n > 0 ? n : null;
+      } else {
+        body.minimumOrderQuantity = null;
+      }
       if (isEdit) {
         await apiRequest("PATCH", `/api/admin/supplier-products/${params.id}`, body);
       } else {
@@ -336,6 +345,19 @@ export default function SupplierProductFormPage() {
                     )}
                   />
                 </div>
+                <FormField
+                  control={form.control}
+                  name="minimumOrderQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>الحد الأدنى للطلب (قطعة)</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" inputMode="numeric" step="1" min="0" placeholder="150" className="rounded-lg" data-testid="input-product-min-qty" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <Button type="submit" className="w-full h-11 rounded-xl" disabled={mutation.isPending} data-testid="button-save-product">

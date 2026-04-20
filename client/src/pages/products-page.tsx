@@ -164,32 +164,19 @@ function fmtPrice(v?: string | null): string | null {
 }
 
 function PriceBlock({ product }: { product: SupplierProductWithSupplier }) {
-  const buy = fmtPrice(product.supplierPrice);
-  const sell = fmtPrice(product.suggestedSellPrice);
-  let margin = fmtPrice(product.estimatedMargin);
-  if (!margin && buy && sell) {
-    const m = parseFloat(sell) - parseFloat(buy);
-    if (m > 0) margin = fmtPrice(String(m));
-  }
-  if (!buy && !sell && !margin) return null;
+  const unit = fmtPrice(product.supplierPrice);
+  const minQty = product.minimumOrderQuantity;
+  if (!unit && !minQty) return null;
   return (
     <div className="rounded-lg bg-primary/[0.04] border border-primary/15 p-2 sm:p-2.5 space-y-1" data-testid={`pricing-${product.id}`}>
-      {buy && (
-        <div className="flex items-center justify-between text-[11px] sm:text-xs">
-          <span className="text-muted-foreground">سعر الجملة</span>
-          <span className="font-semibold text-foreground" data-testid={`price-buy-${product.id}`}>{buy} ر.س</span>
+      {unit && (
+        <div className="text-sm sm:text-base font-bold text-foreground" data-testid={`price-unit-${product.id}`}>
+          {unit} <span className="text-xs font-medium text-muted-foreground">ر.س / حبة</span>
         </div>
       )}
-      {sell && (
-        <div className="flex items-center justify-between text-[11px] sm:text-xs">
-          <span className="text-muted-foreground">سعر البيع</span>
-          <span className="font-semibold text-foreground" data-testid={`price-sell-${product.id}`}>{sell} ر.س</span>
-        </div>
-      )}
-      {margin && (
-        <div className="flex items-center justify-between text-[11px] sm:text-xs pt-1 border-t border-primary/15">
-          <span className="text-primary/80 font-medium">الربح المتوقع</span>
-          <span className="font-bold text-primary" data-testid={`price-margin-${product.id}`}>{margin} ر.س</span>
+      {minQty != null && minQty > 0 && (
+        <div className="text-[11px] sm:text-xs text-muted-foreground" data-testid={`price-min-qty-${product.id}`}>
+          الحد الأدنى: {minQty} قطعة
         </div>
       )}
     </div>

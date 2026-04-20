@@ -374,6 +374,15 @@ export async function registerRoutes(
     supplierPrice: priceField,
     suggestedSellPrice: priceField,
     estimatedMargin: priceField,
+    minimumOrderQuantity: z
+      .union([z.string(), z.number(), z.null()])
+      .optional()
+      .transform((v) => {
+        if (v === null || v === undefined || v === "") return null;
+        const num = typeof v === "number" ? v : parseInt(String(v), 10);
+        if (!Number.isFinite(num) || num <= 0) return null;
+        return Math.floor(num);
+      }),
   });
 
   app.post("/api/admin/supplier-products", async (req: Request, res: Response) => {
