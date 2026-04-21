@@ -28,6 +28,7 @@ const formSchema = z.object({
   suggestedSellPrice: z.string().optional(),
   estimatedMargin: z.string().optional(),
   minimumOrderQuantity: z.string().optional(),
+  dozenPrice: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,6 +74,7 @@ export default function SupplierProductFormPage() {
       suggestedSellPrice: "",
       estimatedMargin: "",
       minimumOrderQuantity: "",
+      dozenPrice: "",
     },
   });
 
@@ -88,6 +90,7 @@ export default function SupplierProductFormPage() {
         suggestedSellPrice: existing.suggestedSellPrice ?? "",
         estimatedMargin: existing.estimatedMargin ?? "",
         minimumOrderQuantity: existing.minimumOrderQuantity != null ? String(existing.minimumOrderQuantity) : "",
+        dozenPrice: existing.dozenPrice ?? "",
       });
       setImageUrl(existing.imageUrl || null);
     }
@@ -345,19 +348,34 @@ export default function SupplierProductFormPage() {
                     )}
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="minimumOrderQuantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>الحد الأدنى للطلب (قطعة)</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" inputMode="numeric" step="1" min="0" placeholder="150" className="rounded-lg" data-testid="input-product-min-qty" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="dozenPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>سعر الدزينة (ر.س) — اختياري</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" inputMode="decimal" step="0.01" min="0" placeholder="اتركه فارغاً للحساب التلقائي (سعر الحبة × 12)" className="rounded-lg" data-testid="input-product-dozen-price" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="minimumOrderQuantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>الحد الأدنى للطلب (قطعة)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" inputMode="numeric" step="1" min="0" placeholder="150" className="rounded-lg" data-testid="input-product-min-qty" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <Button type="submit" className="w-full h-11 rounded-xl" disabled={mutation.isPending} data-testid="button-save-product">

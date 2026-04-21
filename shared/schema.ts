@@ -54,6 +54,7 @@ export const supplierProducts = pgTable("supplier_products", {
   suggestedSellPrice: numeric("suggested_sell_price"),
   estimatedMargin: numeric("estimated_margin"),
   minimumOrderQuantity: integer("minimum_order_quantity"),
+  dozenPrice: numeric("dozen_price"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

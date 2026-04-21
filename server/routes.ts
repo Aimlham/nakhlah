@@ -374,6 +374,7 @@ export async function registerRoutes(
     supplierPrice: priceField,
     suggestedSellPrice: priceField,
     estimatedMargin: priceField,
+    dozenPrice: priceField,
     minimumOrderQuantity: z
       .union([z.string(), z.number(), z.null()])
       .optional()

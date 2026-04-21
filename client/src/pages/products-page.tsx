@@ -166,7 +166,8 @@ function fmtPrice(v?: string | null): string | null {
 function PriceBlock({ product }: { product: SupplierProductWithSupplier }) {
   const unit = fmtPrice(product.supplierPrice);
   const unitNum = product.supplierPrice ? parseFloat(product.supplierPrice) : NaN;
-  const dozen = Number.isFinite(unitNum) ? fmtPrice(String(unitNum * 12)) : null;
+  const manualDozen = fmtPrice(product.dozenPrice);
+  const dozen = manualDozen ?? (Number.isFinite(unitNum) ? fmtPrice(String(unitNum * 12)) : null);
   const minQty = product.minimumOrderQuantity;
   if (!unit && !minQty) return null;
   return (
