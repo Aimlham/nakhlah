@@ -361,6 +361,8 @@ function fmtPrice(v?: string | null): string | null {
 
 function PricingSection({ product }: { product: ProductWithSupplier }) {
   const unit = fmtPrice(product.supplierPrice);
+  const unitNum = product.supplierPrice ? parseFloat(product.supplierPrice) : NaN;
+  const dozen = Number.isFinite(unitNum) ? fmtPrice(String(unitNum * 12)) : null;
   const minQty = product.minimumOrderQuantity;
   if (!unit && !minQty) return null;
 
@@ -382,6 +384,17 @@ function PricingSection({ product }: { product: ProductWithSupplier }) {
               </div>
               <p className="text-2xl font-bold text-primary">
                 {unit} <span className="text-sm font-medium text-primary/70">ر.س / حبة</span>
+              </p>
+            </div>
+          )}
+          {dozen && (
+            <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4 space-y-1.5" data-testid="block-price-dozen">
+              <div className="flex items-center gap-1.5 text-xs text-primary/80 font-medium">
+                <Package className="w-3.5 h-3.5" />
+                سعر الدزينة
+              </div>
+              <p className="text-2xl font-bold text-primary">
+                {dozen} <span className="text-sm font-medium text-primary/70">ر.س / دزينة</span>
               </p>
             </div>
           )}
