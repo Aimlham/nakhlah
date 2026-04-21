@@ -12,6 +12,7 @@ import {
   Trash2,
   Package,
   ImageIcon,
+  Copy,
 } from "lucide-react";
 import type { SupplierProduct } from "@shared/schema";
 
@@ -33,6 +34,33 @@ export default function AdminSupplierProductsPage() {
     },
     onError: () => {
       toast({ title: "خطأ في حذف المنتج", variant: "destructive" });
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (product: SupplierProduct) => {
+      const body = {
+        title: `${product.title} (نسخة)`,
+        imageUrl: product.imageUrl,
+        description: product.description,
+        category: product.category,
+        supplierId: product.supplierId,
+        status: "draft" as const,
+        supplierPrice: product.supplierPrice,
+        suggestedSellPrice: product.suggestedSellPrice,
+        estimatedMargin: product.estimatedMargin,
+        dozenPrice: product.dozenPrice,
+        minimumOrderQuantity: product.minimumOrderQuantity,
+      };
+      await apiRequest("POST", "/api/admin/supplier-products", body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/supplier-products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/supplier-products"] });
+      toast({ title: "تم نسخ المنتج", description: "النسخة محفوظة كمسودة — عدّلها ثم انشرها" });
+    },
+    onError: () => {
+      toast({ title: "خطأ في نسخ المنتج", variant: "destructive" });
     },
   });
 
@@ -100,6 +128,17 @@ export default function AdminSupplierProductsPage() {
                       <Link href={`/admin/products/${product.id}/edit`} data-testid={`button-edit-product-${product.id}`}>
                         <Pencil className="w-4 h-4" />
                       </Link>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-lg"
+                      onClick={() => duplicateMutation.mutate(product)}
+                      disabled={duplicateMutation.isPending}
+                      title="نسخ كقالب"
+                      data-testid={`button-duplicate-product-${product.id}`}
+                    >
+                      <Copy className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
