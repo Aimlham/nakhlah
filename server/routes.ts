@@ -8,7 +8,7 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { z } from "zod";
 import path from "path";
-import { extractSupplierFromImage } from "./openai";
+import { extractSupplierFromImage, normalizeSaudiPhone, normalizeCategory, normalizeSupplierType, ALLOWED_CATEGORIES, ALLOWED_SUPPLIER_TYPES } from "./openai";
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
@@ -746,6 +746,35 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[upload] Error:", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "Upload failed") });
+    }
+  });
+
+  app.get("/api/admin/listings/find-duplicate", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+
+      const phoneRaw = (req.query.phone as string) || "";
+      const nameRaw = ((req.query.name as string) || "").trim().toLowerCase();
+      const cityRaw = ((req.query.city as string) || "").trim().toLowerCase();
+      const phone = normalizeSaudiPhone(phoneRaw);
+
+      if (!phone && !(nameRaw && cityRaw)) return res.json({ matches: [] });
+
+      const all = await storage.getAllListings();
+      const matches = all.filter((l) => {
+        const lp = normalizeSaudiPhone(l.supplierPhone || "") || normalizeSaudiPhone(l.supplierWhatsapp || "");
+        if (phone && lp && lp === phone) return true;
+        if (nameRaw && cityRaw) {
+          const ln = (l.supplierName || "").trim().toLowerCase();
+          const lc = (l.supplierCity || "").trim().toLowerCase();
+          if (ln === nameRaw && lc === cityRaw) return true;
+        }
+        return false;
+      });
+      res.json({ matches });
+    } catch (err: any) {
+      res.status(500).json({ message: safeErrorMessage(err, "خطأ في البحث") });
     }
   });
 

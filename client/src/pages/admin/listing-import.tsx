@@ -6,10 +6,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getAccessToken } from "@/lib/supabase";
-import { ArrowRight, Sparkles, Upload, Loader2, Save, CheckCircle2, ImageIcon, X } from "lucide-react";
+import { ArrowRight, Sparkles, Upload, Loader2, Save, CheckCircle2, ImageIcon, X, AlertTriangle } from "lucide-react";
+
+const ALLOWED_CATEGORIES = [
+  "نظارات", "عطور", "ملابس", "أحذية", "قهوة", "مواد غذائية",
+  "إلكترونيات", "أدوات منزلية", "مستحضرات تجميل", "مجوهرات",
+  "ألعاب أطفال", "أثاث", "قرطاسية", "رياضة", "سيارات وقطع غيار",
+  "هدايا", "أخرى",
+];
+
+const ALLOWED_SUPPLIER_TYPES = ["مصنع", "جملة", "تاجر"];
+
+function normalizeSaudiPhoneClient(raw: string): string {
+  let d = raw.replace(/[^\d+]/g, "");
+  if (d.startsWith("00")) d = "+" + d.slice(2);
+  if (d.startsWith("+966")) d = "0" + d.slice(4);
+  else if (d.startsWith("966")) d = "0" + d.slice(3);
+  d = d.replace(/\D/g, "");
+  if (d.length === 9 && d.startsWith("5")) d = "0" + d;
+  return /^05\d{8}$/.test(d) ? d : "";
+}
+
+interface DuplicateMatch {
+  id: string;
+  title: string;
+  supplierName: string | null;
+  supplierPhone: string | null;
+  supplierCity: string | null;
+  status: string;
+}
 
 interface ExtractedSupplier {
   title: string | null;
@@ -45,6 +74,9 @@ export default function AdminListingImportPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [form, setForm] = useState<ExtractedSupplier>(EMPTY);
   const [analyzed, setAnalyzed] = useState(false);
+  const [duplicates, setDuplicates] = useState<DuplicateMatch[]>([]);
+  const [confirmedAnyway, setConfirmedAnyway] = useState(false);
+  const [checkingDup, setCheckingDup] = useState(false);
 
   function pickFile(f: File) {
     setFile(f);
@@ -101,16 +133,53 @@ export default function AdminListingImportPage() {
     },
   });
 
+  async function checkDuplicates(): Promise<DuplicateMatch[]> {
+    setCheckingDup(true);
+    try {
+      const phone = normalizeSaudiPhoneClient(form.supplierPhone || "");
+      const name = (form.supplierName || "").trim();
+      const city = (form.supplierCity || "").trim();
+      if (!phone && !(name && city)) return [];
+      const params = new URLSearchParams();
+      if (phone) params.set("phone", phone);
+      if (name) params.set("name", name);
+      if (city) params.set("city", city);
+      const token = await getAccessToken();
+      const res = await fetch(`/api/admin/listings/find-duplicate?${params.toString()}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.matches as DuplicateMatch[]) || [];
+    } finally {
+      setCheckingDup(false);
+    }
+  }
+
+  async function attemptSave(status: "draft" | "published") {
+    if (!confirmedAnyway) {
+      const matches = await checkDuplicates();
+      if (matches.length > 0) {
+        setDuplicates(matches);
+        toast({ title: "يوجد مورد مشابه مسبقاً", description: "راجع المقارنة أدناه قبل المتابعة", variant: "destructive" });
+        return;
+      }
+    }
+    saveMutation.mutate(status);
+  }
+
   const saveMutation = useMutation({
     mutationFn: async (status: "draft" | "published") => {
+      const cleanPhone = normalizeSaudiPhoneClient(form.supplierPhone || "") || (form.supplierPhone?.trim() || null);
+      const cleanWa = normalizeSaudiPhoneClient(form.supplierWhatsapp || "") || (form.supplierWhatsapp?.trim() || null);
       const body = {
         title: (form.title || form.supplierName || "").trim(),
         imageUrl: imageUrl ?? null,
         description: form.description?.trim() || null,
         category: form.category?.trim() || null,
         supplierName: form.supplierName?.trim() || null,
-        supplierPhone: form.supplierPhone?.trim() || null,
-        supplierWhatsapp: form.supplierWhatsapp?.trim() || null,
+        supplierPhone: cleanPhone || null,
+        supplierWhatsapp: cleanWa || null,
         supplierCity: form.supplierCity?.trim() || null,
         supplierType: form.supplierType?.trim() || null,
         supplierLocation: form.supplierLocation?.trim() || null,
@@ -231,10 +300,24 @@ export default function AdminListingImportPage() {
                 <Input value={form.supplierCity ?? ""} onChange={update("supplierCity")} data-testid="input-supplierCity" />
               </Field>
               <Field label="نوع النشاط">
-                <Input value={form.supplierType ?? ""} onChange={update("supplierType")} placeholder="مصنع / تاجر جملة / موزع..." data-testid="input-supplierType" />
+                <Select value={form.supplierType ?? ""} onValueChange={(v) => setForm((p) => ({ ...p, supplierType: v }))}>
+                  <SelectTrigger data-testid="input-supplierType"><SelectValue placeholder="اختر النوع" /></SelectTrigger>
+                  <SelectContent>
+                    {ALLOWED_SUPPLIER_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="التصنيف">
-                <Input value={form.category ?? ""} onChange={update("category")} data-testid="input-category" />
+                <Select value={form.category ?? ""} onValueChange={(v) => setForm((p) => ({ ...p, category: v }))}>
+                  <SelectTrigger data-testid="input-category"><SelectValue placeholder="اختر التصنيف" /></SelectTrigger>
+                  <SelectContent>
+                    {ALLOWED_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="الموقع / العنوان">
                 <Input value={form.supplierLocation ?? ""} onChange={update("supplierLocation")} data-testid="input-supplierLocation" />
@@ -244,24 +327,71 @@ export default function AdminListingImportPage() {
               <Textarea value={form.description ?? ""} onChange={update("description")} rows={3} data-testid="input-description" />
             </Field>
 
+            {duplicates.length > 0 && (
+              <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 space-y-3" data-testid="alert-duplicates">
+                <div className="flex items-center gap-2 text-destructive font-semibold">
+                  <AlertTriangle className="w-4 h-4" />
+                  يوجد مورد مشابه مسبقاً ({duplicates.length})
+                </div>
+                <p className="text-xs text-muted-foreground">قارن البيانات قبل أن تحفظ نسخة جديدة. يمكنك إلغاء العملية أو المتابعة بقصد.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-border bg-card p-3 space-y-1.5 text-sm" data-testid="block-new-data">
+                    <div className="text-xs font-semibold text-primary mb-1">الجديد (سيُحفظ)</div>
+                    <Row k="الاسم" v={form.supplierName} />
+                    <Row k="الهاتف" v={normalizeSaudiPhoneClient(form.supplierPhone || "") || form.supplierPhone} />
+                    <Row k="المدينة" v={form.supplierCity} />
+                    <Row k="التصنيف" v={form.category} />
+                  </div>
+                  <div className="space-y-2">
+                    {duplicates.map((m) => (
+                      <div key={m.id} className="rounded-lg border border-destructive/30 bg-card p-3 space-y-1.5 text-sm" data-testid={`block-existing-${m.id}`}>
+                        <div className="text-xs font-semibold text-destructive mb-1">موجود مسبقاً — {m.status === "published" ? "منشور" : "مسودة"}</div>
+                        <Row k="الاسم" v={m.supplierName ?? m.title} />
+                        <Row k="الهاتف" v={m.supplierPhone} />
+                        <Row k="المدينة" v={m.supplierCity} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDuplicates([]); navigate("/admin/listings"); }}
+                    data-testid="button-cancel-dup"
+                  >
+                    إلغاء العملية
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => { setConfirmedAnyway(true); setDuplicates([]); toast({ title: "تم تأكيد المتابعة", description: "اضغط الحفظ أو النشر مرة أخرى" }); }}
+                    data-testid="button-confirm-dup"
+                  >
+                    أعرف وأريد المتابعة
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <Button
                 variant="outline"
-                onClick={() => saveMutation.mutate("draft")}
-                disabled={saveMutation.isPending}
+                onClick={() => attemptSave("draft")}
+                disabled={saveMutation.isPending || checkingDup}
                 className="flex-1 h-11 rounded-xl"
                 data-testid="button-save-draft"
               >
-                {saveMutation.isPending ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Save className="w-4 h-4 me-2" />}
+                {(saveMutation.isPending || checkingDup) ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Save className="w-4 h-4 me-2" />}
                 حفظ كمسودة
               </Button>
               <Button
-                onClick={() => saveMutation.mutate("published")}
-                disabled={saveMutation.isPending}
+                onClick={() => attemptSave("published")}
+                disabled={saveMutation.isPending || checkingDup}
                 className="flex-1 h-11 rounded-xl"
                 data-testid="button-publish"
               >
-                {saveMutation.isPending ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 me-2" />}
+                {(saveMutation.isPending || checkingDup) ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 me-2" />}
                 اعتماد ونشر
               </Button>
             </div>
@@ -277,6 +407,15 @@ function Field({ label, children, testid }: { label: string; children: React.Rea
     <div className="space-y-1.5">
       <Label className="text-xs">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v?: string | null }) {
+  return (
+    <div className="flex justify-between gap-2">
+      <span className="text-muted-foreground text-xs">{k}:</span>
+      <span className="font-medium text-xs truncate" dir="auto">{v || "—"}</span>
     </div>
   );
 }

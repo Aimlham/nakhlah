@@ -121,15 +121,96 @@ export async function extractSupplierFromImage(imageBase64: string, mimeType: st
     if (!s || s.toLowerCase() === "null" || s === "غير محدد" || s === "غير متوفر") return null;
     return s;
   };
+  const phone = normalizeSaudiPhone(clean(parsed.supplierPhone));
+  const wa = normalizeSaudiPhone(clean(parsed.supplierWhatsapp)) ?? phone;
   return {
     title: clean(parsed.title) ?? clean(parsed.supplierName),
     supplierName: clean(parsed.supplierName),
-    supplierPhone: clean(parsed.supplierPhone),
-    supplierWhatsapp: clean(parsed.supplierWhatsapp) ?? clean(parsed.supplierPhone),
+    supplierPhone: phone,
+    supplierWhatsapp: wa,
     supplierCity: clean(parsed.supplierCity),
-    supplierType: clean(parsed.supplierType),
-    category: clean(parsed.category),
+    supplierType: normalizeSupplierType(clean(parsed.supplierType)),
+    category: normalizeCategory(clean(parsed.category)),
     supplierLocation: clean(parsed.supplierLocation),
     description: clean(parsed.description),
   };
+}
+
+export const ALLOWED_CATEGORIES = [
+  "نظارات",
+  "عطور",
+  "ملابس",
+  "أحذية",
+  "قهوة",
+  "مواد غذائية",
+  "إلكترونيات",
+  "أدوات منزلية",
+  "مستحضرات تجميل",
+  "مجوهرات",
+  "ألعاب أطفال",
+  "أثاث",
+  "قرطاسية",
+  "رياضة",
+  "سيارات وقطع غيار",
+  "هدايا",
+  "أخرى",
+] as const;
+
+export const ALLOWED_SUPPLIER_TYPES = ["مصنع", "جملة", "تاجر"] as const;
+
+const CATEGORY_KEYWORDS: Array<[string, string[]]> = [
+  ["نظارات", ["نظار", "شمسي", "بصر", "عدسة", "عدسات"]],
+  ["عطور", ["عطر", "عطور", "perfume", "fragrance", "بخور", "عود"]],
+  ["قهوة", ["قهوة", "كوفي", "coffee", "بن", "اسبريس", "كافيه"]],
+  ["مواد غذائية", ["غذائ", "أغذية", "اغذية", "تموين", "بقال", "food"]],
+  ["مستحضرات تجميل", ["تجميل", "مكياج", "ميكاب", "كريم", "cosmetic", "makeup"]],
+  ["إلكترونيات", ["إلكترون", "الكترون", "موبايل", "جوال", "كمبيوتر", "تك", "tech", "electronic", "شاشة", "اكسسوار جوال"]],
+  ["أحذية", ["حذاء", "أحذية", "اساو", "shoe", "بوت"]],
+  ["ملابس", ["ملاب", "ثياب", "قميص", "فستان", "عبا", "بنطلون", "تيشيرت", "cloth", "fashion", "أزياء"]],
+  ["أدوات منزلية", ["منزل", "منزلية", "مطبخ", "kitchen", "home"]],
+  ["مجوهرات", ["مجوهر", "ذهب", "فضة", "اكسسوار"]],
+  ["ألعاب أطفال", ["لعب", "ألعاب", "أطفال", "toy"]],
+  ["أثاث", ["أثاث", "اثاث", "كنب", "طاولة", "furniture"]],
+  ["قرطاسية", ["قرطاس", "مكتب", "stationery"]],
+  ["رياضة", ["رياض", "جيم", "sport", "fitness"]],
+  ["سيارات وقطع غيار", ["سيار", "قطع غيار", "car", "auto"]],
+  ["هدايا", ["هدي", "gift"]],
+];
+
+const SUPPLIER_TYPE_KEYWORDS: Array<[string, string[]]> = [
+  ["مصنع", ["مصنع", "تصنيع", "factory", "manufactur", "ورشة"]],
+  ["جملة", ["جملة", "جمله", "wholesale", "موزع", "توزيع", "distributor", "مستودع", "warehouse"]],
+  ["تاجر", ["تاجر", "متجر", "محل", "shop", "store", "retail"]],
+];
+
+export function normalizeCategory(raw: string | null): string | null {
+  if (!raw) return null;
+  const s = raw.toLowerCase();
+  for (const [canonical, keywords] of CATEGORY_KEYWORDS) {
+    if (keywords.some((k) => s.includes(k.toLowerCase()))) return canonical;
+  }
+  if ((ALLOWED_CATEGORIES as readonly string[]).includes(raw.trim())) return raw.trim();
+  return "أخرى";
+}
+
+export function normalizeSupplierType(raw: string | null): string | null {
+  if (!raw) return null;
+  const s = raw.toLowerCase();
+  for (const [canonical, keywords] of SUPPLIER_TYPE_KEYWORDS) {
+    if (keywords.some((k) => s.includes(k.toLowerCase()))) return canonical;
+  }
+  if ((ALLOWED_SUPPLIER_TYPES as readonly string[]).includes(raw.trim())) return raw.trim();
+  return null;
+}
+
+export function normalizeSaudiPhone(raw: string | null): string | null {
+  if (!raw) return null;
+  let digits = raw.replace(/[^\d+]/g, "");
+  if (digits.startsWith("00")) digits = "+" + digits.slice(2);
+  if (digits.startsWith("+966")) digits = "0" + digits.slice(4);
+  else if (digits.startsWith("966")) digits = "0" + digits.slice(3);
+  digits = digits.replace(/\D/g, "");
+  if (digits.length === 9 && digits.startsWith("5")) digits = "0" + digits;
+  if (!/^05\d{8}$/.test(digits)) return null;
+  return digits;
 }
