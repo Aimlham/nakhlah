@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { z } from "zod";
 import path from "path";
+import { extractSupplierFromImage } from "./openai";
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
@@ -745,6 +746,52 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[upload] Error:", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "Upload failed") });
+    }
+  });
+
+  app.post("/api/admin/analyze-supplier-image", (req: Request, res: Response, next) => {
+    upload.single("image")(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "حجم الملف يتجاوز الحد الأقصى (5MB)" });
+        }
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "لم يتم رفع صورة" });
+      if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        return res.status(400).json({ message: "نوع الملف غير مدعوم" });
+      }
+
+      let imageUrl: string | null = null;
+      if (supabaseAdmin) {
+        const ext = path.extname(file.originalname).toLowerCase().replace(".", "") || "jpg";
+        const filename = `${randomUUID()}.${ext}`;
+        const { error: upErr } = await supabaseAdmin.storage
+          .from("listing-images")
+          .upload(filename, file.buffer, { contentType: file.mimetype, upsert: false });
+        if (!upErr) {
+          const { data: urlData } = supabaseAdmin.storage.from("listing-images").getPublicUrl(filename);
+          imageUrl = urlData.publicUrl;
+        } else {
+          console.error("[analyze-supplier-image] upload error:", upErr.message);
+        }
+      }
+
+      const base64 = file.buffer.toString("base64");
+      const extracted = await extractSupplierFromImage(base64, file.mimetype);
+
+      res.json({ imageUrl, extracted });
+    } catch (err: any) {
+      console.error("[analyze-supplier-image] error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "فشل تحليل الصورة") });
     }
   });
 

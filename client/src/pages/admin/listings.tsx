@@ -78,6 +78,12 @@ export default function AdminListingsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
+            <Link href="/admin/listings/import" data-testid="link-import-from-image">
+              <Plus className="w-4 h-4 me-1" />
+              إضافة من صورة
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
             <Link href="/admin/listings/new?type=factory" data-testid="link-add-factory">
               <Plus className="w-4 h-4 me-1" />
               إضافة مصنع
