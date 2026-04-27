@@ -114,3 +114,39 @@ id = "gnvlwxMQ2fKDoefAyaxxL"
 uri = "file://attached_assets/stock_images/general.jpg"
 type = "image"
 title = "modern minimal business product showcase, neutral background"
+
+[[outputs]]
+id = "-Gal-fCg8R1jgKGAv4vhE"
+uri = "file://attached_assets/stock_images/food_test.jpg"
+type = "image"
+title = "grocery store shelves with packaged food products"
+
+[[outputs]]
+id = "BxbVjjbBRSyFOZODDppGf"
+uri = "file://attached_assets/stock_images/wholesale_v2.jpg"
+type = "image"
+title = "wholesale warehouse interior with stacked cardboard boxes on shelves, organized inventory"
+
+[[outputs]]
+id = "V77cx-SKawexCwoCTXjv3"
+uri = "file://attached_assets/stock_images/general_v2.jpg"
+type = "image"
+title = "modern minimalist retail store interior with shelves and products, professional storefront"
+
+[[outputs]]
+id = "YF75cMEOYcz145oEmkz5G"
+uri = "file://attached_assets/stock_images/factory_v2.jpg"
+type = "image"
+title = "modern industrial factory production line with stainless steel machinery, clean assembly facility"
+
+[[outputs]]
+id = "0J8BVLU9OaELLG6SzA5d-"
+uri = "file://attached_assets/stock_images/packaging_v2.jpg"
+type = "image"
+title = "stack of brown shipping cardboard boxes neatly arranged in warehouse"
+
+[[outputs]]
+id = "A6Jvh4uc8gg_AiSHyC2xo"
+uri = "file://attached_assets/stock_images/food_v3.jpg"
+type = "image"
+title = "packaged groceries on supermarket shelf"
