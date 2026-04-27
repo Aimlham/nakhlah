@@ -72,7 +72,7 @@ export default function ListingDetailPage({ isSubscribed }: ListingDetailPagePro
 
       <div className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden bg-muted/50">
         <img
-          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
           alt={listing.title}
           className="w-full h-full object-cover"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}

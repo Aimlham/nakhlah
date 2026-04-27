@@ -3,6 +3,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Topbar } from "@/components/topbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { WhatsAppButton } from "@/components/whatsapp-button";
 
 const sidebarStyle = {
   "--sidebar-width": "16rem",
@@ -23,6 +24,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </ScrollArea>
         </div>
       </div>
+      <WhatsAppButton />
     </SidebarProvider>
   );
 }

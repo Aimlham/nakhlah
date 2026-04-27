@@ -252,3 +252,21 @@ id = "ZW8ps6KgNzB5vKqh36fXJ"
 uri = "file://attached_assets/stock_images/packaging_clean.jpg"
 type = "image"
 title = "single brown corrugated cardboard shipping box on white background, product photography"
+
+[[outputs]]
+id = "jFePT0vwUOUT_iR0ELNXp"
+uri = "file://attached_assets/stock_images/general_v3.jpg"
+type = "image"
+title = "neutral business storefront facade modern minimal architecture"
+
+[[outputs]]
+id = "CrXuaeEcysuY6g_H2HEFk"
+uri = "file://attached_assets/stock_images/shoes_fix_1777316598437.jpg"
+type = "image"
+title = "running sneakers white background isolated"
+
+[[outputs]]
+id = "MVNisLARYE9ZMtxcY240d"
+uri = "file://attached_assets/stock_images/eyewear_fix_1777316602099.jpg"
+type = "image"
+title = "black aviator sunglasses isolated white background"

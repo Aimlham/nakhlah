@@ -135,7 +135,7 @@ export default function DashboardPage() {
             >
               <div className="relative aspect-square overflow-hidden bg-muted">
                 <img
-                  src={resolveImage(product.imageUrl, product.category)}
+                  src={resolveImage(product.imageUrl, product.category, null, product.title)}
                   alt={product.title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"

@@ -155,7 +155,7 @@ function ListingCard({ listing }: { listing: Listing }) {
       <CardContent className="p-0">
         <div className="relative h-52 bg-muted/50 overflow-hidden">
           <img
-            src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+            src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
             alt={listing.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"

@@ -115,7 +115,7 @@ export default function ProductDetailsPage() {
             getCategoryGradient(product.category)
           )}>
             <img
-              src={resolveImage(product.imageUrl, product.category)}
+              src={resolveImage(product.imageUrl, product.category, null, product.title)}
               alt={product.title}
               className="w-full h-full object-cover"
               onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}

@@ -106,7 +106,7 @@ export default function AdminSupplierProductsPage() {
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-lg bg-muted/50 overflow-hidden flex-shrink-0">
                     <img
-                      src={resolveImage(product.imageUrl, product.category)}
+                      src={resolveImage(product.imageUrl, product.category, null, product.title)}
                       alt={product.title}
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}

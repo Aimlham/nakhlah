@@ -106,7 +106,7 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
 
       <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
         <img
-          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
           alt={listing.title}
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
@@ -308,7 +308,7 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
                   <div className="flex gap-4 p-4">
                     <div className="w-20 h-20 rounded-lg bg-muted/50 overflow-hidden flex-shrink-0">
                       <img
-                        src={resolveImage(p.imageUrl, p.category, listing.supplierType)}
+                        src={resolveImage(p.imageUrl, p.category, listing.supplierType, p.title)}
                         alt={p.title}
                         className="w-full h-full object-cover"
                         onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}

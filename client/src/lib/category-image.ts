@@ -60,20 +60,21 @@ const KEYWORD_HINTS: Array<{ keys: string[]; image: string }> = [
 export function getCategoryImage(
   category?: string | null,
   supplierType?: string | null,
+  extraText?: string | null,
 ): string {
   if (category && CATEGORY_IMAGE_MAP[category.trim()]) {
     return CATEGORY_IMAGE_MAP[category.trim()];
   }
-  if (supplierType && SUPPLIER_TYPE_IMAGE_MAP[supplierType.trim()]) {
-    return SUPPLIER_TYPE_IMAGE_MAP[supplierType.trim()];
-  }
-  const haystack = `${normalize(category)} ${normalize(supplierType)}`.trim();
+  const haystack = `${normalize(category)} ${normalize(extraText)} ${normalize(supplierType)}`.trim();
   if (haystack) {
     for (const hint of KEYWORD_HINTS) {
       if (hint.keys.some((k) => haystack.includes(k.toLowerCase()))) {
         return hint.image;
       }
     }
+  }
+  if (supplierType && SUPPLIER_TYPE_IMAGE_MAP[supplierType.trim()]) {
+    return SUPPLIER_TYPE_IMAGE_MAP[supplierType.trim()];
   }
   return GENERAL_FALLBACK_IMAGE;
 }
@@ -82,7 +83,8 @@ export function resolveImage(
   imageUrl?: string | null,
   category?: string | null,
   supplierType?: string | null,
+  extraText?: string | null,
 ): string {
   if (imageUrl && imageUrl.trim()) return imageUrl;
-  return getCategoryImage(category, supplierType);
+  return getCategoryImage(category, supplierType, extraText);
 }

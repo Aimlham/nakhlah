@@ -209,7 +209,7 @@ function SavedProductCard({
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
               <img
-                src={resolveImage(product.imageUrl, product.category)}
+                src={resolveImage(product.imageUrl, product.category, null, product.title)}
                 alt={product.title}
                 className="absolute inset-0 w-full h-full object-cover"
                 loading="lazy"
@@ -262,7 +262,7 @@ function SavedListingCard({
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
               <img
-                src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+                src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
                 alt={listing.title}
                 className="absolute inset-0 w-full h-full object-cover"
                 loading="lazy"

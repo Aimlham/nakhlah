@@ -38,7 +38,7 @@ export function ProductCard({ product, isSaved, onToggleSave, savePending }: Pro
           getCategoryGradient(product.category)
         )}>
           <img
-            src={resolveImage(product.imageUrl, product.category)}
+            src={resolveImage(product.imageUrl, product.category, null, product.title)}
             alt={product.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"

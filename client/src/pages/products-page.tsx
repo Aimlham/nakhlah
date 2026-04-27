@@ -208,7 +208,7 @@ function ProductCard({ product, isSaved, onToggleSave, savePending }: ProductCar
         <CardContent className="p-0">
           <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
             <img
-              src={resolveImage(product.imageUrl, product.category)}
+              src={resolveImage(product.imageUrl, product.category, null, product.title)}
               alt={product.title}
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"

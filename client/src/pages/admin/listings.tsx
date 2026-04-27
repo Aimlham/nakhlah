@@ -113,7 +113,7 @@ export default function AdminListingsPage() {
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
                     <img
-                      src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+                      src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
                       alt={listing.title}
                       className="w-full h-full object-cover"
                       onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}

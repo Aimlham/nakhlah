@@ -112,7 +112,7 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
 
       <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
         <img
-          src={resolveImage(product.imageUrl, product.category, supplier?.supplierType)}
+          src={resolveImage(product.imageUrl, product.category, supplier?.supplierType, product.title)}
           alt={product.title}
           className="absolute inset-0 w-full h-full object-cover"
           onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
@@ -201,7 +201,7 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
             </div>
             <div className="flex items-center gap-3">
               <img
-                src={resolveImage(supplier.imageUrl, supplier.category, supplier.supplierType)}
+                src={resolveImage(supplier.imageUrl, supplier.category, supplier.supplierType, supplier.title)}
                 alt={supplier.title}
                 className="w-12 h-12 rounded-xl object-cover"
                 onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
