@@ -23,7 +23,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import type { Listing, SupplierProduct } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -105,12 +105,20 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
       </Button>
 
       <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
-        <img
-          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
-          alt={listing.title}
-          className="absolute inset-0 w-full h-full object-cover"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-        />
+        {hasImage(listing.imageUrl) ? (
+          <img
+            src={listing.imageUrl as string}
+            alt={listing.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className={`absolute inset-0 flex items-center justify-center ${pickAvatarColor(listing.id || listing.title).bg} ${pickAvatarColor(listing.id || listing.title).text}`}
+            data-testid={`avatar-supplier-detail-${listing.id}`}
+          >
+            <span className="text-8xl sm:text-9xl font-bold">{getInitial(listing.title)}</span>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => toggleSave.mutate()}
@@ -306,13 +314,16 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
               <Card key={p.id} className="rounded-xl border-border/50 overflow-hidden" data-testid={`card-supplier-product-${p.id}`}>
                 <CardContent className="p-0">
                   <div className="flex gap-4 p-4">
-                    <div className="w-20 h-20 rounded-lg bg-muted/50 overflow-hidden flex-shrink-0">
-                      <img
-                        src={resolveImage(p.imageUrl, p.category, listing.supplierType, p.title)}
-                        alt={p.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-                      />
+                    <div className="w-20 h-20 rounded-lg bg-muted/50 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                      {hasImage(p.imageUrl) ? (
+                        <img
+                          src={p.imageUrl as string}
+                          alt={p.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="w-7 h-7 text-muted-foreground/40" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0 space-y-1">
                       <h3 className="font-semibold text-sm line-clamp-1">{p.title}</h3>

@@ -8,6 +8,7 @@ import {
   FolderOpen,
   Target,
   Star,
+  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { Product } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage } from "@/lib/category-image";
 
 function getScoreColor(score: number) {
   if (score >= 75) return "text-emerald-500";
@@ -134,13 +135,18 @@ export default function DashboardPage() {
               data-testid={`card-dashboard-project-${product.id}`}
             >
               <div className="relative aspect-square overflow-hidden bg-muted">
-                <img
-                  src={resolveImage(product.imageUrl, product.category, null, product.title)}
-                  alt={product.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  loading="lazy"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-                />
+                {hasImage(product.imageUrl) ? (
+                  <img
+                    src={product.imageUrl as string}
+                    alt={product.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon className="w-10 h-10 text-muted-foreground/30" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
                 <div className="absolute top-2 start-2">

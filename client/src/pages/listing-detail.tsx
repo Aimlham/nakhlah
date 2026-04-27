@@ -13,13 +13,12 @@ import {
   MessageCircle,
   MapPinned,
   Lock,
-  ImageIcon,
   Store,
   Crown,
   ExternalLink,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
 
 interface ListingDetailPageProps {
   isSubscribed: boolean;
@@ -71,12 +70,20 @@ export default function ListingDetailPage({ isSubscribed }: ListingDetailPagePro
       </Button>
 
       <div className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden bg-muted/50">
-        <img
-          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
-          alt={listing.title}
-          className="w-full h-full object-cover"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-        />
+        {hasImage(listing.imageUrl) ? (
+          <img
+            src={listing.imageUrl as string}
+            alt={listing.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div
+            className={`w-full h-full flex items-center justify-center ${pickAvatarColor(listing.id || listing.title).bg} ${pickAvatarColor(listing.id || listing.title).text}`}
+            data-testid={`avatar-listing-detail-${listing.id}`}
+          >
+            <span className="text-8xl font-bold">{getInitial(listing.title)}</span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-5">

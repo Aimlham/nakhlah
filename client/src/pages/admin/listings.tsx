@@ -14,11 +14,10 @@ import {
   Eye,
   EyeOff,
   FolderOpen,
-  ImageIcon,
   MapPin,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
 
 export default function AdminListingsPage() {
   const { toast } = useToast();
@@ -112,12 +111,19 @@ export default function AdminListingsPage() {
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                    <img
-                      src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
-                      alt={listing.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-                    />
+                    {hasImage(listing.imageUrl) ? (
+                      <img
+                        src={listing.imageUrl as string}
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div
+                        className={`w-full h-full flex items-center justify-center ${pickAvatarColor(listing.id || listing.title).bg} ${pickAvatarColor(listing.id || listing.title).text}`}
+                      >
+                        <span className="text-2xl font-bold">{getInitial(listing.title)}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">

@@ -27,7 +27,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import type { SupplierProductWithSupplier } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
 import type { Listing } from "@shared/schema";
 
 interface ProductDetailPageProps {
@@ -111,12 +111,17 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
       </Button>
 
       <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
-        <img
-          src={resolveImage(product.imageUrl, product.category, supplier?.supplierType, product.title)}
-          alt={product.title}
-          className="absolute inset-0 w-full h-full object-cover"
-          onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-        />
+        {hasImage(product.imageUrl) ? (
+          <img
+            src={product.imageUrl as string}
+            alt={product.title}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <ImageIcon className="w-20 h-20 text-muted-foreground/30" />
+          </div>
+        )}
       </div>
 
       <div className="space-y-5">
@@ -200,12 +205,19 @@ export default function ProductDetailPage({ isSubscribed }: ProductDetailPagePro
               </Button>
             </div>
             <div className="flex items-center gap-3">
-              <img
-                src={resolveImage(supplier.imageUrl, supplier.category, supplier.supplierType, supplier.title)}
-                alt={supplier.title}
-                className="w-12 h-12 rounded-xl object-cover"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-              />
+              {hasImage(supplier.imageUrl) ? (
+                <img
+                  src={supplier.imageUrl as string}
+                  alt={supplier.title}
+                  className="w-12 h-12 rounded-xl object-cover"
+                />
+              ) : (
+                <div
+                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${pickAvatarColor(supplier.id || supplier.title).bg} ${pickAvatarColor(supplier.id || supplier.title).text}`}
+                >
+                  <span className="text-lg font-bold">{getInitial(supplier.title)}</span>
+                </div>
+              )}
               <div>
                 <p className="font-semibold" data-testid="text-supplier-title">{supplier.title}</p>
                 <p className="text-sm text-muted-foreground">

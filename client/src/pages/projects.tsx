@@ -14,11 +14,10 @@ import {
   MapPin,
   Tag,
   Store,
-  ImageIcon,
   ChevronLeft,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
 
 interface ProjectsPageProps {
   isSubscribed: boolean;
@@ -154,13 +153,20 @@ function ListingCard({ listing }: { listing: Listing }) {
     >
       <CardContent className="p-0">
         <div className="relative h-52 bg-muted/50 overflow-hidden">
-          <img
-            src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
-            alt={listing.title}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-          />
+          {hasImage(listing.imageUrl) ? (
+            <img
+              src={listing.imageUrl as string}
+              alt={listing.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center ${pickAvatarColor(listing.id || listing.title).bg} ${pickAvatarColor(listing.id || listing.title).text}`}
+            >
+              <span className="text-6xl font-bold">{getInitial(listing.title)}</span>
+            </div>
+          )}
           {listing.category && (
             <div className="absolute top-3 start-3">
               <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-xs px-2.5 py-1 shadow-sm">

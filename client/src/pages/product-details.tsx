@@ -8,14 +8,14 @@ import {
   ArrowRight, Bookmark, BookmarkCheck, ExternalLink, Package,
   TrendingUp, BarChart3, Target, Users, Megaphone, Lightbulb,
   Eye, Heart, Play, Calendar, Flame, Activity, DollarSign,
-  Sparkles, RefreshCw, Loader2,
+  Sparkles, RefreshCw, Loader2, ImageIcon,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { formatMoney, formatMargin, formatCompactNumber, getCategoryGradient, getPlatformColor, parseAiSummary, timeSince, cn, getScoreBg, getScoreColor } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Product, ProductAd } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage } from "@/lib/category-image";
 
 export default function ProductDetailsPage() {
   const [, params] = useRoute("/products/:id");
@@ -114,12 +114,17 @@ export default function ProductDetailsPage() {
             "relative h-56 md:h-72 rounded-xl bg-gradient-to-br flex items-center justify-center overflow-hidden",
             getCategoryGradient(product.category)
           )}>
-            <img
-              src={resolveImage(product.imageUrl, product.category, null, product.title)}
-              alt={product.title}
-              className="w-full h-full object-cover"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-            />
+            {hasImage(product.imageUrl) ? (
+              <img
+                src={product.imageUrl as string}
+                alt={product.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ImageIcon className="w-16 h-16 text-white/40" />
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
             {isHighOpportunity && (
               <div className="absolute top-3 start-3">

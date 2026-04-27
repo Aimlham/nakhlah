@@ -9,7 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Bookmark, BookmarkCheck, MapPin, Store, Tag, ImageIcon } from "lucide-react";
 import type { Listing, SupplierProductWithSupplier } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
+import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
 
 export default function SavedProductsPage() {
   const { toast } = useToast();
@@ -208,13 +208,18 @@ function SavedProductCard({
         <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all cursor-pointer">
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-              <img
-                src={resolveImage(product.imageUrl, product.category, null, product.title)}
-                alt={product.title}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-              />
+              {hasImage(product.imageUrl) ? (
+                <img
+                  src={product.imageUrl as string}
+                  alt={product.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <ImageIcon className="w-12 h-12 text-muted-foreground/30" />
+                </div>
+              )}
               {product.category && (
                 <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
                   <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1">
@@ -261,13 +266,20 @@ function SavedListingCard({
         <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all cursor-pointer">
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-              <img
-                src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
-                alt={listing.title}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-              />
+              {hasImage(listing.imageUrl) ? (
+                <img
+                  src={listing.imageUrl as string}
+                  alt={listing.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div
+                  className={`absolute inset-0 flex items-center justify-center ${pickAvatarColor(listing.id || listing.title).bg} ${pickAvatarColor(listing.id || listing.title).text}`}
+                >
+                  <span className="text-6xl font-bold">{getInitial(listing.title)}</span>
+                </div>
+              )}
               {listing.supplierType && (
                 <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
                   <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1">
