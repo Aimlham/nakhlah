@@ -12,15 +12,47 @@ import {
   Store,
   Search,
   MapPin,
-  ImageIcon,
   Users,
   Bookmark,
   BookmarkCheck,
+  ArrowLeft,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
-import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+const AVATAR_PALETTE = [
+  { bg: "bg-blue-500", text: "text-white" },
+  { bg: "bg-purple-500", text: "text-white" },
+  { bg: "bg-emerald-500", text: "text-white" },
+  { bg: "bg-amber-500", text: "text-white" },
+  { bg: "bg-rose-500", text: "text-white" },
+  { bg: "bg-cyan-500", text: "text-white" },
+  { bg: "bg-orange-500", text: "text-white" },
+  { bg: "bg-indigo-500", text: "text-white" },
+  { bg: "bg-teal-500", text: "text-white" },
+  { bg: "bg-pink-500", text: "text-white" },
+];
+
+function pickAvatarColor(seed: string): { bg: string; text: string } {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+
+function getInitial(title: string): string {
+  const trimmed = (title || "").trim();
+  if (!trimmed) return "ن";
+  const skipWords = ["شركة", "مؤسسة", "متجر", "مصنع", "محل", "ال"];
+  for (const word of trimmed.split(/\s+/)) {
+    if (skipWords.includes(word)) continue;
+    const cleaned = word.replace(/^ال/, "");
+    if (cleaned.length > 0) return cleaned.charAt(0);
+  }
+  return trimmed.charAt(0);
+}
 
 interface SuppliersPageProps {
   filterTypes?: string[];
@@ -189,43 +221,57 @@ interface SupplierCardProps {
 }
 
 function SupplierCard({ listing, isSaved, onToggleSave, savePending }: SupplierCardProps) {
+  const avatar = pickAvatarColor(listing.id || listing.title);
+  const initial = getInitial(listing.title);
+
   return (
     <div className="relative group" data-testid={`card-supplier-${listing.id}`}>
       <Link href={`/suppliers/${listing.id}`}>
-        <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 cursor-pointer">
-          <CardContent className="p-0">
-            <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-              <img
-                src={resolveImage(listing.imageUrl, listing.category, listing.supplierType, listing.title)}
-                alt={listing.title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
-              />
-              {listing.supplierType && (
-                <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
-                  <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 shadow-sm">
-                    <Store className="w-2.5 h-2.5 sm:w-3 sm:h-3 me-1 text-primary" />
-                    {listing.supplierType}
-                  </Badge>
-                </div>
-              )}
+        <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 cursor-pointer h-full">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start gap-3">
+              <div
+                className={`shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-bold text-xl sm:text-2xl ${avatar.bg} ${avatar.text}`}
+                data-testid={`avatar-supplier-${listing.id}`}
+              >
+                {initial}
+              </div>
+
+              <div className="flex-1 min-w-0 space-y-1">
+                <h3
+                  className="font-semibold text-sm sm:text-base leading-snug line-clamp-2"
+                  data-testid={`text-supplier-title-${listing.id}`}
+                >
+                  {listing.title}
+                </h3>
+
+                {listing.supplierCity && (
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs text-muted-foreground">
+                    <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/70" />
+                    {listing.supplierCity}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="p-2.5 sm:p-4 space-y-1.5 sm:space-y-2.5">
-              <h3
-                className="font-semibold text-sm sm:text-base leading-snug line-clamp-2 min-h-[2.5rem] sm:min-h-[3rem]"
-                data-testid={`text-supplier-title-${listing.id}`}
-              >
-                {listing.title}
-              </h3>
+            {listing.supplierType && (
+              <div className="mt-3">
+                <Badge variant="secondary" className="text-[10px] sm:text-xs px-2 py-0.5 font-normal">
+                  <Store className="w-2.5 h-2.5 sm:w-3 sm:h-3 me-1 text-primary" />
+                  {listing.supplierType}
+                </Badge>
+              </div>
+            )}
 
-              {listing.supplierCity && (
-                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                  <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary/70" />
-                  {listing.supplierCity}
-                </div>
-              )}
+            {listing.description && (
+              <p className="mt-2 text-[11px] sm:text-xs text-muted-foreground line-clamp-2">
+                {listing.description}
+              </p>
+            )}
+
+            <div className="mt-3 sm:mt-4 pt-3 border-t border-border/50 flex items-center justify-between text-xs sm:text-sm text-primary font-medium">
+              <span>عرض التفاصيل</span>
+              <ArrowLeft className="w-4 h-4" />
             </div>
           </CardContent>
         </Card>
@@ -240,7 +286,7 @@ function SupplierCard({ listing, isSaved, onToggleSave, savePending }: SupplierC
         }}
         disabled={savePending}
         aria-label={isSaved ? "إلغاء الحفظ" : "حفظ"}
-        className="absolute top-2 end-2 sm:top-3 sm:end-3 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center shadow-sm hover:bg-background hover:scale-110 transition-all disabled:opacity-50"
+        className="absolute top-2 end-2 sm:top-3 sm:end-3 w-8 h-8 rounded-full bg-background/90 backdrop-blur-sm border border-border/50 flex items-center justify-center shadow-sm hover:bg-background hover:scale-110 transition-all disabled:opacity-50"
         data-testid={`button-save-supplier-${listing.id}`}
       >
         {isSaved ? (
