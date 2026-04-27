@@ -150,3 +150,105 @@ id = "A6Jvh4uc8gg_AiSHyC2xo"
 uri = "file://attached_assets/stock_images/food_v3.jpg"
 type = "image"
 title = "packaged groceries on supermarket shelf"
+
+[[outputs]]
+id = "JsOteYpVByGC8CbsbyPt_"
+uri = "file://attached_assets/stock_images/eyewear_clean.jpg"
+type = "image"
+title = "single pair of modern sunglasses on white background, product photography"
+
+[[outputs]]
+id = "8S7Z0sSZFpeldCBNubvY0"
+uri = "file://attached_assets/stock_images/perfume_clean.jpg"
+type = "image"
+title = "elegant glass perfume bottle on white background"
+
+[[outputs]]
+id = "Id6pODogtozrgIWBYQG5I"
+uri = "file://attached_assets/stock_images/clothing_clean.jpg"
+type = "image"
+title = "folded cotton shirts stack on white background, product photography"
+
+[[outputs]]
+id = "2rQ2GjACvPhRXPnLAmYMn"
+uri = "file://attached_assets/stock_images/shoes_clean.jpg"
+type = "image"
+title = "pair of clean modern sneakers on white background, product photography"
+
+[[outputs]]
+id = "rsE73JBOmvYkx4CL8Z8xU"
+uri = "file://attached_assets/stock_images/coffee_clean.jpg"
+type = "image"
+title = "coffee beans pile and coffee cup on white background, product photography"
+
+[[outputs]]
+id = "r5l_G5PKKLlmxlvVuIkfN"
+uri = "file://attached_assets/stock_images/electronics_clean.jpg"
+type = "image"
+title = "modern smartphone and earbuds on white background, product photography"
+
+[[outputs]]
+id = "y0nmeH8uVU7agWdQ0IDwx"
+uri = "file://attached_assets/stock_images/food_clean.jpg"
+type = "image"
+title = "assortment of packaged food jars and cans on white background, product photography"
+
+[[outputs]]
+id = "4ZiwQbg_bG8HI_O9RnjWx"
+uri = "file://attached_assets/stock_images/home-goods_clean.jpg"
+type = "image"
+title = "set of modern kitchen utensils on white background, product photography"
+
+[[outputs]]
+id = "EyDivmkH3HCHQXjdNYPvt"
+uri = "file://attached_assets/stock_images/cosmetics_clean.jpg"
+type = "image"
+title = "lipstick and makeup compact on white background, product photography"
+
+[[outputs]]
+id = "eXAAhYmCUr3HAYwjeU1oJ"
+uri = "file://attached_assets/stock_images/jewelry_clean.jpg"
+type = "image"
+title = "gold ring and necklace on white background, product photography"
+
+[[outputs]]
+id = "WcyfA9vN89fBOkDu8A4Zh"
+uri = "file://attached_assets/stock_images/toys_clean.jpg"
+type = "image"
+title = "colorful wooden building blocks toy on white background, product photography"
+
+[[outputs]]
+id = "1nuW2kK9zkkyAv1CImFYK"
+uri = "file://attached_assets/stock_images/furniture_clean.jpg"
+type = "image"
+title = "modern minimalist wooden chair on white background, product photography"
+
+[[outputs]]
+id = "M5LKueArzzDJHbRGu5EdY"
+uri = "file://attached_assets/stock_images/stationery_clean.jpg"
+type = "image"
+title = "notebook pen and pencils set on white background, product photography"
+
+[[outputs]]
+id = "NfCLa_Gk-b0VvkHj7Pq0o"
+uri = "file://attached_assets/stock_images/sports_clean.jpg"
+type = "image"
+title = "dumbbell and water bottle on white background, product photography"
+
+[[outputs]]
+id = "b_r6iOH5JTBvmXDUJ0BVG"
+uri = "file://attached_assets/stock_images/auto-parts_clean.jpg"
+type = "image"
+title = "chrome car engine part on white background, product photography"
+
+[[outputs]]
+id = "4LcqpBSFmNMYl4mK8oRqU"
+uri = "file://attached_assets/stock_images/gifts_clean.jpg"
+type = "image"
+title = "wrapped gift box with ribbon on white background, product photography"
+
+[[outputs]]
+id = "ZW8ps6KgNzB5vKqh36fXJ"
+uri = "file://attached_assets/stock_images/packaging_clean.jpg"
+type = "image"
+title = "single brown corrugated cardboard shipping box on white background, product photography"
