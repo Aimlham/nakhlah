@@ -18,6 +18,7 @@ import {
   MapPin,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 
 export default function AdminListingsPage() {
   const { toast } = useToast();
@@ -111,15 +112,12 @@ export default function AdminListingsPage() {
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
                   <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                    {listing.imageUrl ? (
-                      <img
-                        src={listing.imageUrl}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <ImageIcon className="w-6 h-6 text-muted-foreground/40" />
-                    )}
+                    <img
+                      src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+                      alt={listing.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+                    />
                   </div>
 
                   <div className="flex-1 min-w-0">

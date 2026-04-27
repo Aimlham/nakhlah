@@ -19,6 +19,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 
 interface ListingDetailPageProps {
   isSubscribed: boolean;
@@ -70,17 +71,12 @@ export default function ListingDetailPage({ isSubscribed }: ListingDetailPagePro
       </Button>
 
       <div className="relative w-full h-72 sm:h-96 rounded-2xl overflow-hidden bg-muted/50">
-        {listing.imageUrl ? (
-          <img
-            src={listing.imageUrl}
-            alt={listing.title}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
-            <ImageIcon className="w-20 h-20 text-muted-foreground/20" />
-          </div>
-        )}
+        <img
+          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+          alt={listing.title}
+          className="w-full h-full object-cover"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+        />
       </div>
 
       <div className="space-y-5">

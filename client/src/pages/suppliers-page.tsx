@@ -18,6 +18,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -194,18 +195,13 @@ function SupplierCard({ listing, isSaved, onToggleSave, savePending }: SupplierC
         <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 cursor-pointer">
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-              {listing.imageUrl ? (
-                <img
-                  src={listing.imageUrl}
-                  alt={listing.title}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
-                  <Store className="w-10 h-10 sm:w-14 sm:h-14 text-muted-foreground/20" />
-                </div>
-              )}
+              <img
+                src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+                alt={listing.title}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+              />
               {listing.supplierType && (
                 <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
                   <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 shadow-sm">

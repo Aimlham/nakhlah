@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { SupplierProductWithSupplier } from "@shared/schema";
 import type { Category } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
@@ -206,18 +207,13 @@ function ProductCard({ product, isSaved, onToggleSave, savePending }: ProductCar
       >
         <CardContent className="p-0">
           <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-            {product.imageUrl ? (
-              <img
-                src={product.imageUrl}
-                alt={product.title}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
-                <ImageIcon className="w-10 h-10 sm:w-14 sm:h-14 text-muted-foreground/20" />
-              </div>
-            )}
+            <img
+              src={resolveImage(product.imageUrl, product.category)}
+              alt={product.title}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              loading="lazy"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+            />
             {product.category && (
               <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
                 <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1 shadow-sm">

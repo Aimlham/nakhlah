@@ -1,0 +1,116 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "jzOkdbHjPha9ppS7mKje5"
+uri = "file://attached_assets/stock_images/eyewear.jpg"
+type = "image"
+title = "elegant sunglasses on clean white background, product photography, studio lighting"
+
+[[outputs]]
+id = "1jXUMpa6R9_4feImwVBsl"
+uri = "file://attached_assets/stock_images/perfume.jpg"
+type = "image"
+title = "luxury perfume bottle on minimal background, product photography"
+
+[[outputs]]
+id = "eSlXTWPF7jfaQDjxTo0Un"
+uri = "file://attached_assets/stock_images/coffee.jpg"
+type = "image"
+title = "coffee beans and roasted coffee bag, warm tones"
+
+[[outputs]]
+id = "j4yqLQbQWAz1DJE6eGiyz"
+uri = "file://attached_assets/stock_images/shoes.jpg"
+type = "image"
+title = "modern sneakers on clean background, product photography"
+
+[[outputs]]
+id = "DOUG8aBiElWeMYswxOyVL"
+uri = "file://attached_assets/stock_images/food.jpg"
+type = "image"
+title = "assorted packaged food products on shelf, grocery"
+
+[[outputs]]
+id = "J32yFWoYOQ2LiVtmaTUh7"
+uri = "file://attached_assets/stock_images/electronics.jpg"
+type = "image"
+title = "modern electronic gadgets and devices, tech products"
+
+[[outputs]]
+id = "qvh45CdU4o7g3cZYAj5EK"
+uri = "file://attached_assets/stock_images/home-goods.jpg"
+type = "image"
+title = "modern home kitchen utensils and household items"
+
+[[outputs]]
+id = "5eX1UAoHJVl_eIYvWkGa0"
+uri = "file://attached_assets/stock_images/cosmetics.jpg"
+type = "image"
+title = "luxury cosmetics and makeup products on white background"
+
+[[outputs]]
+id = "mlnieo8VYBEBvR4uAXLi2"
+uri = "file://attached_assets/stock_images/jewelry.jpg"
+type = "image"
+title = "elegant gold jewelry on dark background, luxury"
+
+[[outputs]]
+id = "Y0YqRMR5EP1G1KaZEO4xr"
+uri = "file://attached_assets/stock_images/toys.jpg"
+type = "image"
+title = "colorful children toys arranged playfully"
+
+[[outputs]]
+id = "ybXfYEu8CWXmJkA4Ww-eW"
+uri = "file://attached_assets/stock_images/furniture.jpg"
+type = "image"
+title = "modern minimal furniture in showroom, sofa and chair"
+
+[[outputs]]
+id = "BNxDb2J7Q9XHDK1zmkSUl"
+uri = "file://attached_assets/stock_images/stationery.jpg"
+type = "image"
+title = "office stationery supplies, pens notebooks paper"
+
+[[outputs]]
+id = "ciVWeKAPa24bT-uBsJAae"
+uri = "file://attached_assets/stock_images/sports.jpg"
+type = "image"
+title = "sports equipment dumbbells gym gear"
+
+[[outputs]]
+id = "pbNjBWAs2B-zmeFwP2izB"
+uri = "file://attached_assets/stock_images/auto-parts.jpg"
+type = "image"
+title = "car spare parts and automotive accessories on display"
+
+[[outputs]]
+id = "HVU2nKk3brvJPLlTgeoej"
+uri = "file://attached_assets/stock_images/gifts.jpg"
+type = "image"
+title = "elegant wrapped gift boxes with ribbons"
+
+[[outputs]]
+id = "5Ymw4T5CQsN3Oqt4ZzfAR"
+uri = "file://attached_assets/stock_images/factory.jpg"
+type = "image"
+title = "modern manufacturing factory interior with machinery"
+
+[[outputs]]
+id = "nKYL4XjnGC_3A9Xm-pUzZ"
+uri = "file://attached_assets/stock_images/wholesale.jpg"
+type = "image"
+title = "wholesale warehouse with stacked product boxes"
+
+[[outputs]]
+id = "tjbYN-bAUqhgmL6AbcYQo"
+uri = "file://attached_assets/stock_images/packaging.jpg"
+type = "image"
+title = "stacked cardboard boxes and packaging materials warehouse"
+
+[[outputs]]
+id = "gnvlwxMQ2fKDoefAyaxxL"
+uri = "file://attached_assets/stock_images/general.jpg"
+type = "image"
+title = "modern minimal business product showcase, neutral background"

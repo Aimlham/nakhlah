@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Bookmark, BookmarkCheck, MapPin, Store, Tag, ImageIcon } from "lucide-react";
 import type { Listing, SupplierProductWithSupplier } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 
 export default function SavedProductsPage() {
   const { toast } = useToast();
@@ -207,13 +208,13 @@ function SavedProductCard({
         <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all cursor-pointer">
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-              {product.imageUrl ? (
-                <img src={product.imageUrl} alt={product.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ImageIcon className="w-10 h-10 text-muted-foreground/20" />
-                </div>
-              )}
+              <img
+                src={resolveImage(product.imageUrl, product.category)}
+                alt={product.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+              />
               {product.category && (
                 <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
                   <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1">
@@ -260,13 +261,13 @@ function SavedListingCard({
         <Card className="overflow-hidden rounded-xl sm:rounded-2xl border-border/50 hover:border-primary/30 transition-all cursor-pointer">
           <CardContent className="p-0">
             <div className="relative aspect-[4/5] bg-muted/50 overflow-hidden">
-              {listing.imageUrl ? (
-                <img src={listing.imageUrl} alt={listing.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Store className="w-10 h-10 text-muted-foreground/20" />
-                </div>
-              )}
+              <img
+                src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+                alt={listing.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+              />
               {listing.supplierType && (
                 <div className="absolute top-2 start-2 sm:top-3 sm:start-3">
                   <Badge className="bg-background/90 text-foreground backdrop-blur-sm border-0 text-[10px] sm:text-xs px-1.5 py-0.5 sm:px-2.5 sm:py-1">

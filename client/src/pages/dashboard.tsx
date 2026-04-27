@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import type { Product } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 
 function getScoreColor(score: number) {
   if (score >= 75) return "text-emerald-500";
@@ -133,18 +134,13 @@ export default function DashboardPage() {
               data-testid={`card-dashboard-project-${product.id}`}
             >
               <div className="relative aspect-square overflow-hidden bg-muted">
-                {product.imageUrl ? (
-                  <img
-                    src={product.imageUrl}
-                    alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <FolderOpen className="w-8 h-8" />
-                  </div>
-                )}
+                <img
+                  src={resolveImage(product.imageUrl, product.category)}
+                  alt={product.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
                 <div className="absolute top-2 start-2">

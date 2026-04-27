@@ -23,6 +23,7 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import type { Listing, SupplierProduct } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -104,17 +105,12 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
       </Button>
 
       <div className="relative w-full max-w-md mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-muted/50">
-        {listing.imageUrl ? (
-          <img
-            src={listing.imageUrl}
-            alt={listing.title}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/80">
-            <Store className="w-20 h-20 text-muted-foreground/20" />
-          </div>
-        )}
+        <img
+          src={resolveImage(listing.imageUrl, listing.category, listing.supplierType)}
+          alt={listing.title}
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+        />
         <button
           type="button"
           onClick={() => toggleSave.mutate()}
@@ -311,13 +307,12 @@ export default function SupplierDetailPage({ isSubscribed }: SupplierDetailPageP
                 <CardContent className="p-0">
                   <div className="flex gap-4 p-4">
                     <div className="w-20 h-20 rounded-lg bg-muted/50 overflow-hidden flex-shrink-0">
-                      {p.imageUrl ? (
-                        <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ImageIcon className="w-6 h-6 text-muted-foreground/20" />
-                        </div>
-                      )}
+                      <img
+                        src={resolveImage(p.imageUrl, p.category, listing.supplierType)}
+                        alt={p.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+                      />
                     </div>
                     <div className="flex-1 min-w-0 space-y-1">
                       <h3 className="font-semibold text-sm line-clamp-1">{p.title}</h3>

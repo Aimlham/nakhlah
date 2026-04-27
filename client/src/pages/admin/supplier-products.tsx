@@ -15,6 +15,7 @@ import {
   Copy,
 } from "lucide-react";
 import type { SupplierProduct } from "@shared/schema";
+import { resolveImage, GENERAL_FALLBACK_IMAGE } from "@/lib/category-image";
 
 export default function AdminSupplierProductsPage() {
   const { toast } = useToast();
@@ -104,13 +105,12 @@ export default function AdminSupplierProductsPage() {
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-lg bg-muted/50 overflow-hidden flex-shrink-0">
-                    {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="w-6 h-6 text-muted-foreground/30" />
-                      </div>
-                    )}
+                    <img
+                      src={resolveImage(product.imageUrl, product.category)}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = GENERAL_FALLBACK_IMAGE; }}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold truncate">{product.title}</h3>
