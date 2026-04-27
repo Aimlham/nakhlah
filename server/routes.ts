@@ -949,7 +949,7 @@ export async function registerRoutes(
   const MOYASAR_SECRET_KEY = process.env.MOYASAR_SECRET_KEY;
 
   const PLANS: Record<string, { nameAr: string; amountHalalas: number }> = {
-    pro: { nameAr: "نخلة برو - اشتراك شهري", amountHalalas: 9900 },
+    pro: { nameAr: "نخلة برو - وصول دائم (دفعة واحدة)", amountHalalas: 9900 },
   };
 
   function moyasarAuth(): string {

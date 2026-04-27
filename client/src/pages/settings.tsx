@@ -52,16 +52,16 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">الاشتراك</CardTitle>
+            <CardTitle className="text-base">الوصول إلى نخلة برو</CardTitle>
             <CardDescription>
-              {isActive ? "اشتراكك نشط" : "لا يوجد اشتراك نشط حالياً"}
+              {isActive ? "وصولك مفعّل" : "وصولك غير مفعّل حالياً"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {isActive && (
               <div className="flex items-center gap-2">
                 <Badge data-testid="badge-plan-name">نخلة برو</Badge>
-                <span className="text-sm text-muted-foreground">99 ريال / شهرياً</span>
+                <span className="text-sm text-muted-foreground">99 ريال - دفعة واحدة (وصول دائم)</span>
               </div>
             )}
             {!isActive && (

@@ -239,7 +239,7 @@ export default function ListingDetailPage({ isSubscribed }: ListingDetailPagePro
                 <Crown className="w-7 h-7 text-primary" />
               </div>
               <div className="space-y-1.5">
-                <h3 className="font-bold text-lg">اشترك في نخلة برو</h3>
+                <h3 className="font-bold text-lg">فعّل وصولك إلى نخلة برو</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
                   احصل على وصول كامل لبيانات التواصل مع جميع الموردين
                 </p>
@@ -247,7 +247,7 @@ export default function ListingDetailPage({ isSubscribed }: ListingDetailPagePro
               <Button size="lg" className="w-full max-w-xs h-12 rounded-xl font-bold text-base" asChild>
                 <Link href="/pricing" data-testid="button-subscribe-detail">
                   <Crown className="w-5 h-5 me-2" />
-                  اشترك الآن - 99 ر.س/شهرياً
+                  احصل عليه الآن - 99 ر.س (دفعة واحدة)
                 </Link>
               </Button>
             </div>

@@ -69,9 +69,9 @@ function HeroSection() {
           </Button>
         </div>
         <div className="flex items-center justify-center gap-6 pt-4 text-sm text-muted-foreground flex-wrap">
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> 99 ريال فقط شهرياً</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> 99 ريال فقط - دفعة واحدة</span>
           <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> وصول كامل لجميع المزايا</span>
-          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> إلغاء في أي وقت</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-emerald-500" /> بدون رسوم متكررة</span>
         </div>
       </div>
     </section>
@@ -228,7 +228,7 @@ function PricingSection() {
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-5xl font-bold">99</span>
                 <span className="text-xl text-muted-foreground">ريال</span>
-                <span className="text-sm text-muted-foreground">/شهرياً</span>
+                <span className="text-sm text-muted-foreground">- دفعة واحدة</span>
               </div>
             </div>
             <ul className="space-y-3">
@@ -268,8 +268,8 @@ function FAQSection() {
       a: "اقتراحات الأسعار لدينا مبنية على تحليل السوق لمنتجات مشابهة عبر منصات متعددة. وهي نقطة انطلاق - ننصح باختبار نقاط سعر مختلفة لجمهورك المحدد.",
     },
     {
-      q: "هل يمكنني إلغاء الاشتراك في أي وقت؟",
-      a: "نعم، يمكنك إلغاء اشتراكك في أي وقت دون أي رسوم إضافية. ستظل تتمتع بالوصول الكامل حتى نهاية فترة الاشتراك المدفوعة.",
+      q: "هل الدفع شهري أم لمرة واحدة؟",
+      a: "الدفع لمرة واحدة فقط بمبلغ 99 ريال، وتحصل على وصول دائم لجميع الموردين والمصانع بدون أي رسوم متكررة أو تجديد شهري.",
     },
   ];
 

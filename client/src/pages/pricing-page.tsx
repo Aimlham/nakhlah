@@ -52,7 +52,7 @@ export default function PricingPage() {
     <div className="space-y-6 sm:space-y-8 max-w-3xl mx-auto">
       <div className="text-center space-y-2 sm:space-y-3">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" data-testid="text-pricing-title">
-          اشترك في نخلة برو
+          فعّل وصولك إلى نخلة برو
         </h1>
         <p className="text-muted-foreground text-sm sm:text-base max-w-xl mx-auto">
           الوصول الكامل لبيانات الموردين والمصانع المحليين في السعودية. تواصل مباشر، حفظ غير محدود، وكل ما تحتاجه لإطلاق متجر دروبشيبينج محلي ناجح.
@@ -77,7 +77,7 @@ export default function PricingPage() {
               <p className="text-sm text-muted-foreground">وصول كامل لجميع الموردين والمصانع</p>
               <div className="flex items-baseline justify-center gap-1 pt-3">
                 <span className="text-4xl sm:text-5xl font-bold" data-testid="text-price-pro">99</span>
-                <span className="text-muted-foreground">ر.س / شهرياً</span>
+                <span className="text-muted-foreground">ر.س - دفعة واحدة</span>
               </div>
             </div>
 
@@ -103,7 +103,7 @@ export default function PricingPage() {
               data-testid="button-plan-pro"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Crown className="w-4 h-4 me-2" />}
-              اشترك الآن - 99 ر.س
+              احصل عليه الآن - 99 ر.س (دفعة واحدة)
             </Button>
           </CardContent>
         </Card>
