@@ -23,6 +23,7 @@ import PaymentCallbackPage from "@/pages/payment-callback";
 import AdminListingsPage from "@/pages/admin/listings";
 import ListingFormPage from "@/pages/admin/listing-form";
 import AdminListingImportPage from "@/pages/admin/listing-import";
+import AdminPdfImportPage from "@/pages/admin/pdf-import";
 import AdminSupplierProductsPage from "@/pages/admin/supplier-products";
 import SupplierProductFormPage from "@/pages/admin/supplier-product-form";
 import AdminCategoriesPage from "@/pages/admin/categories";
@@ -153,6 +154,7 @@ function Router() {
       <Route path="/saved">{() => <ProtectedRoute component={SavedProductsPage} />}</Route>
 
       <Route path="/admin/listings/import">{() => <AdminRoute component={AdminListingImportPage} />}</Route>
+      <Route path="/admin/listings/import-pdf">{() => <AdminRoute component={AdminPdfImportPage} />}</Route>
       <Route path="/admin/listings/new">{() => <AdminRoute component={ListingFormPage} />}</Route>
       <Route path="/admin/listings/:id/edit">{() => <AdminRoute component={ListingFormPage} />}</Route>
       <Route path="/admin/listings">{() => <AdminRoute component={AdminListingsPage} />}</Route>

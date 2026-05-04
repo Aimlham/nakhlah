@@ -136,6 +136,89 @@ export async function extractSupplierFromImage(imageBase64: string, mimeType: st
   };
 }
 
+export interface ExtractedTableSupplier {
+  supplierName: string | null;
+  supplierPhone: string | null;
+  extraPhones: string | null;
+  supplierCity: string | null;
+  supplierType: string | null;
+  category: string | null;
+  description: string | null;
+}
+
+export async function extractSuppliersFromTableImage(imageBase64: string, mimeType: string): Promise<ExtractedTableSupplier[]> {
+  const prompt = `أنت مساعد متخصص في استخراج بيانات الموردين من صور جداول.
+الصورة المرفقة تحتوي على جدول فيه بيانات موردين (أسماء، أرقام جوال، مدن، تصنيفات، أنواع نشاط).
+استخرج كل صف كمورد منفصل. أعد JSON يحتوي على مصفوفة "suppliers" فقط.
+
+لكل مورد استخرج:
+{
+  "supplierName": "اسم المورد أو الشركة أو المصنع",
+  "supplierPhone": "رقم الجوال الأساسي (يبدأ بـ 05 أو +966)",
+  "extraPhones": "أي أرقام إضافية في نفس الصف مفصولة بفاصلة، أو null إن لم يوجد",
+  "supplierCity": "المدينة فقط (الرياض، جدة، الدمام...)",
+  "supplierType": "نوع النشاط: مصنع | تاجر جملة | موزع | مستودع | متجر",
+  "category": "التصنيف المناسب من: ملابس، أحذية، إلكترونيات، أغذية، مستحضرات تجميل، عطور، أثاث، مجوهرات، ألعاب أطفال، أدوات منزلية، قرطاسية، رياضة، سيارات وقطع غيار، هدايا، نظارات، قهوة، مواد غذائية، أخرى",
+  "description": "وصف مختصر للنشاط إن وُجد في الجدول، أو null"
+}
+
+قواعد مهمة:
+- استخرج كل صف في الجدول كمورد منفصل.
+- إذا كان في الصف أكثر من رقم جوال، ضع الأول في supplierPhone والباقي في extraPhones.
+- نظّف الأرقام: احذف المسافات والشُرَط، احتفظ بالأرقام و+ فقط.
+- لا تخترع بيانات. الحقول غير الواضحة = null.
+- إذا لم تجد جدول أو لم تستطع استخراج أي مورد، أعد {"suppliers": []}.
+- أعد JSON فقط بهذا الشكل: {"suppliers": [...]}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: "high" } },
+        ],
+      },
+    ],
+    temperature: 0.1,
+    max_tokens: 4000,
+    response_format: { type: "json_object" },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error("لم يتم الحصول على رد من الذكاء الاصطناعي");
+
+  const parsed = JSON.parse(content) as { suppliers?: unknown[] };
+  const rawList = Array.isArray(parsed.suppliers) ? parsed.suppliers : [];
+
+  const clean = (v: unknown): string | null => {
+    if (v == null) return null;
+    const s = String(v).trim();
+    if (!s || s.toLowerCase() === "null" || s === "غير محدد" || s === "غير متوفر") return null;
+    return s;
+  };
+
+  return rawList.filter((raw: any) => raw && typeof raw === "object").map((raw: any) => {
+    const phone = normalizeSaudiPhone(clean(raw.supplierPhone));
+    const extraRaw = clean(raw.extraPhones);
+    let extraCleaned: string | null = null;
+    if (extraRaw) {
+      const parts = extraRaw.split(/[,،;]+/).map((p: string) => normalizeSaudiPhone(p.trim())).filter(Boolean);
+      extraCleaned = parts.length > 0 ? parts.join("، ") : extraRaw;
+    }
+    return {
+      supplierName: clean(raw.supplierName),
+      supplierPhone: phone,
+      extraPhones: extraCleaned,
+      supplierCity: clean(raw.supplierCity),
+      supplierType: normalizeSupplierType(clean(raw.supplierType)),
+      category: normalizeCategory(clean(raw.category)),
+      description: clean(raw.description),
+    };
+  });
+}
+
 export const ALLOWED_CATEGORIES = [
   "نظارات",
   "عطور",

@@ -15,6 +15,7 @@ import {
   EyeOff,
   FolderOpen,
   MapPin,
+  FileText,
 } from "lucide-react";
 import type { Listing } from "@shared/schema";
 import { hasImage, pickAvatarColor, getInitial } from "@/lib/category-image";
@@ -76,7 +77,13 @@ export default function AdminListingsPage() {
             {listings?.length || 0} بوست
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" asChild>
+            <Link href="/admin/listings/import-pdf" data-testid="link-import-from-pdf">
+              <FileText className="w-4 h-4 me-1" />
+              استيراد من PDF
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/admin/listings/import" data-testid="link-import-from-image">
               <Plus className="w-4 h-4 me-1" />

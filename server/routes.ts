@@ -8,10 +8,36 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { z } from "zod";
 import path from "path";
-import { extractSupplierFromImage, normalizeSaudiPhone, normalizeCategory, normalizeSupplierType, ALLOWED_CATEGORIES, ALLOWED_SUPPLIER_TYPES } from "./openai";
+import { extractSupplierFromImage, extractSuppliersFromTableImage, normalizeSaudiPhone, normalizeCategory, normalizeSupplierType, ALLOWED_CATEGORIES, ALLOWED_SUPPLIER_TYPES } from "./openai";
+import { execFile } from "child_process";
+import { promisify } from "util";
+import fs from "fs";
+import os from "os";
+
+const execFileAsync = promisify(execFile);
+const mkdtempAsync = promisify(fs.mkdtemp);
+const readdirAsync = promisify(fs.readdir);
+const readFileAsync = promisify(fs.readFile);
+const writeFileAsync = promisify(fs.writeFile);
+const rmAsync = promisify(fs.rm);
 
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
+
+const PDF_MAX_SIZE = 20 * 1024 * 1024;
+const PDF_MAX_PAGES = 25;
+
+const pdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: PDF_MAX_SIZE },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
+    if (file.mimetype !== "application/pdf" || ext !== "pdf") {
+      return cb(new Error("يُقبل ملف PDF فقط"));
+    }
+    cb(null, true);
+  },
+});
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -821,6 +847,132 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[analyze-supplier-image] error:", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "فشل تحليل الصورة") });
+    }
+  });
+
+  app.post("/api/admin/analyze-supplier-pdf", async (req: Request, res: Response, next) => {
+    const admin = await isUserAdmin(req);
+    if (!admin) return res.status(403).json({ message: "Forbidden" });
+    pdfUpload.single("pdf")(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: `حجم الملف يتجاوز الحد الأقصى (${PDF_MAX_SIZE / 1024 / 1024}MB)` });
+        }
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, async (req: Request, res: Response) => {
+    let tmpDir: string | null = null;
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "لم يتم رفع ملف PDF" });
+
+      const header = file.buffer.subarray(0, 5).toString("ascii");
+      if (header !== "%PDF-") {
+        return res.status(400).json({ message: "الملف ليس PDF صالحاً" });
+      }
+
+      tmpDir = await mkdtempAsync(path.join(os.tmpdir(), "nakhlah-pdf-"));
+      const pdfPath = path.join(tmpDir, "input.pdf");
+      await writeFileAsync(pdfPath, file.buffer);
+
+      await execFileAsync("pdftoppm", ["-png", "-r", "200", pdfPath, path.join(tmpDir, "page")], { timeout: 60000 });
+
+      const files = (await readdirAsync(tmpDir)).filter((f) => f.endsWith(".png")).sort();
+      if (files.length === 0) {
+        return res.status(400).json({ message: "لم يتم العثور على صفحات في الملف" });
+      }
+      if (files.length > PDF_MAX_PAGES) {
+        return res.status(400).json({ message: `الملف يحتوي على ${files.length} صفحة — الحد الأقصى ${PDF_MAX_PAGES} صفحة` });
+      }
+
+      const allListings = await storage.getAllListings();
+      const existingPhones = new Set<string>();
+      const existingNameCity = new Set<string>();
+      for (const l of allListings) {
+        const p = normalizeSaudiPhone(l.supplierPhone || "") || normalizeSaudiPhone(l.supplierWhatsapp || "");
+        if (p) existingPhones.add(p);
+        const n = (l.supplierName || "").trim().toLowerCase();
+        const c = (l.supplierCity || "").trim().toLowerCase();
+        if (n && c) existingNameCity.add(`${n}|${c}`);
+      }
+
+      interface PageResult {
+        page: number;
+        suppliers: Array<{
+          supplierName: string | null;
+          supplierPhone: string | null;
+          supplierWhatsapp: string | null;
+          supplierCity: string | null;
+          supplierType: string | null;
+          category: string | null;
+          description: string | null;
+          isDuplicate: boolean;
+          duplicateReason: string | null;
+        }>;
+        error: string | null;
+      }
+
+      const results: PageResult[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const pageNum = i + 1;
+        try {
+          const imgBuffer = await readFileAsync(path.join(tmpDir, files[i]));
+          const base64 = imgBuffer.toString("base64");
+          const extracted = await extractSuppliersFromTableImage(base64, "image/png");
+
+          const suppliers = extracted.map((s) => {
+            let isDuplicate = false;
+            let duplicateReason: string | null = null;
+
+            if (s.supplierPhone && existingPhones.has(s.supplierPhone)) {
+              isDuplicate = true;
+              duplicateReason = "رقم الجوال موجود مسبقاً";
+            }
+            const nameKey = `${(s.supplierName || "").trim().toLowerCase()}|${(s.supplierCity || "").trim().toLowerCase()}`;
+            if (!isDuplicate && s.supplierName && s.supplierCity && existingNameCity.has(nameKey)) {
+              isDuplicate = true;
+              duplicateReason = "الاسم والمدينة موجودان مسبقاً";
+            }
+
+            if (s.supplierPhone) existingPhones.add(s.supplierPhone);
+            if (s.supplierName && s.supplierCity) existingNameCity.add(nameKey);
+
+            let desc = s.description || "";
+            if (s.extraPhones) {
+              desc = desc ? `${desc}\nأرقام إضافية: ${s.extraPhones}` : `أرقام إضافية: ${s.extraPhones}`;
+            }
+
+            return {
+              supplierName: s.supplierName,
+              supplierPhone: s.supplierPhone,
+              supplierWhatsapp: s.supplierPhone,
+              supplierCity: s.supplierCity,
+              supplierType: s.supplierType,
+              category: s.category,
+              description: desc || null,
+              isDuplicate,
+              duplicateReason,
+            };
+          });
+
+          results.push({ page: pageNum, suppliers, error: null });
+        } catch (pageErr: any) {
+          console.error(`[analyze-pdf] page ${pageNum} error:`, pageErr.message);
+          results.push({ page: pageNum, suppliers: [], error: `فشل تحليل الصفحة ${pageNum}: ${pageErr.message}` });
+        }
+      }
+
+      res.json({ totalPages: files.length, results });
+    } catch (err: any) {
+      console.error("[analyze-pdf] error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "فشل تحليل ملف PDF") });
+    } finally {
+      if (tmpDir) {
+        rmAsync(tmpDir, { recursive: true, force: true }).catch(() => {});
+      }
     }
   });
 
