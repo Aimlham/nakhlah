@@ -13,7 +13,7 @@ export function WhatsAppButton() {
       rel="noopener noreferrer"
       aria-label="تواصل معنا عبر واتساب"
       data-testid="link-whatsapp-support"
-      className="fixed bottom-5 left-5 z-50 flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white rounded-full shadow-lg shadow-black/20 px-4 py-3 transition-all hover:scale-105 active:scale-95"
+      className="fixed bottom-20 md:bottom-5 left-5 z-50 flex items-center gap-2 bg-[#25D366] hover:bg-[#1ebe57] text-white rounded-full shadow-lg shadow-black/20 px-4 py-3 transition-all hover:scale-105 active:scale-95"
     >
       <SiWhatsapp className="w-6 h-6" />
       <span className="hidden sm:inline text-sm font-medium" data-testid="text-whatsapp-label">

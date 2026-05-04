@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Topbar } from "@/components/topbar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { WhatsAppButton } from "@/components/whatsapp-button";
+import { BottomNav } from "@/components/bottom-nav";
 
 const sidebarStyle = {
   "--sidebar-width": "16rem",
@@ -18,13 +19,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex flex-col flex-1 min-w-0">
           <Topbar />
           <ScrollArea className="flex-1">
-            <main className="p-6 max-w-7xl mx-auto w-full">
+            <main className="p-6 pb-24 md:pb-6 max-w-7xl mx-auto w-full">
               {children}
             </main>
           </ScrollArea>
         </div>
       </div>
       <WhatsAppButton />
+      <BottomNav />
     </SidebarProvider>
   );
 }
