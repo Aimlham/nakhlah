@@ -262,9 +262,9 @@ const CATEGORY_KEYWORDS: Array<[string, string[]]> = [
 ];
 
 const SUPPLIER_TYPE_KEYWORDS: Array<[string, string[]]> = [
-  ["مصنع", ["مصنع", "تصنيع", "factory", "manufactur", "ورشة"]],
-  ["جملة", ["جملة", "جمله", "wholesale", "موزع", "توزيع", "distributor", "مستودع", "warehouse"]],
-  ["تاجر", ["تاجر", "متجر", "محل", "shop", "store", "retail"]],
+  ["مصنع", ["مصنع", "مصانع", "تصنيع", "factory", "manufactur", "ورشة"]],
+  ["جملة", ["جملة", "جمله", "بالجملة", "wholesale", "موزع", "توزيع", "distributor", "مستودع", "مستودعات", "warehouse"]],
+  ["تاجر", ["تاجر", "متجر", "محل", "معرض", "shop", "store", "retail", "تجارة", "بيع"]],
 ];
 
 export function normalizeCategory(raw: string | null): string | null {
