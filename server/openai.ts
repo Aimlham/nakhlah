@@ -207,12 +207,13 @@ export async function extractSuppliersFromTableImage(imageBase64: string, mimeTy
       const parts = extraRaw.split(/[,،;]+/).map((p: string) => normalizeSaudiPhone(p.trim())).filter(Boolean);
       extraCleaned = parts.length > 0 ? parts.join("، ") : extraRaw;
     }
+    const name = clean(raw.supplierName);
     return {
-      supplierName: clean(raw.supplierName),
+      supplierName: name,
       supplierPhone: phone,
       extraPhones: extraCleaned,
       supplierCity: clean(raw.supplierCity),
-      supplierType: normalizeSupplierType(clean(raw.supplierType)),
+      supplierType: normalizeSupplierType(clean(raw.supplierType)) ?? normalizeSupplierType(name),
       category: normalizeCategory(clean(raw.category)),
       description: clean(raw.description),
     };

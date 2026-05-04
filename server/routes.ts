@@ -1001,7 +1001,7 @@ export async function registerRoutes(
         const phone = normalizeSaudiPhone(rawPhone);
         const wa = normalizeSaudiPhone(rawWa) ?? phone;
         const category = normalizeCategory(rawCategory);
-        const supplierType = normalizeSupplierType(rawType);
+        const supplierType = normalizeSupplierType(rawType) ?? normalizeSupplierType(rawName);
 
         let isDuplicate = false;
         let duplicateReason: string | null = null;
