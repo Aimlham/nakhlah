@@ -123,16 +123,19 @@ export async function extractSupplierFromImage(imageBase64: string, mimeType: st
   };
   const phone = normalizeSaudiPhone(clean(parsed.supplierPhone));
   const wa = normalizeSaudiPhone(clean(parsed.supplierWhatsapp)) ?? phone;
+  const name = clean(parsed.supplierName);
+  const category = normalizeCategory(clean(parsed.category));
+  const desc = clean(parsed.description);
   return {
-    title: clean(parsed.title) ?? clean(parsed.supplierName),
-    supplierName: clean(parsed.supplierName),
+    title: clean(parsed.title) ?? name,
+    supplierName: name,
     supplierPhone: phone,
     supplierWhatsapp: wa,
     supplierCity: clean(parsed.supplierCity),
-    supplierType: normalizeSupplierType(clean(parsed.supplierType)),
-    category: normalizeCategory(clean(parsed.category)),
+    supplierType: inferSupplierType(clean(parsed.supplierType), name, category, desc),
+    category,
     supplierLocation: clean(parsed.supplierLocation),
-    description: clean(parsed.description),
+    description: desc,
   };
 }
 
@@ -208,14 +211,16 @@ export async function extractSuppliersFromTableImage(imageBase64: string, mimeTy
       extraCleaned = parts.length > 0 ? parts.join("، ") : extraRaw;
     }
     const name = clean(raw.supplierName);
+    const category = normalizeCategory(clean(raw.category));
+    const desc = clean(raw.description);
     return {
       supplierName: name,
       supplierPhone: phone,
       extraPhones: extraCleaned,
       supplierCity: clean(raw.supplierCity),
-      supplierType: normalizeSupplierType(clean(raw.supplierType)) ?? normalizeSupplierType(name),
-      category: normalizeCategory(clean(raw.category)),
-      description: clean(raw.description),
+      supplierType: inferSupplierType(clean(raw.supplierType), name, category, desc),
+      category,
+      description: desc,
     };
   });
 }
@@ -262,9 +267,9 @@ const CATEGORY_KEYWORDS: Array<[string, string[]]> = [
 ];
 
 const SUPPLIER_TYPE_KEYWORDS: Array<[string, string[]]> = [
-  ["مصنع", ["مصنع", "مصانع", "تصنيع", "factory", "manufactur", "ورشة"]],
-  ["جملة", ["جملة", "جمله", "بالجملة", "wholesale", "موزع", "توزيع", "distributor", "مستودع", "مستودعات", "warehouse"]],
-  ["تاجر", ["تاجر", "متجر", "محل", "معرض", "shop", "store", "retail", "تجارة", "بيع"]],
+  ["مصنع", ["مصنع", "مصانع", "معمل", "تصنيع", "ورشة", "factory", "manufactur"]],
+  ["جملة", ["جملة", "جمله", "بالجملة", "أسواق", "اسواق", "مستودع", "مستودعات", "موزع", "توزيع", "wholesale", "distributor", "warehouse"]],
+  ["تاجر", ["تاجر", "متجر", "محل", "معرض", "مؤسسة", "مركز", "شركة", "shop", "store", "retail", "تجارة", "بيع"]],
 ];
 
 export function normalizeCategory(raw: string | null): string | null {
@@ -285,6 +290,24 @@ export function normalizeSupplierType(raw: string | null): string | null {
   }
   if ((ALLOWED_SUPPLIER_TYPES as readonly string[]).includes(raw.trim())) return raw.trim();
   return null;
+}
+
+/**
+ * Infer supplier type from multiple text sources.
+ * - rawType (manual/extracted) takes priority if it normalizes to a valid type.
+ * - Otherwise, name + category + description are scanned together.
+ * - Keyword priority is global: مصنع > جملة > تاجر.
+ */
+export function inferSupplierType(
+  rawType: string | null | undefined,
+  name: string | null | undefined,
+  category?: string | null,
+  description?: string | null,
+): string | null {
+  const fromRaw = normalizeSupplierType(rawType ?? null);
+  if (fromRaw) return fromRaw;
+  const combined = [name, category, description].filter(Boolean).join(" ");
+  return normalizeSupplierType(combined || null);
 }
 
 export function normalizeSaudiPhone(raw: string | null): string | null {

@@ -8,7 +8,7 @@ import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
 import { z } from "zod";
 import path from "path";
-import { extractSupplierFromImage, extractSuppliersFromTableImage, normalizeSaudiPhone, normalizeCategory, normalizeSupplierType, ALLOWED_CATEGORIES, ALLOWED_SUPPLIER_TYPES } from "./openai";
+import { extractSupplierFromImage, extractSuppliersFromTableImage, normalizeSaudiPhone, normalizeCategory, normalizeSupplierType, inferSupplierType, ALLOWED_CATEGORIES, ALLOWED_SUPPLIER_TYPES } from "./openai";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import fs from "fs";
@@ -1001,7 +1001,7 @@ export async function registerRoutes(
         const phone = normalizeSaudiPhone(rawPhone);
         const wa = normalizeSaudiPhone(rawWa) ?? phone;
         const category = normalizeCategory(rawCategory);
-        const supplierType = normalizeSupplierType(rawType) ?? normalizeSupplierType(rawName);
+        const supplierType = inferSupplierType(rawType, rawName, category, rawDesc);
 
         let isDuplicate = false;
         let duplicateReason: string | null = null;
