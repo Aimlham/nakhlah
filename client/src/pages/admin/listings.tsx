@@ -81,7 +81,7 @@ export default function AdminListingsPage() {
           <Button variant="outline" asChild>
             <Link href="/admin/listings/import-pdf" data-testid="link-import-from-pdf">
               <FileText className="w-4 h-4 me-1" />
-              استيراد من PDF
+              استيراد جماعي
             </Link>
           </Button>
           <Button variant="outline" asChild>

@@ -95,7 +95,7 @@ client/src/
       listings.tsx     - Admin supplier management
       listing-form.tsx - Add/edit supplier form
       listing-import.tsx - Add supplier from image (single)
-      pdf-import.tsx   - Bulk import suppliers from PDF tables
+      pdf-import.tsx   - Bulk import suppliers from PDF/Excel/CSV (unified import page)
       supplier-products.tsx - Admin products management
       supplier-product-form.tsx - Add/edit product form
       categories.tsx   - Admin categories management
@@ -133,6 +133,7 @@ shared/
 - `POST /api/admin/upload-image` - Image upload to Supabase Storage
 - `POST /api/admin/analyze-supplier-image` - Extract supplier from single image (Vision API)
 - `POST /api/admin/analyze-supplier-pdf` - Bulk extract suppliers from PDF tables (pdftoppm + Vision API, max 25 pages / 20MB)
+- `POST /api/admin/parse-supplier-spreadsheet` - Parse CSV/XLSX/XLS files (direct parsing via xlsx lib, Arabic header auto-mapping, max 10MB)
 - `GET /api/admin/listings/find-duplicate` - Check supplier duplicates by phone or name+city
 - `POST /api/admin/subscriptions/:id/cancel` - Cancel subscription (status → cancelled)
 - `POST /api/admin/subscriptions/:id/refund` - Refund via Moyasar API + mark refunded

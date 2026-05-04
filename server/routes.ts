@@ -26,6 +26,15 @@ const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
 
 const PDF_MAX_SIZE = 20 * 1024 * 1024;
 const PDF_MAX_PAGES = 25;
+const SPREADSHEET_MAX_SIZE = 10 * 1024 * 1024;
+
+const SPREADSHEET_MIMES = new Set([
+  "text/csv",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/octet-stream",
+]);
+const SPREADSHEET_EXTS = new Set(["csv", "xlsx", "xls"]);
 
 const pdfUpload = multer({
   storage: multer.memoryStorage(),
@@ -34,6 +43,21 @@ const pdfUpload = multer({
     const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
     if (file.mimetype !== "application/pdf" || ext !== "pdf") {
       return cb(new Error("يُقبل ملف PDF فقط"));
+    }
+    cb(null, true);
+  },
+});
+
+const spreadsheetUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: SPREADSHEET_MAX_SIZE },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
+    if (!SPREADSHEET_EXTS.has(ext)) {
+      return cb(new Error("الصيغ المسموحة: CSV, XLSX, XLS"));
+    }
+    if (!SPREADSHEET_MIMES.has(file.mimetype)) {
+      return cb(new Error("نوع الملف غير مدعوم"));
     }
     cb(null, true);
   },
@@ -847,6 +871,175 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[analyze-supplier-image] error:", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "فشل تحليل الصورة") });
+    }
+  });
+
+  app.post("/api/admin/parse-supplier-spreadsheet", async (req: Request, res: Response, next) => {
+    const admin = await isUserAdmin(req);
+    if (!admin) return res.status(403).json({ message: "Forbidden" });
+    spreadsheetUpload.single("file")(req, res, (err: any) => {
+      if (err) {
+        if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: `حجم الملف يتجاوز الحد الأقصى (${SPREADSHEET_MAX_SIZE / 1024 / 1024}MB)` });
+        }
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, async (req: Request, res: Response) => {
+    try {
+      const file = req.file;
+      if (!file) return res.status(400).json({ message: "لم يتم رفع ملف" });
+
+      const XLSX = await import("xlsx");
+      const workbook = XLSX.read(file.buffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) return res.status(400).json({ message: "الملف لا يحتوي على أي بيانات" });
+
+      const sheet = workbook.Sheets[sheetName];
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+      if (rawRows.length === 0) return res.status(400).json({ message: "لم يتم العثور على صفوف في الملف" });
+
+      const HEADER_MAP: Record<string, string> = {
+        "اسم المورد": "supplierName",
+        "الاسم": "supplierName",
+        "اسم": "supplierName",
+        "المورد": "supplierName",
+        "اسم الشركة": "supplierName",
+        "الشركة": "supplierName",
+        "supplier_name": "supplierName",
+        "supplier name": "supplierName",
+        "name": "supplierName",
+        "رقم التواصل": "supplierPhone",
+        "رقم الجوال": "supplierPhone",
+        "الجوال": "supplierPhone",
+        "الهاتف": "supplierPhone",
+        "رقم الهاتف": "supplierPhone",
+        "جوال": "supplierPhone",
+        "هاتف": "supplierPhone",
+        "تلفون": "supplierPhone",
+        "phone": "supplierPhone",
+        "supplier_phone": "supplierPhone",
+        "mobile": "supplierPhone",
+        "المدينة": "supplierCity",
+        "مدينة": "supplierCity",
+        "city": "supplierCity",
+        "supplier_city": "supplierCity",
+        "الصنف": "category",
+        "التصنيف": "category",
+        "المنتج": "category",
+        "الصنف / المنتج": "category",
+        "الصنف/المنتج": "category",
+        "المنتجات": "category",
+        "category": "category",
+        "نوع النشاط": "supplierType",
+        "النشاط": "supplierType",
+        "النوع": "supplierType",
+        "type": "supplierType",
+        "supplier_type": "supplierType",
+        "الوصف": "description",
+        "وصف": "description",
+        "ملاحظات": "description",
+        "description": "description",
+        "notes": "description",
+        "واتساب": "supplierWhatsapp",
+        "whatsapp": "supplierWhatsapp",
+        "واتس": "supplierWhatsapp",
+      };
+
+      const firstRow = rawRows[0] as Record<string, unknown>;
+      const colKeys = Object.keys(firstRow);
+      const fieldMap: Record<string, string> = {};
+      for (const colKey of colKeys) {
+        const cleaned = colKey.trim().toLowerCase();
+        for (const [pattern, field] of Object.entries(HEADER_MAP)) {
+          if (cleaned === pattern.toLowerCase() || cleaned.includes(pattern.toLowerCase())) {
+            if (!fieldMap[field]) {
+              fieldMap[field] = colKey;
+            }
+            break;
+          }
+        }
+      }
+
+      if (!fieldMap["supplierName"] && !fieldMap["supplierPhone"]) {
+        return res.status(400).json({
+          message: "لم يتم التعرف على أعمدة أساسية في الملف. تأكد من وجود عمود باسم \"اسم المورد\" أو \"رقم التواصل\" على الأقل.",
+          detectedHeaders: colKeys,
+        });
+      }
+
+      const allListings = await storage.getAllListings();
+      const existingPhones = new Set<string>();
+      const existingNameCity = new Set<string>();
+      for (const l of allListings) {
+        const p = normalizeSaudiPhone(l.supplierPhone || "") || normalizeSaudiPhone(l.supplierWhatsapp || "");
+        if (p) existingPhones.add(p);
+        const n = (l.supplierName || "").trim().toLowerCase();
+        const c = (l.supplierCity || "").trim().toLowerCase();
+        if (n && c) existingNameCity.add(`${n}|${c}`);
+      }
+
+      const suppliers = rawRows.map((row: Record<string, unknown>) => {
+        const get = (field: string): string | null => {
+          const col = fieldMap[field];
+          if (!col) return null;
+          const v = row[col];
+          if (v == null) return null;
+          const s = String(v).trim();
+          return s || null;
+        };
+
+        const rawName = get("supplierName");
+        const rawPhone = get("supplierPhone");
+        const rawWa = get("supplierWhatsapp");
+        const rawCity = get("supplierCity");
+        const rawCategory = get("category");
+        const rawType = get("supplierType");
+        const rawDesc = get("description");
+
+        const phone = normalizeSaudiPhone(rawPhone);
+        const wa = normalizeSaudiPhone(rawWa) ?? phone;
+        const category = normalizeCategory(rawCategory);
+        const supplierType = normalizeSupplierType(rawType);
+
+        let isDuplicate = false;
+        let duplicateReason: string | null = null;
+
+        if (phone && existingPhones.has(phone)) {
+          isDuplicate = true;
+          duplicateReason = "رقم الجوال موجود مسبقاً";
+        }
+        const nameKey = `${(rawName || "").trim().toLowerCase()}|${(rawCity || "").trim().toLowerCase()}`;
+        if (!isDuplicate && rawName && rawCity && existingNameCity.has(nameKey)) {
+          isDuplicate = true;
+          duplicateReason = "الاسم والمدينة موجودان مسبقاً";
+        }
+
+        if (phone) existingPhones.add(phone);
+        if (rawName && rawCity) existingNameCity.add(nameKey);
+
+        return {
+          supplierName: rawName,
+          supplierPhone: phone ?? rawPhone,
+          supplierWhatsapp: wa ?? rawPhone,
+          supplierCity: rawCity,
+          supplierType: supplierType,
+          category: category,
+          description: rawDesc,
+          isDuplicate,
+          duplicateReason,
+        };
+      }).filter((s: any) => s.supplierName || s.supplierPhone);
+
+      res.json({
+        totalRows: rawRows.length,
+        mappedFields: Object.keys(fieldMap),
+        suppliers,
+      });
+    } catch (err: any) {
+      console.error("[parse-spreadsheet] error:", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "فشل تحليل الملف") });
     }
   });
 
