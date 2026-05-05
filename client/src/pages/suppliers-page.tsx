@@ -34,8 +34,8 @@ interface SuppliersPageProps {
 export default function SuppliersPage({
   filterTypes,
   excludeTypes,
-  title = "الموردين",
-  subtitle = "تصفح جميع الموردين المحليين",
+  title = "تصفح الموردين والمصانع المحليين",
+  subtitle = "دليل الموردين المحليين في المملكة — اختر المورد المناسب وتواصل معه مباشرة",
   emptyTitle = "لا يوجد موردين حالياً",
   emptyDescription = "سيتم إضافة موردين جدد قريباً",
 }: SuppliersPageProps) {

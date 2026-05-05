@@ -56,7 +56,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate("/products");
+      navigate("/suppliers");
     } catch (err: any) {
       toast({
         title: "فشل تسجيل الدخول",

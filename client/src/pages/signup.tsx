@@ -43,7 +43,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       await signup(email, password, fullName);
-      navigate("/products");
+      navigate("/suppliers");
     } catch (err: any) {
       toast({
         title: "فشل إنشاء الحساب",

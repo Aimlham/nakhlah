@@ -106,9 +106,9 @@ export default function SavedProductsPage() {
             <EmptyState
               icon={Bookmark}
               title="لا توجد منتجات محفوظة"
-              description="تصفّح المنتجات واحفظ ما يهمّك."
-              actionLabel="تصفّح المنتجات"
-              actionHref="/products"
+              description="تصفّح الموردين واحفظ ما يهمّك."
+              actionLabel="تصفّح الموردين"
+              actionHref="/suppliers"
             />
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">

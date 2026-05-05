@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Bookmark, Settings, Package, Store, Factory, Shield, Tag, BarChart3 } from "lucide-react";
+import { Bookmark, Settings, Package, Store, Factory, Tag, BarChart3 } from "lucide-react";
 import nakhlahLogo from "@assets/nakhlah-logo.png";
 import {
   Sidebar,
@@ -18,7 +18,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
-  { title: "المنتجات", url: "/products", icon: Package, key: "products" },
   { title: "الموردين", url: "/suppliers", icon: Store, key: "suppliers" },
   { title: "المصانع", url: "/factories", icon: Factory, key: "factories" },
   { title: "المحفوظة", url: "/saved", icon: Bookmark, key: "saved" },
@@ -49,7 +48,7 @@ export function AppSidebar() {
   return (
     <Sidebar side="right">
       <SidebarHeader className="p-4">
-        <Link href="/products" className="flex items-center gap-2">
+        <Link href="/suppliers" className="flex items-center gap-2">
           <img src={nakhlahLogo} alt="نخلة" className="w-8 h-8 rounded-md object-contain" />
           <span className="text-lg font-semibold tracking-tight" data-testid="text-brand-name">
             نخلة

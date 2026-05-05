@@ -142,7 +142,7 @@ export default function ResetPasswordPage() {
                 <p className="text-sm text-muted-foreground" data-testid="text-reset-success">
                   تم تحديث كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
                 </p>
-                <Button className="w-full" onClick={() => navigate("/products")} data-testid="button-go-dashboard">
+                <Button className="w-full" onClick={() => navigate("/suppliers")} data-testid="button-go-dashboard">
                   الذهاب إلى لوحة التحكم
                 </Button>
               </div>

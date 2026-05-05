@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Package, Store, Factory, Bookmark, User, LogIn } from "lucide-react";
+// Note: "المنتجات" intentionally hidden from bottom nav — page still accessible at /products
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +13,6 @@ type NavItem = {
 };
 
 const baseItems: NavItem[] = [
-  { title: "المنتجات", url: "/products", icon: Package, key: "products" },
   { title: "الموردين", url: "/suppliers", icon: Store, key: "suppliers" },
   { title: "المصانع", url: "/factories", icon: Factory, key: "factories" },
   { title: "المحفوظات", url: "/saved", icon: Bookmark, key: "saved" },

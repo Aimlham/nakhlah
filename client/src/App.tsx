@@ -92,7 +92,7 @@ function AdminRoute({ component: Component }: { component: () => JSX.Element }) 
 
   if (authLoading || (user && roleLoading)) return <LoadingScreen />;
   if (!user) return <Redirect to="/login" />;
-  if (roleData?.role !== "admin") return <Redirect to="/products" />;
+  if (roleData?.role !== "admin") return <Redirect to="/suppliers" />;
 
   return (
     <AppLayout>
@@ -105,7 +105,7 @@ function PublicRoute({ component: Component }: { component: () => JSX.Element })
   const { user, isLoading } = useAuth();
 
   if (isLoading) return <LoadingScreen />;
-  if (user) return <Redirect to="/products" />;
+  if (user) return <Redirect to="/suppliers" />;
 
   return <Component />;
 }
@@ -129,7 +129,7 @@ function FactoriesRoute() {
 function Router() {
   return (
     <Switch>
-      <Route path="/">{() => <Redirect to="/products" />}</Route>
+      <Route path="/">{() => <Redirect to="/suppliers" />}</Route>
       <Route path="/login">{() => <PublicRoute component={LoginPage} />}</Route>
       <Route path="/signup">{() => <PublicRoute component={SignupPage} />}</Route>
       <Route path="/forgot-password" component={ForgotPasswordPage} />

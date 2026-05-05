@@ -28,7 +28,7 @@ export default function PaymentCallbackPage() {
     sessionStorage.removeItem(PENDING_INVOICE_KEY);
     queryClient.invalidateQueries({ queryKey: ["/api/payments/subscription"] });
     setStatus("paid");
-    setTimeout(() => navigate("/products"), 2000);
+    setTimeout(() => navigate("/suppliers"), 2000);
   }
 
   useEffect(() => {
@@ -149,14 +149,14 @@ export default function PaymentCallbackPage() {
               </p>
             )}
             <p className="text-sm text-muted-foreground">
-              سيتم تحويلك للمنتجات تلقائياً...
+              سيتم تحويلك إلى الموردين تلقائياً...
             </p>
             <Button
               className="w-full"
-              onClick={() => navigate("/products")}
+              onClick={() => navigate("/suppliers")}
               data-testid="button-go-products"
             >
-              انتقل للمنتجات الآن
+              انتقل إلى الموردين الآن
             </Button>
           </>
         )}
@@ -182,7 +182,7 @@ export default function PaymentCallbackPage() {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate("/products")}
+                onClick={() => navigate("/suppliers")}
                 data-testid="button-back-dashboard"
               >
                 العودة للوحة التحكم

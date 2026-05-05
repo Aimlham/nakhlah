@@ -1,7 +1,7 @@
 # Nakhlah (نخلة) - Local Supplier Marketplace
 
 ## Overview
-Nakhlah (نخلة) is an Arabic-first RTL SaaS platform at nakhlah.io for dropshipping sellers. It's a local supplier marketplace: admin manually creates supplier listings and their products; users browse products on `/products` (main page), view product details, browse suppliers on `/suppliers`, view supplier detail pages, and discover factories on `/factories`. Supplier contact info is gated behind "نخلة برو" subscription at 99 SAR/month.
+Nakhlah (نخلة) is an Arabic-first RTL SaaS platform at nakhlah.io for dropshipping sellers. It's a local supplier directory ("دليل موردين"): admin manually creates supplier listings and their products; users land on `/suppliers` (the home), view supplier detail pages, discover factories on `/factories`, and can still open individual products at `/products/:id`. The standalone `/products` index page is kept in the codebase but hidden from navigation. Supplier contact info is gated behind "نخلة برو" subscription at 99 SAR (one-time).
 
 ## Branding
 - Site name: نخلة (Nakhlah)
@@ -25,10 +25,12 @@ Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + 
 - `supplier_id` in `supplier_products` is `text` referencing `listings.id`
 
 ## App Flow
-1. `/` → redirects to `/products`
-2. `/products` — Browse published supplier products (search + category filter)
-3. `/products/:id` — Product detail with supplier info + gated contact section
-4. `/suppliers` — Browse all published suppliers (search + city filter)
+- **Home route `/`** redirects to `/suppliers` — the site is positioned as a supplier directory ("دليل موردين"), not a products marketplace.
+- `/products` page is hidden from sidebar and bottom nav but the route remains accessible directly. Login/signup/payment-callback/auth-callback all redirect to `/suppliers` after success.
+1. `/` → redirects to `/suppliers` (home)
+2. `/suppliers` — Browse all published suppliers (search + city filter) — primary landing page
+3. `/products` — Hidden from nav, but still reachable directly: browse published supplier products
+4. `/products/:id` — Product detail with supplier info + gated contact section
 5. `/suppliers/:id` — Supplier detail with their products + gated contact section
 6. `/factories` — Filtered suppliers (manufacturing types: مصنع, تصنيع)
 7. `/saved` — Bookmarked products
@@ -53,7 +55,7 @@ Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + 
 - All admin pages protected by `AdminRoute`
 
 ## Route Guards
-- **PublicRoute**: Login/signup — redirects logged-in users to `/products`
+- **PublicRoute**: Login/signup — redirects logged-in users to `/suppliers`
 - **ProtectedRoute**: Requires login
 - **SubscriptionAwareRoute**: Requires login, passes `isSubscribed` prop
 - **AdminRoute**: Requires login + admin role
