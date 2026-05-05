@@ -6,6 +6,7 @@ import multer from "multer";
 import { randomUUID, timingSafeEqual } from "crypto";
 import { storage } from "./storage";
 import { supabaseConfigured, supabaseAdmin, verifySupabaseToken } from "./supabase";
+import { ensureSubscriptionManualCols } from "./supabase-storage";
 import { z } from "zod";
 import path from "path";
 import { extractSupplierFromImage, extractSuppliersFromTableImage, normalizeSaudiPhone, normalizeCategory, normalizeSupplierType, inferSupplierType, ALLOWED_CATEGORIES, ALLOWED_SUPPLIER_TYPES } from "./openai";
@@ -96,13 +97,19 @@ function stripListingSupplierFields<T extends Record<string, any>>(listing: T): 
   };
 }
 
+function isSubscriptionEffectivelyActive(sub: { status: string; expiresAt?: Date | null } | undefined | null): boolean {
+  if (!sub || sub.status !== "active") return false;
+  if (sub.expiresAt && new Date(sub.expiresAt).getTime() < Date.now()) return false;
+  return true;
+}
+
 async function isUserSubscribed(req: Request): Promise<boolean> {
   const userId = await getAuthUserId(req);
   if (!userId) return false;
   const profile = await storage.getProfile(userId);
   if (profile?.plan === "admin") return true;
   const sub = await storage.getSubscriptionByUserId(userId);
-  return sub?.status === "active";
+  return isSubscriptionEffectivelyActive(sub);
 }
 
 async function isUserAdmin(req: Request): Promise<boolean> {
@@ -596,47 +603,44 @@ export async function registerRoutes(
         return res.status(503).json({ message: "Database not configured" });
       }
 
-      const { count: activeCount } = await supabaseAdmin
+      const { data: allSubs } = await supabaseAdmin
         .from("subscriptions")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "active");
+        .select("*");
 
-      const { data: allActiveSubs } = await supabaseAdmin
-        .from("subscriptions")
-        .select("amount_halalas")
-        .eq("status", "active");
+      const subs = (allSubs || []) as any[];
+      const nowMs = Date.now();
+      const isActive = (s: any) =>
+        s.status === "active" &&
+        (!s.expires_at || new Date(s.expires_at).getTime() >= nowMs);
+      const isManual = (s: any) => (s.activation_source ?? "payment") === "manual";
+      const isPaid = (s: any) => !isManual(s);
 
-      const totalRevenueHalalas = (allActiveSubs || []).reduce(
-        (sum: number, s: any) => sum + (s.amount_halalas || 0),
-        0
-      );
+      const activeAll = subs.filter(isActive);
+      const paidActive = activeAll.filter(isPaid).length;
+      const manualActive = activeAll.filter(isManual).length;
+      const activeSubscribers = activeAll.length;
+
+      const totalRevenueHalalas = subs
+        .filter((s) => s.status === "active" && isPaid(s))
+        .reduce((sum, s) => sum + (s.amount_halalas || 0), 0);
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
 
-      const { data: todaySubs } = await supabaseAdmin
-        .from("subscriptions")
-        .select("amount_halalas")
-        .gte("created_at", todayStart.toISOString());
+      const todayRevenueHalalas = subs
+        .filter((s) =>
+          s.status === "active" &&
+          isPaid(s) &&
+          s.activated_at &&
+          new Date(s.activated_at).getTime() >= todayStart.getTime()
+        )
+        .reduce((sum, s) => sum + (s.amount_halalas || 0), 0);
 
-      const todayRevenueHalalas = (todaySubs || []).reduce(
-        (sum: number, s: any) => sum + (s.amount_halalas || 0),
-        0
-      );
+      const recent = [...subs]
+        .sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+        .slice(0, 10);
 
-      const { data: recentRows, error: recentError } = await supabaseAdmin
-        .from("subscriptions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (recentError) {
-        console.error("[admin-overview] recentRows error:", recentError.message);
-      }
-
-      const recent = recentRows || [];
-      const userIds = recent.map((r: any) => r.user_id);
-
+      const userIds = Array.from(new Set(recent.map((r: any) => r.user_id)));
       const emailMap: Record<string, string> = {};
       for (const uid of userIds) {
         try {
@@ -653,11 +657,16 @@ export async function registerRoutes(
         amountRiyal: r.amount_halalas ? (r.amount_halalas / 100).toFixed(2) : "0.00",
         hasMoyasarPayment: !!r.moyasar_payment_id,
         refundStatus: r.refund_status || null,
+        activationSource: (r.activation_source as string) ?? "payment",
+        manualActivationReason: (r.manual_activation_reason as string) ?? null,
+        expiresAt: r.expires_at ?? null,
         createdAt: r.created_at,
       }));
 
       res.json({
-        activeSubscribers: activeCount || 0,
+        activeSubscribers,
+        paidActiveSubscribers: paidActive,
+        manualActiveSubscribers: manualActive,
         totalRevenueRiyal: (totalRevenueHalalas / 100).toFixed(2),
         todayRevenueRiyal: (todayRevenueHalalas / 100).toFixed(2),
         recentSubscribers,
@@ -665,6 +674,96 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("[admin-overview]", err.message);
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch overview") });
+    }
+  });
+
+  const manualActivateSchema = z.object({
+    email: z.string().email("بريد إلكتروني غير صالح"),
+    durationDays: z.coerce.number().int().min(0).max(36500).optional(),
+    reason: z.string().trim().min(1, "السبب مطلوب").max(200),
+  });
+
+  app.post("/api/admin/subscriptions/manual-activate", async (req: Request, res: Response) => {
+    try {
+      const admin = await isUserAdmin(req);
+      if (!admin) return res.status(403).json({ message: "Forbidden" });
+      const adminUser = await getAuthUser(req);
+
+      if (!supabaseAdmin) {
+        return res.status(503).json({ message: "Database not configured" });
+      }
+
+      const cols = await ensureSubscriptionManualCols(true);
+      const required = ["activation_source", "manual_activation_reason", "manually_activated_by", "expires_at"];
+      const missing = required.filter((c) => !cols.has(c));
+      if (missing.length > 0) {
+        return res.status(503).json({
+          message:
+            "تفعيل يدوي معطل: قاعدة البيانات تفتقد الأعمدة المطلوبة. شغّل supabase-migrations/001-manual-activation.sql في محرر SQL في Supabase ثم أعد المحاولة.",
+        });
+      }
+
+      const parsed = manualActivateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          message: parsed.error.errors[0]?.message || "بيانات غير صالحة",
+        });
+      }
+
+      const { email, durationDays, reason } = parsed.data;
+
+      let foundUserId: string | null = null;
+      try {
+        let page = 1;
+        const perPage = 200;
+        const target = email.toLowerCase();
+        while (page <= 50) {
+          const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+          if (error || !data) break;
+          const match = data.users.find((u) => (u.email || "").toLowerCase() === target);
+          if (match) {
+            foundUserId = match.id;
+            break;
+          }
+          if (!data.users.length || data.users.length < perPage) break;
+          page += 1;
+        }
+      } catch (err: any) {
+        console.error("[manual-activate] auth lookup error:", err.message);
+      }
+
+      if (!foundUserId) {
+        return res.status(404).json({
+          message: "المستخدم غير موجود، اطلب منه التسجيل أولًا",
+        });
+      }
+
+      const expiresAt =
+        durationDays && durationDays > 0
+          ? new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000)
+          : null;
+
+      const updated = await storage.upsertSubscription({
+        userId: foundUserId,
+        plan: "pro",
+        status: "active",
+        amountHalalas: 0,
+        moyasarInvoiceId: null,
+        moyasarPaymentId: null,
+        activatedAt: new Date(),
+        activationSource: "manual",
+        manualActivationReason: reason,
+        manuallyActivatedBy: adminUser?.email || adminUser?.id || "admin",
+        expiresAt,
+      });
+
+      res.json({
+        message: "تم تفعيل الاشتراك يدويًا بنجاح",
+        subscription: updated,
+      });
+    } catch (err: any) {
+      console.error("[manual-activate]", err.message);
+      res.status(500).json({ message: safeErrorMessage(err, "فشل التفعيل اليدوي") });
     }
   });
 
@@ -1411,6 +1510,10 @@ export async function registerRoutes(
           moyasarInvoiceId: invoiceId,
           moyasarPaymentId: paidPayment.id,
           activatedAt: new Date(),
+          activationSource: "payment",
+          manualActivationReason: null,
+          manuallyActivatedBy: null,
+          expiresAt: null,
         });
         return res.json({ status: "active" });
       }
@@ -1478,6 +1581,10 @@ export async function registerRoutes(
                 moyasarInvoiceId: invoiceId,
                 moyasarPaymentId: paidPayment.id,
                 activatedAt: new Date(),
+                activationSource: "payment",
+                manualActivationReason: null,
+                manuallyActivatedBy: null,
+                expiresAt: null,
               });
               console.log(`[webhook] Activated subscription for user ${sub.userId}`);
             } else {
@@ -1508,7 +1615,13 @@ export async function registerRoutes(
       if (!sub) {
         return res.json({ plan: null, status: "none" });
       }
-      res.json({ plan: sub.plan, status: sub.status });
+      const effectiveStatus = isSubscriptionEffectivelyActive(sub) ? "active" : (sub.status === "active" ? "expired" : sub.status);
+      res.json({
+        plan: sub.plan,
+        status: effectiveStatus,
+        activationSource: sub.activationSource ?? "payment",
+        expiresAt: sub.expiresAt ? sub.expiresAt.toISOString() : null,
+      });
     } catch (err: any) {
       res.status(500).json({ message: safeErrorMessage(err, "Failed to fetch subscription") });
     }

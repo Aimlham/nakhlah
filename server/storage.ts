@@ -33,10 +33,14 @@ export interface IStorage {
     userId: string;
     plan: string;
     status: string;
-    moyasarInvoiceId?: string;
-    moyasarPaymentId?: string;
+    moyasarInvoiceId?: string | null;
+    moyasarPaymentId?: string | null;
     amountHalalas?: number;
     activatedAt?: Date | null;
+    activationSource?: string;
+    manualActivationReason?: string | null;
+    manuallyActivatedBy?: string | null;
+    expiresAt?: Date | null;
   }): Promise<Subscription>;
   getSubscriptionById(id: string): Promise<Subscription | undefined>;
   getSubscriptionByUserId(userId: string): Promise<Subscription | undefined>;
@@ -296,10 +300,14 @@ export class MemStorage implements IStorage {
     userId: string;
     plan: string;
     status: string;
-    moyasarInvoiceId?: string;
-    moyasarPaymentId?: string;
+    moyasarInvoiceId?: string | null;
+    moyasarPaymentId?: string | null;
     amountHalalas?: number;
     activatedAt?: Date | null;
+    activationSource?: string;
+    manualActivationReason?: string | null;
+    manuallyActivatedBy?: string | null;
+    expiresAt?: Date | null;
   }): Promise<Subscription> {
     const existing = Array.from(this.subscriptions.values()).find(s => s.userId === sub.userId);
     const record: Subscription = {
@@ -307,13 +315,17 @@ export class MemStorage implements IStorage {
       userId: sub.userId,
       plan: sub.plan,
       status: sub.status,
-      moyasarInvoiceId: sub.moyasarInvoiceId ?? existing?.moyasarInvoiceId ?? null,
-      moyasarPaymentId: sub.moyasarPaymentId ?? existing?.moyasarPaymentId ?? null,
+      moyasarInvoiceId: sub.moyasarInvoiceId !== undefined ? sub.moyasarInvoiceId : (existing?.moyasarInvoiceId ?? null),
+      moyasarPaymentId: sub.moyasarPaymentId !== undefined ? sub.moyasarPaymentId : (existing?.moyasarPaymentId ?? null),
       amountHalalas: sub.amountHalalas ?? existing?.amountHalalas ?? null,
       activatedAt: sub.activatedAt !== undefined ? sub.activatedAt : (existing?.activatedAt ?? null),
       refundStatus: existing?.refundStatus ?? null,
       refundedAt: existing?.refundedAt ?? null,
       refundAmountHalalas: existing?.refundAmountHalalas ?? null,
+      activationSource: sub.activationSource ?? existing?.activationSource ?? "payment",
+      manualActivationReason: sub.manualActivationReason !== undefined ? sub.manualActivationReason : (existing?.manualActivationReason ?? null),
+      manuallyActivatedBy: sub.manuallyActivatedBy !== undefined ? sub.manuallyActivatedBy : (existing?.manuallyActivatedBy ?? null),
+      expiresAt: sub.expiresAt !== undefined ? sub.expiresAt : (existing?.expiresAt ?? null),
       createdAt: existing?.createdAt ?? new Date(),
     };
     this.subscriptions.set(record.id, record);

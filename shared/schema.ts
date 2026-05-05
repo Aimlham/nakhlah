@@ -122,6 +122,10 @@ export const subscriptions = pgTable("subscriptions", {
   refundStatus: text("refund_status"),
   refundedAt: timestamp("refunded_at"),
   refundAmountHalalas: integer("refund_amount_halalas"),
+  activationSource: text("activation_source").default("payment"),
+  manualActivationReason: text("manual_activation_reason"),
+  manuallyActivatedBy: text("manually_activated_by"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

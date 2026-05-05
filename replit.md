@@ -43,6 +43,8 @@ Frontend: React 18 + TypeScript + Tailwind CSS + shadcn/ui + wouter (routing) + 
 - **Server-side protection**: Strips `supplierName`, `supplierPhone`, `supplierWhatsapp`, `supplierLocation` for non-subscribers
 - **Client-side**: Non-subscribers see blurred/locked supplier section with subscribe CTA
 - **Admin auto-subscription**: `isUserSubscribed()` returns true if `profile.plan === "admin"`
+- **Manual activation (admin)**: Admin can gift Pro access without payment via the overview page. Stored with `activation_source = 'manual'`, optional `expires_at`, and a free-text `manual_activation_reason` (suggested: معلن، تجربة، شريك، دعم). Manual subs are excluded from total/today revenue and counted separately in KPIs. Expired manual subs are automatically treated as inactive by `isUserSubscribed()`.
+- **Required SQL migration**: Run `supabase-migrations/001-manual-activation.sql` once in the Supabase SQL editor to add `activation_source`, `manual_activation_reason`, `manually_activated_by`, `expires_at` columns. The server probes columns at startup and degrades gracefully if missing.
 
 ## Admin System
 - Admin role: `profiles.plan = 'admin'` in Supabase
@@ -132,6 +134,9 @@ shared/
 - `POST/DELETE /api/admin/categories` - CRUD categories
 - `POST /api/admin/upload-image` - Image upload to Supabase Storage
 - `POST /api/admin/analyze-supplier-image` - Extract supplier from single image (Vision API)
+- `GET /api/admin/overview` - Subscription KPIs (active/paid/manual counts, total + today revenue excluding manual) and recent subscribers
+- `POST /api/admin/subscriptions/manual-activate` - Body `{ email, durationDays?, reason }`. Looks up user by email via `supabaseAdmin.auth.admin.listUsers`, upserts a `pro/active/manual` subscription with optional expiry.
+- `POST /api/admin/subscriptions/:id/cancel` / `POST /api/admin/subscriptions/:id/refund`
 - `POST /api/admin/analyze-supplier-pdf` - Bulk extract suppliers from PDF tables (pdftoppm + Vision API, max 25 pages / 20MB)
 - `POST /api/admin/parse-supplier-spreadsheet` - Parse CSV/XLSX/XLS files (direct parsing via xlsx lib, Arabic header auto-mapping, max 10MB)
 - `GET /api/admin/listings/find-duplicate` - Check supplier duplicates by phone or name+city

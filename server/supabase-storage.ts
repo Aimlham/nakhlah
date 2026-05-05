@@ -37,6 +37,40 @@ const SUPPLIER_PRODUCT_PRICE_COLS = ["supplier_price", "suggested_sell_price", "
 let supplierProductPriceColsAvailable: Set<string> = new Set();
 let supplierProductPriceColsProbed = false;
 
+const SUBSCRIPTION_MANUAL_COLS = ["activation_source", "manual_activation_reason", "manually_activated_by", "expires_at"];
+let subscriptionManualColsAvailable: Set<string> = new Set();
+let subscriptionManualColsProbed = false;
+
+async function probeSubscriptionManualCols(force = false): Promise<Set<string>> {
+  if (!supabaseAdmin) return subscriptionManualColsAvailable;
+  if (subscriptionManualColsProbed && !force) return subscriptionManualColsAvailable;
+  subscriptionManualColsProbed = true;
+  const found = new Set<string>();
+  for (const col of SUBSCRIPTION_MANUAL_COLS) {
+    try {
+      const { error } = await supabaseAdmin.from("subscriptions").select(col).limit(1);
+      if (!error) found.add(col);
+    } catch {}
+  }
+  subscriptionManualColsAvailable = found;
+  const missing = SUBSCRIPTION_MANUAL_COLS.filter(c => !subscriptionManualColsAvailable.has(c));
+  if (missing.length > 0) {
+    console.warn("[supabase] subscriptions table is missing columns:", missing.join(", "));
+    console.warn("[supabase] Run supabase-migrations/001-manual-activation.sql in Supabase SQL editor to enable manual activation.");
+  } else {
+    console.log("[supabase] All subscriptions manual-activation columns available");
+  }
+  return subscriptionManualColsAvailable;
+}
+
+export function getSubscriptionManualColsAvailable(): Set<string> {
+  return subscriptionManualColsAvailable;
+}
+
+export async function ensureSubscriptionManualCols(force = false): Promise<Set<string>> {
+  return probeSubscriptionManualCols(force);
+}
+
 async function probeSupplierProductPriceCols(): Promise<Set<string>> {
   if (supplierProductPriceColsProbed || !supabaseAdmin) return supplierProductPriceColsAvailable;
   supplierProductPriceColsProbed = true;
@@ -210,6 +244,10 @@ function mapSubscription(row: Record<string, unknown>): Subscription {
     refundStatus: (row.refund_status as string) ?? null,
     refundedAt: row.refunded_at ? new Date(row.refunded_at as string) : null,
     refundAmountHalalas: (row.refund_amount_halalas as number) ?? null,
+    activationSource: (row.activation_source as string) ?? "payment",
+    manualActivationReason: (row.manual_activation_reason as string) ?? null,
+    manuallyActivatedBy: (row.manually_activated_by as string) ?? null,
+    expiresAt: row.expires_at ? new Date(row.expires_at as string) : null,
     createdAt: row.created_at ? new Date(row.created_at as string) : null,
   };
 }
@@ -244,6 +282,7 @@ export class SupabaseStorage implements IStorage {
     await probeAdColumns();
     await probeSavedItemType();
     await probeSupplierProductPriceCols();
+    await probeSubscriptionManualCols();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -564,26 +603,64 @@ export class SupabaseStorage implements IStorage {
     userId: string;
     plan: string;
     status: string;
-    moyasarInvoiceId?: string;
-    moyasarPaymentId?: string;
+    moyasarInvoiceId?: string | null;
+    moyasarPaymentId?: string | null;
     amountHalalas?: number;
     activatedAt?: Date | null;
+    activationSource?: string;
+    manualActivationReason?: string | null;
+    manuallyActivatedBy?: string | null;
+    expiresAt?: Date | null;
   }): Promise<Subscription> {
     if (!supabaseAdmin) throw new Error("Supabase not configured");
 
     const existing = await this.getSubscriptionByUserId(sub.userId);
 
-    const record = {
+    const callerTouchesManualCols =
+      sub.activationSource !== undefined ||
+      sub.manualActivationReason !== undefined ||
+      sub.manuallyActivatedBy !== undefined ||
+      sub.expiresAt !== undefined;
+
+    if (callerTouchesManualCols) {
+      const probed = await probeSubscriptionManualCols();
+      if (probed.size === 0) {
+        await probeSubscriptionManualCols(true);
+      }
+    }
+
+    const record: Record<string, any> = {
       user_id: sub.userId,
       plan: sub.plan,
       status: sub.status,
-      moyasar_invoice_id: sub.moyasarInvoiceId ?? existing?.moyasarInvoiceId ?? null,
-      moyasar_payment_id: sub.moyasarPaymentId ?? existing?.moyasarPaymentId ?? null,
-      amount_halalas: sub.amountHalalas ?? existing?.amountHalalas ?? null,
+      moyasar_invoice_id: sub.moyasarInvoiceId !== undefined ? sub.moyasarInvoiceId : (existing?.moyasarInvoiceId ?? null),
+      moyasar_payment_id: sub.moyasarPaymentId !== undefined ? sub.moyasarPaymentId : (existing?.moyasarPaymentId ?? null),
+      amount_halalas: sub.amountHalalas !== undefined ? sub.amountHalalas : (existing?.amountHalalas ?? null),
       activated_at: sub.activatedAt !== undefined
         ? (sub.activatedAt ? sub.activatedAt.toISOString() : null)
         : (existing?.activatedAt ? existing.activatedAt.toISOString() : null),
     };
+
+    const manualCols = subscriptionManualColsAvailable;
+    if (manualCols.has("activation_source")) {
+      record.activation_source = sub.activationSource ?? existing?.activationSource ?? "payment";
+    }
+    const switchedToPayment = sub.activationSource === "payment";
+    if (manualCols.has("manual_activation_reason")) {
+      record.manual_activation_reason = sub.manualActivationReason !== undefined
+        ? sub.manualActivationReason
+        : (switchedToPayment ? null : (existing?.manualActivationReason ?? null));
+    }
+    if (manualCols.has("manually_activated_by")) {
+      record.manually_activated_by = sub.manuallyActivatedBy !== undefined
+        ? sub.manuallyActivatedBy
+        : (switchedToPayment ? null : (existing?.manuallyActivatedBy ?? null));
+    }
+    if (manualCols.has("expires_at")) {
+      record.expires_at = sub.expiresAt !== undefined
+        ? (sub.expiresAt ? sub.expiresAt.toISOString() : null)
+        : (switchedToPayment ? null : (existing?.expiresAt ? existing.expiresAt.toISOString() : null));
+    }
 
     if (existing) {
       const { data, error } = await supabaseAdmin
